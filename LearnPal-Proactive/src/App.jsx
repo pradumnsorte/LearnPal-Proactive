@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import './App.css'
 import transcriptRows from './data/transcript.json'
 import glossaryData from './data/glossary.json'
@@ -7,12 +7,28 @@ import questionsData from './data/questions.json'
 import brandIcon from './assets/brand-icon.svg'
 import palCharacter from './assets/pal-character.svg'
 
-const VIDEO_FRAME_URL = 'https://www.figma.com/api/mcp/asset/23bfe8ed-0e49-430f-a6b4-8d5ccbb148c5'
-const VIDEO_DURATION_SECONDS = Math.max(
-  1080,
-  Math.ceil((transcriptRows[transcriptRows.length - 1]?.seconds ?? 720) / 30) * 30,
-)
-const INITIAL_PLAYBACK_SECONDS = 222
+const VIDEO_ID = 'CqOfi41LfDw'
+const PLAYLIST_ID = 'PLblh5JKOoLUIxGDQs4LFFD--41Vzf-ME1'
+
+let ytApiPromise = null
+const loadYouTubeIframeApi = () => {
+  if (window.YT && window.YT.Player) return Promise.resolve(window.YT)
+  if (ytApiPromise) return ytApiPromise
+  ytApiPromise = new Promise((resolve) => {
+    const previousReady = window.onYouTubeIframeAPIReady
+    window.onYouTubeIframeAPIReady = () => {
+      if (typeof previousReady === 'function') previousReady()
+      resolve(window.YT)
+    }
+    const existing = document.querySelector('script[src="https://www.youtube.com/iframe_api"]')
+    if (!existing) {
+      const script = document.createElement('script')
+      script.src = 'https://www.youtube.com/iframe_api'
+      document.body.appendChild(script)
+    }
+  })
+  return ytApiPromise
+}
 
 const QUICK_SUGGESTIONS = [
   'Give me a summary in simple terms',
@@ -20,13 +36,15 @@ const QUICK_SUGGESTIONS = [
   'Explain with real life example',
 ]
 
-const FREQUENCY_OPTIONS = ['Low', 'medium', 'High']
+const FREQUENCY_OPTIONS = ['Low', 'Medium', 'High']
 const PLAYBACK_SPEEDS = [1, 1.25, 1.5]
 
+// confidenceThreshold: minimum highlight confidence (0–1) to surface at each frequency.
+// Low  → only very high-confidence highlights; High → surface more liberally.
 const FREQUENCY_CONFIG = {
-  Low: { visualThreshold: 3, promptGap: 60 },
-  medium: { visualThreshold: 2, promptGap: 42 },
-  High: { visualThreshold: 1, promptGap: 28 },
+  Low:    { confidenceThreshold: 0.9, promptGap: 60 },
+  Medium: { confidenceThreshold: 0.8, promptGap: 42 },
+  High:   { confidenceThreshold: 0.6, promptGap: 28 },
 }
 
 const PROACTIVE_KEYWORD_EVENTS = [
@@ -59,38 +77,6 @@ const PROACTIVE_KEYWORD_EVENTS = [
   },
 ]
 
-const VISUAL_EVENTS = [
-  {
-    id: 'pv1',
-    timestampSeconds: 222,
-    salience: 2,
-    title: 'Input dosage box',
-    summary: 'This square is the input node where the dosage first enters the network.',
-    detailPrompt: 'Explain the dosage input box and why it matters',
-    detailExplanation: 'The dosage value enters here, then the connection labels show how that one number is transformed before the hidden nodes bend it into new shapes.',
-    region: { left: 12, top: 50, width: 7, height: 14 },
-  },
-  {
-    id: 'pv2',
-    timestampSeconds: 229,
-    salience: 3,
-    title: 'Top hidden node',
-    summary: 'This hidden node is one of the curved building blocks that help produce the final squiggle.',
-    detailPrompt: 'Explain the top hidden node in the diagram',
-    detailExplanation: 'That node takes the transformed dosage, runs it through an activation function, and contributes one shaped curve to the final prediction.',
-    region: { left: 33, top: 28, width: 8, height: 15 },
-  },
-  {
-    id: 'pv3',
-    timestampSeconds: 238,
-    salience: 2,
-    title: 'Output node',
-    summary: 'This final green circle combines earlier pieces into the network output.',
-    detailPrompt: 'Explain how the output node combines the hidden nodes',
-    detailExplanation: 'The output node sums the hidden-node contributions and applies the final bias, producing the green squiggle that predicts effectiveness.',
-    region: { left: 59, top: 55, width: 7, height: 11 },
-  },
-]
 
 const createMessageId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
 
@@ -160,14 +146,16 @@ const buildAdaptiveStrategy = (stats) => {
     keywordThreshold = 1
   }
 
-  let visualThresholdOffset = 0
-  if (stats.visualIgnored >= 2 && stats.visualOpened === 0) visualThresholdOffset = 1
-  if (stats.visualOpened >= 2) visualThresholdOffset = -1
+  // Adjust confidence threshold based on engagement with visual highlights.
+  // Positive offset → raise threshold (more selective); negative → lower it (show more).
+  let confidenceThresholdOffset = 0
+  if (stats.visualIgnored >= 2 && stats.visualOpened === 0) confidenceThresholdOffset = 0.08
+  if (stats.visualOpened >= 2) confidenceThresholdOffset = -0.08
 
   const quizGap = stats.quizSkipped >= 2 ? 240 : 135
   const quizEnabled = stats.quizSkipped < 4
 
-  return { keywordThreshold, promptGapBonus, visualThresholdOffset, quizGap, quizEnabled }
+  return { keywordThreshold, promptGapBonus, confidenceThresholdOffset, quizGap, quizEnabled }
 }
 
 const buildKeywordExplanation = (item, currentSeconds) => {
@@ -178,7 +166,7 @@ const buildKeywordExplanation = (item, currentSeconds) => {
 
 const buildVisualExplanation = (item, currentSeconds) => {
   const currentConcept = getCurrentConceptSummary(currentSeconds)
-  return `${item.detailExplanation} This matters now because the speaker is walking through ${currentConcept.toLowerCase()}.`
+  return `${item.detailedExplanation} This matters now because the speaker is walking through ${currentConcept.toLowerCase()}.`
 }
 
 const buildQuizExplanation = (question, selectedIndex, currentSeconds) => {
@@ -191,36 +179,6 @@ const buildQuizExplanation = (question, selectedIndex, currentSeconds) => {
   }
 
   return `The best answer is "${correctOption}". ${question.explanation} The tricky part is that "${selectedOption}" sounds plausible until you connect it back to ${currentConcept.toLowerCase()}.`
-}
-
-const buildManualReply = (message, currentSeconds) => {
-  const normalizedMessage = normalizeText(message)
-  const recentHighlights = highlightsData
-    .filter((item) => item.timestampSeconds <= currentSeconds)
-    .slice(-3)
-  const glossaryMatch = glossaryData.find((entry) => {
-    const normalizedEntry = normalizeText(entry.term)
-    return normalizedMessage.includes(normalizedEntry)
-      || normalizedEntry
-        .split(' ')
-        .filter((word) => word.length > 4)
-        .some((word) => normalizedMessage.includes(word))
-  })
-
-  if (normalizedMessage.includes('summary')) {
-    const summary = recentHighlights.map((item) => item.text).join(' ')
-    return summary || 'So far the lesson has introduced neural networks as a way to fit useful curved patterns instead of forcing a straight line.'
-  }
-
-  if (glossaryMatch) {
-    return `${glossaryMatch.term}: ${glossaryMatch.definition} In this part of the lesson, that idea supports ${getCurrentConceptSummary(currentSeconds).toLowerCase()}.`
-  }
-
-  if (normalizedMessage.includes('real life') || normalizedMessage.includes('example')) {
-    return 'Think of the network like tuning a recipe: each node adjusts the ingredient a little differently, and the final taste tells you whether the combination worked.'
-  }
-
-  return `Right now the lesson is focused on ${getCurrentConceptSummary(currentSeconds).toLowerCase()}. The main idea is that each node transforms the signal so the final output can match the pattern in the data.`
 }
 
 // Returns true when the transcript in the recent window is too dense to interrupt.
@@ -240,19 +198,87 @@ const isTranscriptDense = (currentSeconds, threshold = 3.5) => {
   return totalWords / elapsed > threshold
 }
 
-const SERVER_URL = 'http://localhost:3003'
+const PROVIDERS = { CLAUDE: 'claude', OPENAI: 'openai', GROQ: 'groq', OLLAMA: 'ollama', AZURE: 'azure' }
+const PROVIDER_CYCLE = [PROVIDERS.AZURE, PROVIDERS.CLAUDE, PROVIDERS.OPENAI, PROVIDERS.GROQ, PROVIDERS.OLLAMA]
+const PROVIDER_LABELS = {
+  [PROVIDERS.CLAUDE]: '✦ Claude',
+  [PROVIDERS.OPENAI]: '⬡ GPT-4o',
+  [PROVIDERS.GROQ]:   '⚡ Groq',
+  [PROVIDERS.OLLAMA]: '🦙 Ollama',
+  [PROVIDERS.AZURE]:  '☁ Azure',
+}
+
+const buildSystemPrompt = (currentSeconds, quizHistory = []) => {
+  const mins = Math.floor(currentSeconds / 60)
+  const secs = Math.floor(currentSeconds % 60)
+  const timeStr = `${mins}:${String(secs).padStart(2, '0')}`
+
+  const recentContext = transcriptRows
+    .filter((r) => r.seconds <= currentSeconds)
+    .slice(-6)
+    .map((r) => `[${r.time}] ${r.text}`)
+    .join('\n')
+
+  const quizBlock = quizHistory.length > 0
+    ? `\nQuiz attempts this session:\n${quizHistory
+        .map((q) => `- "${q.question}" — ${q.isCorrect ? 'answered correctly' : 'answered incorrectly'}`)
+        .join('\n')}`
+    : ''
+
+  const sessionContext = quizBlock ? `\n--- Session context ---${quizBlock}\n` : ''
+
+  return `You are Pal, a friendly learning assistant embedded in LearnPal, a video learning app.
+
+The user is watching: "The Essential Main Ideas of Neural Networks" by StatQuest.
+Current video position: ${timeStr}
+
+Recent transcript context:
+${recentContext || 'Video just started.'}
+${sessionContext}
+Help the user understand the video. Be concise (under 150 words unless asked for more), clear, and educational. Use simple language and real-world examples when helpful.`
+}
+
+const callAI = async (provider, messages, currentSeconds, sessionId = null, quizHistory = []) => {
+  const systemPrompt = buildSystemPrompt(currentSeconds, quizHistory)
+  const res = await fetch('/api/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ provider, messages, systemPrompt, sessionId }),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err?.error ?? `Server error ${res.status}`)
+  }
+  const data = await res.json()
+  return data.reply
+}
 
 function App() {
-  const [selectedFrequency, setSelectedFrequency] = useState('medium')
+  const [selectedFrequency, setSelectedFrequency] = useState('Medium')
+  const [videoHighlights, setVideoHighlights] = useState([])
   const [highlightsPaused, setHighlightsPaused] = useState(false)
   const [prompt, setPrompt] = useState('')
   const [chatMessages, setChatMessages] = useState([])
   const [savedVisualCards, setSavedVisualCards] = useState([])
   const [laterQueue, setLaterQueue] = useState([])
-  const [playbackSeconds, setPlaybackSeconds] = useState(INITIAL_PLAYBACK_SECONDS)
-  const [isPlaying, setIsPlaying] = useState(true)
+  const [currentPlaybackSeconds, setCurrentPlaybackSeconds] = useState(0)
+  const [isPlaying, setIsPlaying] = useState(false)
   const [playbackRate, setPlaybackRate] = useState(1)
   const [isMuted, setIsMuted] = useState(false)
+  const [duration, setDuration] = useState(0)
+  const [volume, setVolume] = useState(100)
+  const [showControls, setShowControls] = useState(true)
+  const [isFullscreen, setIsFullscreen] = useState(false)
+  const [showSpeedMenu, setShowSpeedMenu] = useState(false)
+  const [isCompact, setIsCompact] = useState(false)
+  const [playerControlsMode, setPlayerControlsMode] = useState('custom')
+  const [playerKey, setPlayerKey] = useState(0)
+  const [showSettings, setShowSettings] = useState(false)
+  const [aiProvider, setAiProvider] = useState(PROVIDERS.AZURE)
+  const [isLoading, setIsLoading] = useState(false)
+  const [aiError, setAiError] = useState(null)
+  const [quizHistory, setQuizHistory] = useState([])
+  const [participantId, setParticipantId] = useState('')
   const [activeKeywordPrompt, setActiveKeywordPrompt] = useState(null)
   const [activeVisualCue, setActiveVisualCue] = useState(null)
   const [activeVisualCard, setActiveVisualCard] = useState(null)
@@ -262,7 +288,7 @@ function App() {
   const [shownKeywordIds, setShownKeywordIds] = useState([])
   const [shownVisualIds, setShownVisualIds] = useState([])
   const [shownQuizIds, setShownQuizIds] = useState([])
-  const [lastInterventionAt, setLastInterventionAt] = useState(INITIAL_PLAYBACK_SECONDS - 45)
+  const [lastInterventionAt, setLastInterventionAt] = useState(-45)
   const [lastQuizAt, setLastQuizAt] = useState(-Infinity)
   const [interactionStats, setInteractionStats] = useState({
     keywordIgnored: 0,
@@ -277,56 +303,189 @@ function App() {
     detailRequests: 0,
   })
 
+  const playerHostRef = useRef(null)
+  const playerRef = useRef(null)
+  const playbackPollRef = useRef(null)
+  const playerStageRef = useRef(null)
+  const mainColumnRef = useRef(null)
+  const isPlayingRef = useRef(false)
+  const isCompactRef = useRef(false)
+  const controlsTimerRef = useRef(null)
+  const isSeekingRef = useRef(false)
+  const savedTimeRef = useRef(0)
+  const playerControlsModeRef = useRef('custom')
+  const settingsPanelRef = useRef(null)
+  const gearBtnRef = useRef(null)
   const progressRef = useRef(null)
   const sessionIdRef = useRef(null)
+  const chatMessagesRef = useRef(null)
 
   const logEvent = (eventType, atSeconds) => {
     if (!sessionIdRef.current) return
-    fetch(`${SERVER_URL}/api/events`, {
+    fetch('/api/events', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         sessionId: sessionIdRef.current,
         eventType,
-        playbackSeconds: Math.floor(atSeconds ?? 0),
+        currentPlaybackSeconds: Math.floor(atSeconds ?? 0),
       }),
     }).catch(() => {})
   }
 
-  const activeTranscriptIndex = getActiveTranscriptIndex(playbackSeconds)
+  const activeTranscriptIndex = getActiveTranscriptIndex(currentPlaybackSeconds)
   const transcriptWindow = transcriptRows.slice(
     Math.max(0, activeTranscriptIndex - 1),
     Math.min(transcriptRows.length, activeTranscriptIndex + 5),
   )
-  const currentHighlightAnchor = getCurrentHighlightAnchor(playbackSeconds)
+  const currentHighlightAnchor = getCurrentHighlightAnchor(currentPlaybackSeconds)
   const adaptiveStrategy = buildAdaptiveStrategy(interactionStats)
-  const playbackProgress = (playbackSeconds / VIDEO_DURATION_SECONDS) * 100
-  const systemState = activeQuiz
-    ? 'Checkpoint quiz'
-    : activeVisualCard
-      ? 'Expanded support'
-      : activeKeywordPrompt
-        ? 'Keyword prompt'
-        : activeVisualCue
-          ? 'Visual highlight'
-          : 'Passive watching'
+  const seekPercent = duration > 0 ? (currentPlaybackSeconds / duration) * 100 : 0
+
+
+  // ── YouTube player setup ─────────────────────────────────────────────────
 
   useEffect(() => {
-    if (!isPlaying || activeQuiz) return undefined
+    let disposed = false
 
-    const timer = window.setInterval(() => {
-      setPlaybackSeconds((current) => clamp(current + playbackRate, 0, VIDEO_DURATION_SECONDS))
-    }, 1000)
+    const startPlaybackPolling = () => {
+      window.clearInterval(playbackPollRef.current)
+      playbackPollRef.current = window.setInterval(() => {
+        const player = playerRef.current
+        if (!player || typeof player.getCurrentTime !== 'function') return
+        const current = player.getCurrentTime()
+        if (Number.isFinite(current)) setCurrentPlaybackSeconds(current)
+      }, 500)
+    }
 
-    return () => window.clearInterval(timer)
-  }, [isPlaying, playbackRate, activeQuiz])
+    const initPlayer = async () => {
+      await loadYouTubeIframeApi()
+      if (disposed || !playerHostRef.current || !window.YT?.Player) return
+
+      playerRef.current = new window.YT.Player(playerHostRef.current, {
+        host: 'https://www.youtube-nocookie.com',
+        videoId: VIDEO_ID,
+        playerVars: {
+          controls: playerControlsModeRef.current === 'native' ? 1 : 0,
+          rel: 0,
+          modestbranding: 1,
+          iv_load_policy: 3,
+          playsinline: 1,
+          list: PLAYLIST_ID,
+          autoplay: 0,
+        },
+        events: {
+          onReady: (e) => {
+            startPlaybackPolling()
+            if (savedTimeRef.current > 0) {
+              e.target.seekTo(savedTimeRef.current, true)
+              savedTimeRef.current = 0
+            }
+            const d = e.target.getDuration()
+            if (d > 0) setDuration(d)
+            setVolume(e.target.getVolume())
+            setIsMuted(e.target.isMuted())
+          },
+          onStateChange: (e) => {
+            const playing = e.data === 1
+            const ended  = e.data === 0
+            isPlayingRef.current = playing
+            setIsPlaying(playing)
+            const d = e.target.getDuration()
+            if (d > 0) setDuration(d)
+            if (playerControlsModeRef.current === 'custom') {
+              if (playing) {
+                clearTimeout(controlsTimerRef.current)
+                controlsTimerRef.current = setTimeout(() => setShowControls(false), 3000)
+              } else {
+                clearTimeout(controlsTimerRef.current)
+                setShowControls(true)
+              }
+            }
+            void ended
+          },
+        },
+      })
+    }
+
+    initPlayer()
+
+    return () => {
+      disposed = true
+      window.clearInterval(playbackPollRef.current)
+      clearTimeout(controlsTimerRef.current)
+      if (playerRef.current && typeof playerRef.current.destroy === 'function') {
+        playerRef.current.destroy()
+      }
+      playerRef.current = null
+    }
+  }, [playerKey])
+
+  // ── Fullscreen sync ─────────────────────────────────────────────────────
 
   useEffect(() => {
-    if (playbackSeconds >= VIDEO_DURATION_SECONDS) setIsPlaying(false)
-  }, [playbackSeconds])
+    const onFsChange = () => setIsFullscreen(!!document.fullscreenElement)
+    document.addEventListener('fullscreenchange', onFsChange)
+    return () => document.removeEventListener('fullscreenchange', onFsChange)
+  }, [])
+
+  // ── Compact player on scroll ─────────────────────────────────────────────
+
+  const handleMainScroll = useCallback(() => {
+    const el = mainColumnRef.current
+    if (!el) return
+    if (!isCompactRef.current && el.scrollTop > 1) {
+      isCompactRef.current = true
+      setIsCompact(true)
+    } else if (isCompactRef.current && el.scrollTop < 1) {
+      isCompactRef.current = false
+      setIsCompact(false)
+    }
+  }, [])
+
+  // ── Chat auto-scroll ──────────────────────────────────────────────────────
 
   useEffect(() => {
-    fetch(`${SERVER_URL}/api/sessions`, {
+    const el = chatMessagesRef.current
+    if (el) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' })
+  }, [chatMessages, isLoading])
+
+  // ── Settings panel (close on outside click) ──────────────────────────────
+
+  useEffect(() => {
+    if (!showSettings) return
+    const close = (e) => {
+      if (settingsPanelRef.current?.contains(e.target)) return
+      if (gearBtnRef.current?.contains(e.target)) return
+      setShowSettings(false)
+    }
+    document.addEventListener('mousedown', close)
+    return () => document.removeEventListener('mousedown', close)
+  }, [showSettings])
+
+  // ── Controls mode switch ─────────────────────────────────────────────────
+
+  const switchPlayerControls = (next) => {
+    if (next === playerControlsMode) { setShowSettings(false); return }
+    savedTimeRef.current = playerRef.current?.getCurrentTime?.() ?? 0
+    playerControlsModeRef.current = next
+    setPlayerControlsMode(next)
+    setShowControls(true)
+    setShowSettings(false)
+    setPlayerKey((k) => k + 1)
+  }
+
+  // ── Fetch video highlights from backend ──────────────────────────────────
+
+  useEffect(() => {
+    fetch('/api/videos/neural-networks/highlights')
+      .then((r) => r.json())
+      .then((data) => { if (Array.isArray(data)) setVideoHighlights(data) })
+      .catch(() => {})
+  }, [])
+
+  useEffect(() => {
+    fetch('/api/sessions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -345,35 +504,35 @@ function App() {
 
     const frequency = FREQUENCY_CONFIG[selectedFrequency]
     const promptGap = frequency.promptGap + adaptiveStrategy.promptGapBonus
-    if (playbackSeconds - lastInterventionAt < promptGap) return
+    if (currentPlaybackSeconds - lastInterventionAt < promptGap) return
 
     // §3.4 — do not interrupt if the transcript is too dense at this moment
-    if (isTranscriptDense(playbackSeconds)) return
+    if (isTranscriptDense(currentPlaybackSeconds)) return
 
     const quizCandidate = adaptiveStrategy.quizEnabled
       ? questionsData.find(
           (question) =>
-            question.timestampSeconds <= playbackSeconds
+            question.timestampSeconds <= currentPlaybackSeconds
             && !shownQuizIds.includes(question.id)
-            && playbackSeconds - lastQuizAt >= adaptiveStrategy.quizGap,
+            && currentPlaybackSeconds - lastQuizAt >= adaptiveStrategy.quizGap,
         )
       : null
 
-    if (quizCandidate && playbackSeconds - lastInterventionAt >= Math.max(promptGap, 38)) {
+    if (quizCandidate && currentPlaybackSeconds - lastInterventionAt >= Math.max(promptGap, 38)) {
       setShownQuizIds((current) => [...current, quizCandidate.id])
       setActiveQuiz(quizCandidate)
       setQuizSelection(null)
       setQuizOutcome(null)
-      setIsPlaying(false)
-      setLastQuizAt(playbackSeconds)
-      setLastInterventionAt(playbackSeconds)
-      logEvent('quiz_shown', playbackSeconds)
+      playerRef.current?.pauseVideo()
+      setLastQuizAt(currentPlaybackSeconds)
+      setLastInterventionAt(currentPlaybackSeconds)
+      logEvent('quiz_shown', currentPlaybackSeconds)
       return
     }
 
     const keywordCandidate = PROACTIVE_KEYWORD_EVENTS.find(
       (item) =>
-        item.timestampSeconds <= playbackSeconds
+        item.timestampSeconds <= currentPlaybackSeconds
         && !shownKeywordIds.includes(item.id)
         && item.importance >= adaptiveStrategy.keywordThreshold,
     )
@@ -381,30 +540,31 @@ function App() {
     if (keywordCandidate) {
       setShownKeywordIds((current) => [...current, keywordCandidate.id])
       setActiveKeywordPrompt(keywordCandidate)
-      setLastInterventionAt(playbackSeconds)
-      logEvent('keyword_shown', playbackSeconds)
+      setLastInterventionAt(currentPlaybackSeconds)
+      logEvent('keyword_shown', currentPlaybackSeconds)
       return
     }
 
     if (highlightsPaused) return
 
-    const visualThreshold = clamp(
-      frequency.visualThreshold + adaptiveStrategy.visualThresholdOffset,
+    // Confidence threshold is frequency-controlled and nudged by adaptive strategy.
+    const confidenceThreshold = clamp(
+      frequency.confidenceThreshold + adaptiveStrategy.confidenceThresholdOffset,
+      0,
       1,
-      3,
     )
-    const visualCandidate = VISUAL_EVENTS.find(
+    const visualCandidate = videoHighlights.find(
       (item) =>
-        item.timestampSeconds <= playbackSeconds
+        item.startTime <= currentPlaybackSeconds
         && !shownVisualIds.includes(item.id)
-        && item.salience >= visualThreshold,
+        && item.confidence >= confidenceThreshold,
     )
 
     if (visualCandidate) {
       setShownVisualIds((current) => [...current, visualCandidate.id])
       setActiveVisualCue(visualCandidate)
-      setLastInterventionAt(playbackSeconds)
-      logEvent('visual_shown', playbackSeconds)
+      setLastInterventionAt(currentPlaybackSeconds)
+      logEvent('visual_shown', currentPlaybackSeconds)
     }
   }, [
     activeKeywordPrompt,
@@ -416,11 +576,12 @@ function App() {
     isPlaying,
     lastInterventionAt,
     lastQuizAt,
-    playbackSeconds,
+    currentPlaybackSeconds,
     selectedFrequency,
     shownKeywordIds,
     shownQuizIds,
     shownVisualIds,
+    videoHighlights,
   ])
 
   useEffect(() => {
@@ -429,7 +590,7 @@ function App() {
     const timer = window.setTimeout(() => {
       setInteractionStats((current) => ({ ...current, keywordIgnored: current.keywordIgnored + 1 }))
       setActiveKeywordPrompt(null)
-      logEvent('keyword_ignored', playbackSeconds)
+      logEvent('keyword_ignored', currentPlaybackSeconds)
     }, 7800)
 
     return () => window.clearTimeout(timer)
@@ -441,7 +602,7 @@ function App() {
     const timer = window.setTimeout(() => {
       setInteractionStats((current) => ({ ...current, visualIgnored: current.visualIgnored + 1 }))
       setActiveVisualCue(null)
-      logEvent('visual_ignored', playbackSeconds)
+      logEvent('visual_ignored', currentPlaybackSeconds)
     }, 6500)
 
     return () => window.clearTimeout(timer)
@@ -465,17 +626,37 @@ function App() {
     ])
   }
 
-  const sendMessage = (nextPrompt = prompt.trim()) => {
-    if (!nextPrompt) return
+  const sendMessage = async (nextPrompt = prompt.trim()) => {
+    if (!nextPrompt || isLoading) return
 
-    const reply = buildManualReply(nextPrompt, playbackSeconds)
-    addChatExchange({
-      source: 'Ask Pal',
-      title: `Manual question • ${formatTime(playbackSeconds)}`,
-      userMessage: nextPrompt,
-      assistantMessage: reply,
-    })
+    const userMsg = {
+      id: createMessageId(),
+      role: 'user',
+      content: nextPrompt,
+    }
+    setChatMessages((prev) => [...prev, userMsg])
     setPrompt('')
+    setAiError(null)
+    setIsLoading(true)
+
+    try {
+      const history = [...chatMessages, userMsg].map(({ role, content }) => ({ role, content }))
+      const reply = await callAI(aiProvider, history, currentPlaybackSeconds, sessionIdRef.current, quizHistory)
+      setChatMessages((prev) => [
+        ...prev,
+        {
+          id: createMessageId(),
+          role: 'assistant',
+          source: 'Ask Pal',
+          title: `Reply • ${formatTime(currentPlaybackSeconds)}`,
+          content: reply,
+        },
+      ])
+    } catch (err) {
+      setAiError(err.message)
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const handleSubmit = (event) => {
@@ -489,16 +670,16 @@ function App() {
     if (action === 'detail') {
       addChatExchange({
         source: 'Keyword prompt',
-        title: `${activeKeywordPrompt.term} • ${formatTime(playbackSeconds)}`,
+        title: `${activeKeywordPrompt.term} • ${formatTime(currentPlaybackSeconds)}`,
         userMessage: activeKeywordPrompt.detailPrompt,
-        assistantMessage: buildKeywordExplanation(activeKeywordPrompt, playbackSeconds),
+        assistantMessage: buildKeywordExplanation(activeKeywordPrompt, currentPlaybackSeconds),
       })
       setInteractionStats((current) => ({
         ...current,
         keywordOpened: current.keywordOpened + 1,
         detailRequests: current.detailRequests + 1,
       }))
-      logEvent('keyword_detail', playbackSeconds)
+      logEvent('keyword_detail', currentPlaybackSeconds)
     } else if (action === 'later') {
       setLaterQueue((current) => (
         current.some((item) => item.id === activeKeywordPrompt.id)
@@ -509,13 +690,13 @@ function App() {
         ...current,
         keywordDeferred: current.keywordDeferred + 1,
       }))
-      logEvent('keyword_later', playbackSeconds)
+      logEvent('keyword_later', currentPlaybackSeconds)
     } else {
       setInteractionStats((current) => ({
         ...current,
         keywordIgnored: current.keywordIgnored + 1,
       }))
-      logEvent('keyword_dismissed', playbackSeconds)
+      logEvent('keyword_dismissed', currentPlaybackSeconds)
     }
 
     setActiveKeywordPrompt(null)
@@ -526,8 +707,8 @@ function App() {
     setInteractionStats((current) => ({ ...current, visualOpened: current.visualOpened + 1 }))
     setActiveVisualCard(activeVisualCue)
     setActiveVisualCue(null)
-    setIsPlaying(false)
-    logEvent('visual_opened', playbackSeconds)
+    playerRef.current?.pauseVideo()
+    logEvent('visual_opened', currentPlaybackSeconds)
   }
 
   const handleVisualCardAction = (action) => {
@@ -540,38 +721,38 @@ function App() {
           : [...current, activeVisualCard]
       ))
       setInteractionStats((current) => ({ ...current, visualSaved: current.visualSaved + 1 }))
-      logEvent('visual_saved', playbackSeconds)
+      logEvent('visual_saved', currentPlaybackSeconds)
     }
 
     if (action === 'detail') {
       addChatExchange({
         source: 'Visual detail',
-        title: `${activeVisualCard.title} • ${formatTime(playbackSeconds)}`,
+        title: `${activeVisualCard.title} • ${formatTime(currentPlaybackSeconds)}`,
         userMessage: activeVisualCard.detailPrompt,
-        assistantMessage: buildVisualExplanation(activeVisualCard, playbackSeconds),
+        assistantMessage: buildVisualExplanation(activeVisualCard, currentPlaybackSeconds),
       })
       setInteractionStats((current) => ({
         ...current,
         detailRequests: current.detailRequests + 1,
       }))
-      logEvent('visual_detail', playbackSeconds)
+      logEvent('visual_detail', currentPlaybackSeconds)
     }
 
     if (action === 'close') {
-      logEvent('visual_closed', playbackSeconds)
+      logEvent('visual_closed', currentPlaybackSeconds)
     }
 
     setActiveVisualCard(null)
-    setIsPlaying(true)
+    playerRef.current?.playVideo()
   }
 
   const skipQuiz = () => {
     setInteractionStats((current) => ({ ...current, quizSkipped: current.quizSkipped + 1 }))
-    logEvent('quiz_skipped', playbackSeconds)
+    logEvent('quiz_skipped', currentPlaybackSeconds)
     setActiveQuiz(null)
     setQuizSelection(null)
     setQuizOutcome(null)
-    setIsPlaying(true)
+    playerRef.current?.playVideo()
   }
 
   const submitQuiz = () => {
@@ -584,7 +765,8 @@ function App() {
       quizAnswered: current.quizAnswered + 1,
       quizCorrect: current.quizCorrect + (isCorrect ? 1 : 0),
     }))
-    logEvent(isCorrect ? 'quiz_correct' : 'quiz_wrong', playbackSeconds)
+    setQuizHistory((prev) => [...prev, { question: activeQuiz.question, isCorrect }])
+    logEvent(isCorrect ? 'quiz_correct' : 'quiz_wrong', currentPlaybackSeconds)
   }
 
   const explainQuizInAskPal = () => {
@@ -592,54 +774,189 @@ function App() {
 
     addChatExchange({
       source: 'Checkpoint quiz',
-      title: `Quiz follow-up • ${formatTime(playbackSeconds)}`,
+      title: `Quiz follow-up • ${formatTime(currentPlaybackSeconds)}`,
       userMessage: activeQuiz.question,
-      assistantMessage: buildQuizExplanation(activeQuiz, quizSelection, playbackSeconds),
+      assistantMessage: buildQuizExplanation(activeQuiz, quizSelection, currentPlaybackSeconds),
     })
     setInteractionStats((current) => ({
       ...current,
       detailRequests: current.detailRequests + 1,
     }))
-    logEvent('quiz_detail', playbackSeconds)
+    logEvent('quiz_detail', currentPlaybackSeconds)
     setActiveQuiz(null)
     setQuizSelection(null)
     setQuizOutcome(null)
-    setIsPlaying(true)
+    playerRef.current?.playVideo()
   }
 
   const resumeAfterQuiz = () => {
     setActiveQuiz(null)
     setQuizSelection(null)
     setQuizOutcome(null)
-    setIsPlaying(true)
+    playerRef.current?.playVideo()
   }
 
   const seekTo = (seconds) => {
     if (activeQuiz) return
-    setPlaybackSeconds(clamp(seconds, 0, VIDEO_DURATION_SECONDS))
+    const player = playerRef.current
+    if (player && typeof player.seekTo === 'function') {
+      player.seekTo(Math.max(0, seconds), true)
+      setCurrentPlaybackSeconds(Math.max(0, seconds))
+    }
     setActiveKeywordPrompt(null)
     setActiveVisualCue(null)
     if (activeVisualCard) {
       setActiveVisualCard(null)
-      setIsPlaying(true)
+      player?.playVideo()
     }
   }
 
   const stepPlayback = (deltaSeconds) => {
-    seekTo(playbackSeconds + deltaSeconds)
+    const p = playerRef.current
+    seekTo(Math.max(0, (p?.getCurrentTime?.() ?? currentPlaybackSeconds) + deltaSeconds))
   }
 
-  const handleProgressClick = (event) => {
-    if (!progressRef.current || activeQuiz) return
-    const bounds = progressRef.current.getBoundingClientRect()
-    const ratio = clamp((event.clientX - bounds.left) / bounds.width, 0, 1)
-    seekTo(ratio * VIDEO_DURATION_SECONDS)
+  // ── Custom overlay controls ──────────────────────────────────────────────
+
+  const togglePlay = useCallback(() => {
+    const p = playerRef.current
+    if (!p) return
+    isPlayingRef.current ? p.pauseVideo() : p.playVideo()
+  }, [])
+
+  const seekRelative = useCallback((delta) => {
+    const p = playerRef.current
+    if (!p) return
+    const t = Math.max(0, (p.getCurrentTime() || 0) + delta)
+    p.seekTo(t, true)
+    setCurrentPlaybackSeconds(t)
+  }, [])
+
+  const handleStageMouseMove = useCallback(() => {
+    setShowControls(true)
+    clearTimeout(controlsTimerRef.current)
+    if (isPlayingRef.current) {
+      controlsTimerRef.current = setTimeout(() => setShowControls(false), 3000)
+    }
+  }, [])
+
+  const handleStageMouseLeave = useCallback(() => {
+    clearTimeout(controlsTimerRef.current)
+    if (isPlayingRef.current) setShowControls(false)
+  }, [])
+
+  const seekToRatio = (clientX) => {
+    const rect = progressRef.current?.getBoundingClientRect()
+    if (!rect || !duration) return
+    const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width))
+    const t = ratio * duration
+    setCurrentPlaybackSeconds(t)
+    playerRef.current?.seekTo(t, true)
+  }
+
+  const handleSeekPointerDown = (e) => {
+    e.currentTarget.setPointerCapture(e.pointerId)
+    isSeekingRef.current = true
+    seekToRatio(e.clientX)
+  }
+
+  const handleSeekPointerMove = (e) => {
+    if (!isSeekingRef.current) return
+    seekToRatio(e.clientX)
+  }
+
+  const handleSeekPointerUp = () => { isSeekingRef.current = false }
+
+  const handleVolumeChange = (val) => {
+    const p = playerRef.current
+    if (!p) return
+    setVolume(val)
+    p.setVolume(val)
+    if (val === 0) { p.mute(); setIsMuted(true) }
+    else if (isMuted) { p.unMute(); setIsMuted(false) }
+  }
+
+  const toggleMute = () => {
+    const p = playerRef.current
+    if (!p) return
+    if (isMuted) {
+      p.unMute()
+      setIsMuted(false)
+      if (volume === 0) { setVolume(50); p.setVolume(50) }
+    } else {
+      p.mute()
+      setIsMuted(true)
+    }
+  }
+
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      playerStageRef.current?.requestFullscreen()
+    } else {
+      document.exitFullscreen()
+    }
+  }
+
+  const saveParticipantId = (id) => {
+    if (!sessionIdRef.current) return
+    fetch(`/api/sessions/${sessionIdRef.current}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ participantId: id }),
+    }).catch(() => {})
+  }
+
+  const resetSession = () => {
+    // Pause and rewind video
+    playerRef.current?.pauseVideo?.()
+    playerRef.current?.seekTo?.(0, true)
+
+    // Reset all AI + chat state
+    setChatMessages([])
+    setAiError(null)
+    setPrompt('')
+    setIsLoading(false)
+    setQuizHistory([])
+
+    // Reset all proactive intervention state
+    setActiveKeywordPrompt(null)
+    setActiveVisualCue(null)
+    setActiveVisualCard(null)
+    setActiveQuiz(null)
+    setQuizSelection(null)
+    setQuizOutcome(null)
+    setShownKeywordIds([])
+    setShownVisualIds([])
+    setShownQuizIds([])
+    setLastInterventionAt(-45)
+    setLastQuizAt(-Infinity)
+    setSavedVisualCards([])
+    setLaterQueue([])
+    setInteractionStats({ dismissed: 0, detailed: 0, quizCorrect: 0, quizTotal: 0 })
+
+    // Reset participant
+    setParticipantId('')
+
+    // Create a fresh session
+    fetch('/api/sessions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        videoId: 'proactive-neural-networks',
+        videoTitle: 'The Essential Main Ideas of Neural Networks',
+      }),
+    })
+      .then((r) => r.json())
+      .then((data) => { sessionIdRef.current = data.id })
+      .catch(() => {})
   }
 
   const cyclePlaybackRate = () => {
     const currentIndex = PLAYBACK_SPEEDS.indexOf(playbackRate)
     const nextIndex = currentIndex === PLAYBACK_SPEEDS.length - 1 ? 0 : currentIndex + 1
-    setPlaybackRate(PLAYBACK_SPEEDS[nextIndex])
+    const next = PLAYBACK_SPEEDS[nextIndex]
+    setPlaybackRate(next)
+    playerRef.current?.setPlaybackRate(next)
   }
 
   const visibleSavedCards = savedVisualCards.slice(-2)
@@ -658,47 +975,201 @@ function App() {
       </header>
 
       <div className="app-shell">
-        <aside className="left-rail" aria-label="Primary navigation">
-          <button className="rail-button rail-button-top" type="button" aria-label="Open navigation menu">
-            <MenuIcon />
+        <aside className="lp-left-nav">
+          <button className="lp-icon-btn" type="button" aria-label="Menu">
+            ☰
           </button>
 
-          <div className="rail-footer">
-            <button className="rail-button" type="button" aria-label="Open settings">
-              <SettingsIcon />
-            </button>
-            <button className="profile-chip" type="button" aria-label="Open profile">
-              <img src={brandIcon} alt="" />
-            </button>
+          <div className="lp-left-bottom">
+            <div className="lp-settings-anchor">
+              <button
+                ref={gearBtnRef}
+                className={`lp-icon-btn${showSettings ? ' lp-icon-btn-active' : ''}`}
+                type="button"
+                aria-label="Settings"
+                aria-expanded={showSettings}
+                onClick={() => setShowSettings((v) => !v)}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </button>
+
+              {showSettings && (
+                <div ref={settingsPanelRef} className="lp-settings-panel" role="dialog" aria-label="Settings">
+                  <p className="lp-settings-label">Player controls</p>
+                  <div className="lp-settings-seg">
+                    <button
+                      type="button"
+                      className={`lp-seg-opt${playerControlsMode === 'custom' ? ' lp-seg-active' : ''}`}
+                      onClick={() => switchPlayerControls('custom')}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                        <path d="M8 5v14l11-7z"/>
+                      </svg>
+                      Custom
+                    </button>
+                    <button
+                      type="button"
+                      className={`lp-seg-opt${playerControlsMode === 'native' ? ' lp-seg-active' : ''}`}
+                      onClick={() => switchPlayerControls('native')}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <rect x="2" y="4" width="20" height="16" rx="2" stroke="currentColor" strokeWidth="1.8"/>
+                        <path d="M8 10l2.5 2.5L8 15M12 15h4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                      YouTube
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="lp-user-avatar" aria-label="User profile">
+              P
+            </div>
           </div>
         </aside>
 
-        <main className="main-panel">
-          <section className="player-card">
-            <div className="player-titlebar">
-              <div className="player-title-copy">
-                <h1>The Essential Main Ideas of Neural Networks</h1>
-                <p>Transcript, visuals, and checkpoint logic are running in the background.</p>
-              </div>
-              <span className="state-chip">{systemState}</span>
-            </div>
+        <main className="main-panel" ref={mainColumnRef} onScroll={handleMainScroll}>
+          <section className={`player-card${isCompact ? ' player-card-compact' : ''}`}>
+            <div
+              ref={playerStageRef}
+              className={`player-stage${playerControlsMode === 'custom' && !showControls ? ' player-nocursor' : ''}${activeQuiz || activeVisualCard ? ' is-dimmed' : ''}`}
+              onMouseMove={handleStageMouseMove}
+              onMouseLeave={handleStageMouseLeave}
+            >
+              <div ref={playerHostRef} className="lp-youtube-player" />
 
-            <div className={`player-stage${activeQuiz || activeVisualCard ? ' is-dimmed' : ''}`}>
-              <img
-                className="player-frame"
-                src={VIDEO_FRAME_URL}
-                alt="Neural network lesson frame with labelled nodes and diagram annotations"
-              />
+              {/* Click capture — only in custom controls mode */}
+              {playerControlsMode === 'custom' && (
+                <div className="lp-player-click-capture" onClick={togglePlay} aria-hidden="true" />
+              )}
+
+              {/* Custom controls overlay — hidden in native mode */}
+              {playerControlsMode === 'custom' && (
+              <div className={`lp-controls${showControls ? ' lp-controls-visible' : ''}`}>
+                <div
+                  className="lp-seek-bar"
+                  ref={progressRef}
+                  onPointerDown={handleSeekPointerDown}
+                  onPointerMove={handleSeekPointerMove}
+                  onPointerUp={handleSeekPointerUp}
+                >
+                  <div className="lp-seek-track">
+                    <div className="lp-seek-fill" style={{ width: `${seekPercent}%` }} />
+                    <div className="lp-seek-thumb" style={{ left: `${seekPercent}%` }} />
+                  </div>
+                </div>
+                <div className="lp-controls-row">
+                  <div className="lp-ctrl-left">
+                    <button type="button" className="lp-ctrl-btn" onClick={togglePlay} aria-label={isPlaying ? 'Pause' : 'Play'}>
+                      {isPlaying ? (
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                          <rect x="6" y="4" width="4" height="16" rx="1" /><rect x="14" y="4" width="4" height="16" rx="1" />
+                        </svg>
+                      ) : (
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                          <path d="M5 3l14 9-14 9V3z" />
+                        </svg>
+                      )}
+                    </button>
+                    <button type="button" className="lp-ctrl-btn" onClick={() => seekRelative(-10)} aria-label="Rewind 10 seconds">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                        <path d="M11.99 5V1l-5 5 5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6h-2c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z" />
+                        <text x="12" y="17" textAnchor="middle" fontSize="6" fontWeight="bold" fill="currentColor">10</text>
+                      </svg>
+                    </button>
+                    <button type="button" className="lp-ctrl-btn" onClick={() => seekRelative(10)} aria-label="Forward 10 seconds">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                        <path d="M12.01 5V1l5 5-5 5V7c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6h2c0 4.42-3.58 8-8 8s-8-3.58-8-8 3.58-8 8-8z" />
+                        <text x="12" y="17" textAnchor="middle" fontSize="6" fontWeight="bold" fill="currentColor">10</text>
+                      </svg>
+                    </button>
+                    <div className="lp-vol-group">
+                      <button type="button" className="lp-ctrl-btn" onClick={toggleMute} aria-label={isMuted ? 'Unmute' : 'Mute'}>
+                        {(isMuted || volume === 0) ? (
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                            <path d="M16.5 12A4.5 4.5 0 0 0 14 7.97v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51A8.796 8.796 0 0 0 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06A8.99 8.99 0 0 0 17.73 18l1.73 1.73L21 18.46 5.73 3H4.27zM12 4L9.91 6.09 12 8.18V4z" />
+                          </svg>
+                        ) : volume < 50 ? (
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                            <path d="M18.5 12A4.5 4.5 0 0 0 16 7.97v8.05c1.48-.73 2.5-2.25 2.5-4.02zM5 9v6h4l5 5V4L9 9H5z" />
+                          </svg>
+                        ) : (
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                            <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3A4.5 4.5 0 0 0 14 7.97v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z" />
+                          </svg>
+                        )}
+                      </button>
+                      <div className="lp-vol-track">
+                        <input
+                          type="range" min="0" max="100"
+                          value={isMuted ? 0 : volume}
+                          onChange={(e) => handleVolumeChange(Number(e.target.value))}
+                          className="lp-vol-slider"
+                          aria-label="Volume"
+                        />
+                      </div>
+                    </div>
+                    <span className="lp-ctrl-time">{formatTime(currentPlaybackSeconds)} / {formatTime(duration)}</span>
+                  </div>
+                  <div className="lp-ctrl-right">
+                    <div className="lp-speed-group">
+                      <button
+                        type="button"
+                        className="lp-ctrl-btn lp-speed-btn"
+                        onClick={(e) => { e.stopPropagation(); setShowSpeedMenu((v) => !v) }}
+                        aria-label="Playback speed"
+                      >
+                        {playbackRate === 1 ? '1×' : `${playbackRate}×`}
+                      </button>
+                      {showSpeedMenu && (
+                        <div className="lp-speed-menu">
+                          {[0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2].map((r) => (
+                            <button
+                              key={r}
+                              type="button"
+                              className={`lp-speed-opt${playbackRate === r ? ' lp-speed-current' : ''}`}
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                playerRef.current?.setPlaybackRate(r)
+                                setPlaybackRate(r)
+                                setShowSpeedMenu(false)
+                              }}
+                            >
+                              {r === 1 ? 'Normal' : `${r}×`}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <button type="button" className="lp-ctrl-btn" onClick={toggleFullscreen} aria-label={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}>
+                      {isFullscreen ? (
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                          <path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z" />
+                        </svg>
+                      ) : (
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                          <path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z" />
+                        </svg>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </div>
+              )}
 
               {activeVisualCue ? (
                 <button
                   className="visual-cue"
                   type="button"
                   style={{
-                    left: `${activeVisualCue.region.left}%`,
-                    top: `${activeVisualCue.region.top}%`,
-                    width: `${activeVisualCue.region.width}%`,
-                    height: `${activeVisualCue.region.height}%`,
+                    left:   `${activeVisualCue.x      * 100}%`,
+                    top:    `${activeVisualCue.y      * 100}%`,
+                    width:  `${activeVisualCue.width  * 100}%`,
+                    height: `${activeVisualCue.height * 100}%`,
                   }}
                   aria-label={`Open explanation for ${activeVisualCue.title}`}
                   onClick={openVisualCard}
@@ -754,7 +1225,7 @@ function App() {
                     </button>
                   </div>
 
-                  <p>{activeVisualCard.summary}</p>
+                  <p>{activeVisualCard.shortExplanation}</p>
 
                   <div className="visual-card-actions">
                     <button className="button-secondary" type="button" onClick={() => handleVisualCardAction('save')}>
@@ -836,70 +1307,6 @@ function App() {
               ) : null}
             </div>
 
-            <div className="player-controls">
-              <button
-                ref={progressRef}
-                className="progress-track"
-                type="button"
-                aria-label="Seek through the lesson"
-                onClick={handleProgressClick}
-              >
-                <span className="progress-fill" style={{ width: `${playbackProgress}%` }} />
-              </button>
-
-              <div className="player-controls-row">
-                <div className="player-controls-left">
-                  <button
-                    className="icon-button"
-                    type="button"
-                    aria-label={isPlaying ? 'Pause lesson' : 'Play lesson'}
-                    disabled={!!activeQuiz}
-                    onClick={() => setIsPlaying((current) => !current)}
-                  >
-                    <PlayIcon isPlaying={isPlaying} />
-                  </button>
-                  <button
-                    className="icon-button"
-                    type="button"
-                    aria-label={isMuted ? 'Unmute lesson' : 'Mute lesson'}
-                    onClick={() => setIsMuted((current) => !current)}
-                  >
-                    <VolumeIcon isMuted={isMuted} />
-                  </button>
-                  <button
-                    className="icon-button"
-                    type="button"
-                    aria-label="Jump backward ten seconds"
-                    onClick={() => stepPlayback(-10)}
-                  >
-                    <RotateLeftIcon />
-                  </button>
-                  <button
-                    className="icon-button"
-                    type="button"
-                    aria-label="Jump forward ten seconds"
-                    onClick={() => stepPlayback(10)}
-                  >
-                    <RotateRightIcon />
-                  </button>
-                  <span className="timecode">
-                    {formatTime(playbackSeconds)} / {formatTime(VIDEO_DURATION_SECONDS)}
-                  </span>
-                </div>
-
-                <div className="player-controls-right">
-                  <button className="icon-button" type="button" aria-label="Captions are available in the transcript panel">
-                    <CaptionsIcon />
-                  </button>
-                  <button className="control-pill" type="button" onClick={cyclePlaybackRate}>
-                    {playbackRate}x
-                  </button>
-                  <button className="control-pill" type="button">
-                    {selectedFrequency}
-                  </button>
-                </div>
-              </div>
-            </div>
           </section>
 
           <section className="highlights-card">
@@ -963,7 +1370,7 @@ function App() {
                             source: 'Later queue',
                             title: `${item.term} • revisit`,
                             userMessage: `Revisit ${item.term}`,
-                            assistantMessage: buildKeywordExplanation(item, playbackSeconds),
+                            assistantMessage: buildKeywordExplanation(item, currentPlaybackSeconds),
                           })}
                         >
                           {item.term}
@@ -986,7 +1393,7 @@ function App() {
                             source: 'Saved visual',
                             title: `${item.title} • revisit`,
                             userMessage: `Revisit the saved visual detail for ${item.title}`,
-                            assistantMessage: buildVisualExplanation(item, playbackSeconds),
+                            assistantMessage: buildVisualExplanation(item, currentPlaybackSeconds),
                           })}
                         >
                           {item.title}
@@ -1022,96 +1429,150 @@ function App() {
           </section>
         </main>
 
-        <aside className="chat-panel">
-          <div className="chat-panel-header">
-            <h2>Ask Pal</h2>
+        <aside className="lp-chat-column">
+          {/* Title bar + provider toggle */}
+          <div className="lp-chat-title">
+            Ask Pal
+            <button
+              type="button"
+              className="lp-provider-toggle"
+              onClick={() =>
+                setAiProvider((p) => {
+                  const idx = PROVIDER_CYCLE.indexOf(p)
+                  return PROVIDER_CYCLE[(idx + 1) % PROVIDER_CYCLE.length]
+                })
+              }
+              title="Switch AI provider"
+            >
+              {PROVIDER_LABELS[aiProvider]}
+            </button>
           </div>
 
-          <div className="chat-panel-body">
-            <div className="chat-greeting">
-              <img className="chat-mascot" src={palCharacter} alt="Pal assistant character" />
-
-              <div className="greeting-bubbles">
-                <div className="chat-bubble chat-bubble-light">Hi there,</div>
-                <div className="chat-bubble chat-bubble-strong">How can I help you?</div>
-              </div>
-            </div>
-
-            <div className="chat-context-banner">
-              <span>Current concept</span>
-              <p>{getCurrentConceptSummary(playbackSeconds)}</p>
-            </div>
-
-            {chatMessages.length > 0 ? (
-              <div className="chat-history" aria-live="polite">
-                {chatMessages.map((message) => (
-                  <div
-                    key={message.id}
-                    className={`chat-history-bubble chat-history-bubble-${message.role}`}
-                  >
-                    {message.role === 'assistant' && message.title ? (
-                      <div className="chat-message-meta">
-                        <span>{message.source}</span>
-                        <strong>{message.title}</strong>
-                      </div>
-                    ) : null}
-                    <div>{message.content}</div>
+          {/* Scrollable chat body */}
+          <section className="lp-chat-hero" ref={chatMessagesRef} aria-live="polite">
+            {chatMessages.length === 0 && !isLoading ? (
+              <>
+                <div className="lp-greeting-wrap">
+                  <img src={palCharacter} alt="Pal mascot" />
+                  <div className="lp-greeting-bubbles">
+                    <p className="lp-greet-light">Hi there,</p>
+                    <p className="lp-greet-strong">How can I help you?</p>
                   </div>
-                ))}
+                </div>
+                <div className="chat-context-banner">
+                  <span>Current concept</span>
+                  <p>{getCurrentConceptSummary(currentPlaybackSeconds)}</p>
+                </div>
+              </>
+            ) : (
+              <div className="lp-snap-chat-flow">
+                {/* Proactive-specific context banner */}
+                <div className="chat-context-banner">
+                  <span>Current concept</span>
+                  <p>{getCurrentConceptSummary(currentPlaybackSeconds)}</p>
+                </div>
+
+                {chatMessages.map((msg) =>
+                  msg.role === 'user' ? (
+                    <div key={msg.id} className="lp-flow-user-end lp-flow-col">
+                      <div className="lp-flow-chip">{msg.content}</div>
+                    </div>
+                  ) : (
+                    <div key={msg.id} className="lp-flow-assistant">
+                      {msg.title && (
+                        <p className="lp-flow-meta">{msg.source} · {msg.title}</p>
+                      )}
+                      <p>{msg.content}</p>
+                    </div>
+                  )
+                )}
+
+                {isLoading && (
+                  <div className="lp-flow-assistant">
+                    <div className="lp-typing-indicator">
+                      <span /><span /><span />
+                    </div>
+                  </div>
+                )}
+
+                {aiError && (
+                  <div className="lp-flow-assistant">
+                    <p className="lp-error-msg">⚠ {aiError}</p>
+                  </div>
+                )}
               </div>
-            ) : null}
-          </div>
+            )}
+          </section>
 
-          <div className="chat-panel-footer">
-            <form className="composer" onSubmit={handleSubmit}>
-              <label className="sr-only" htmlFor="ask-pal-input">
-                Ask Pal anything
-              </label>
-              <input
-                id="ask-pal-input"
-                name="prompt"
-                type="text"
-                value={prompt}
-                onChange={(event) => setPrompt(event.target.value)}
-                placeholder="Ask me anything..."
-              />
-              <button className="send-button" type="submit" aria-label="Send prompt">
-                <SendIcon />
-              </button>
-              <button className="mic-button" type="button" aria-label="Use microphone">
-                <MicIcon />
-              </button>
-            </form>
+          {/* Footer */}
+          <section className="lp-chat-bottom">
+            <div className="lp-input-row">
+              <form className="lp-input-main" onSubmit={handleSubmit}>
+                <input
+                  value={prompt}
+                  onChange={(e) => setPrompt(e.target.value)}
+                  placeholder="Ask me anything..."
+                  aria-label="Ask Pal input"
+                  disabled={isLoading}
+                />
+                <button type="submit" aria-label="Send message" disabled={isLoading}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M22 2L11 13M22 2L15 22l-4-9-9-4 20-7z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </button>
+              </form>
+            </div>
 
-            <section className="suggestions-card" aria-label="Quick suggestions">
-              <h3>Quick suggestions</h3>
-              <div className="suggestion-list">
-                {QUICK_SUGGESTIONS.map((suggestion) => (
+            {chatMessages.length === 0 && (
+              <div className="lp-suggestions-wrap">
+                <h4>Quick suggestions</h4>
+                {QUICK_SUGGESTIONS.map((s) => (
                   <button
-                    key={suggestion}
-                    className="suggestion-chip"
+                    key={s}
                     type="button"
-                    onClick={() => sendMessage(suggestion)}
+                    className="lp-suggestion-chip"
+                    onClick={() => sendMessage(s)}
+                    disabled={isLoading}
                   >
-                    {suggestion}
+                    {s}
                   </button>
                 ))}
               </div>
-            </section>
-          </div>
+            )}
+          </section>
+
+          <p className="lp-ai-disclaimer">Pal can make mistakes. Always verify important information.</p>
         </aside>
+      </div>
+
+      {/* Researcher panel — fixed top-right, fades unless hovered */}
+      <div className="lp-researcher-panel">
+        <input
+          type="text"
+          className="lp-researcher-input"
+          placeholder="Participant ID"
+          value={participantId}
+          onChange={(e) => {
+            setParticipantId(e.target.value)
+            saveParticipantId(e.target.value)
+          }}
+        />
+        <button type="button" className="lp-researcher-reset" onClick={resetSession}>
+          Reset
+        </button>
+        <a
+          className="lp-researcher-export"
+          href="/api/export"
+          target="_blank"
+          rel="noreferrer"
+        >
+          Export CSV
+        </a>
       </div>
     </div>
   )
 }
 
-function MenuIcon() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M4 7h16M4 12h16M4 17h16" />
-    </svg>
-  )
-}
 
 function SettingsIcon() {
   return (
@@ -1204,22 +1665,6 @@ function InfoIcon() {
   )
 }
 
-function SendIcon() {
-  return (
-    <svg viewBox="0 0 21 24" aria-hidden="true">
-      <path d="M2 21 19 12 2 3l3.6 7L2 21Z" fill="currentColor" stroke="none" />
-    </svg>
-  )
-}
-
-function MicIcon() {
-  return (
-    <svg viewBox="0 0 18 24" aria-hidden="true">
-      <rect x="5.3" y="2.5" width="7.4" height="11" rx="3.7" />
-      <path d="M3.5 10.6a5.5 5.5 0 0 0 11 0M9 16.2v4.3M6 20.5h6" />
-    </svg>
-  )
-}
 
 function CloseIcon() {
   return (
