@@ -56,7 +56,7 @@
 .app-shell {
   display: grid;
   flex: 1;
-  grid-template-columns: 52px 1fr 463px;
+  grid-template-columns: 52px 1fr var(--right-col-w);
   grid-template-rows: 1fr;
   min-height: 0;
   overflow: hidden;
@@ -300,14 +300,14 @@
 
 .player-stage {
   background: #444e76;
-  height: calc((100vw - 520px) * 9 / 16);
+  height: var(--player-h);
   overflow: hidden;
   position: relative;
   transition: height 0.38s ease;
 }
 
 .player-card-compact .player-stage {
-  height: calc((100vw - 520px) * 9 / 16 * 0.58);
+  height: var(--compact-player-h);
 }
 
 .player-stage.is-dimmed::after {
@@ -1162,6 +1162,78 @@
   word-break: break-word;
 }
 
+/* Markdown-rendered assistant bubble — wrapper is the bubble */
+.lp-flow-assistant--md {
+  background: #ffffff;
+  border: 1px solid #c3c3c3;
+  border-radius: 12px 12px 12px 0;
+  color: #121a3e;
+  font-family: var(--ff-ui);
+  font-size: var(--fs-base);
+  font-weight: var(--fw-regular);
+  line-height: var(--lh-normal);
+  padding: 10px 16px;
+}
+
+.lp-flow-assistant--md p {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  margin: 0 0 6px;
+  padding: 0;
+}
+
+.lp-flow-assistant--md p:last-child {
+  margin-bottom: 0;
+}
+
+.lp-flow-assistant--md strong {
+  font-weight: var(--fw-semibold);
+}
+
+.lp-flow-assistant--md ul,
+.lp-flow-assistant--md ol {
+  margin: 4px 0 6px;
+  padding-left: 20px;
+}
+
+.lp-flow-assistant--md li {
+  margin-bottom: 4px;
+}
+
+.lp-flow-assistant--md li:last-child {
+  margin-bottom: 0;
+}
+
+.lp-flow-assistant--md h1,
+.lp-flow-assistant--md h2,
+.lp-flow-assistant--md h3 {
+  font-size: var(--fs-md);
+  font-weight: var(--fw-semibold);
+  margin: 0 0 6px;
+}
+
+.lp-flow-assistant--md code {
+  background: #f0f2f8;
+  border-radius: 4px;
+  font-family: ui-monospace, monospace;
+  font-size: var(--fs-xs);
+  padding: 2px 5px;
+}
+
+.lp-flow-assistant--md pre {
+  background: #f0f2f8;
+  border-radius: 8px;
+  margin: 6px 0;
+  overflow-x: auto;
+  padding: 10px 12px;
+}
+
+.lp-flow-assistant--md pre code {
+  background: transparent;
+  padding: 0;
+}
+
 /* Typing indicator */
 .lp-typing-indicator {
   align-items: center;
@@ -1464,6 +1536,12 @@
 /* ─── Responsive — small desktop (≤ 1280px) ──────────────────────────────── */
 
 @media (max-width: 1280px) {
+  :root {
+    --right-col-w:      0px;
+    --player-h:         min(calc((100vw - 52px) * 9 / 16), 60vh);
+    --compact-player-h: min(calc((100vw - 52px) * 9 / 16 * 0.58), 313px);
+  }
+
   .app-shell {
     grid-template-columns: 52px 1fr;
   }
@@ -1510,12 +1588,9 @@
     position: static;
   }
 
-  .player-stage {
-    height: calc((100vw - 57px) * 9 / 16);
-  }
-
-  .player-card-compact .player-stage {
-    height: calc((100vw - 57px) * 9 / 16 * 0.58);
+  :root {
+    --player-h:         min(calc(100vw * 9 / 16), 60vh);
+    --compact-player-h: min(calc(100vw * 9 / 16 * 0.58), 313px);
   }
 
   .proactive-alert,
