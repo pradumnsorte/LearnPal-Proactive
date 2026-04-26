@@ -1,12 +1,12 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import './App.css'
 import transcriptRows from './data/transcript.json'
 import glossaryData from './data/glossary.json'
 import highlightsData from './data/highlights.json'
-import questionsData from './data/questions.json'
 import brandIcon from './assets/brand-icon.svg'
 import palCharacter from './assets/pal-character.svg'
+import chatgptLogo from './assets/Chat GPT logo.png'
 
 const VIDEO_ID = 'CqOfi41LfDw'
 const PLAYLIST_ID = 'PLblh5JKOoLUIxGDQs4LFFD--41Vzf-ME1'
@@ -38,6 +38,7 @@ const QUICK_SUGGESTIONS = [
 ]
 
 const FREQUENCY_OPTIONS = ['Low', 'Medium', 'High']
+const FREQUENCY_LABELS  = { Low: 'Lower', Medium: 'Default', High: 'Higher' }
 const PLAYBACK_SPEEDS = [1, 1.25, 1.5]
 
 // confidenceThreshold: minimum highlight confidence (0–1) to surface at each frequency.
@@ -46,6 +47,26 @@ const FREQUENCY_CONFIG = {
   Low:    { confidenceThreshold: 0.9, promptGap: 60 },
   Medium: { confidenceThreshold: 0.8, promptGap: 42 },
   High:   { confidenceThreshold: 0.6, promptGap: 28 },
+}
+
+const QUIZ_FREQUENCY_CONFIG = {
+  Low: {
+    quizGap:    300,
+    minNewRows: 8,
+    qualityInstruction: `Only generate a question if the recent transcript introduces a non-obvious, foundational concept that genuinely rewards deeper understanding.
+If the content is too shallow or transitional to support a meaningful question, respond with exactly {"skip":true} and nothing else.
+When you do generate: the question must require genuine conceptual understanding. Prefer WHY and HOW over WHAT. The learner should only be able to answer it correctly if they truly grasped the idea — not just heard the words.`,
+  },
+  Medium: {
+    quizGap:    135,
+    minNewRows: 5,
+    qualityInstruction: `Generate a question that requires genuine understanding, not surface recall. Prefer "why" and "how" over "what". The learner should need to reason through the concept, not just repeat a definition.`,
+  },
+  High: {
+    quizGap:    75,
+    minNewRows: 3,
+    qualityInstruction: `Generate a useful question from the content just covered. It can test recall, understanding, or application — prioritise questions that reinforce the core idea of the current segment.`,
+  },
 }
 
 const PROACTIVE_KEYWORD_EVENTS = [
@@ -153,10 +174,7 @@ const buildAdaptiveStrategy = (stats) => {
   if (stats.visualIgnored >= 2 && stats.visualOpened === 0) confidenceThresholdOffset = 0.08
   if (stats.visualOpened >= 2) confidenceThresholdOffset = -0.08
 
-  const quizGap = stats.quizSkipped >= 2 ? 240 : 135
-  const quizEnabled = stats.quizSkipped < 4
-
-  return { keywordThreshold, promptGapBonus, confidenceThresholdOffset, quizGap, quizEnabled }
+  return { keywordThreshold, promptGapBonus, confidenceThresholdOffset }
 }
 
 const buildKeywordExplanation = (item, currentSeconds) => {
@@ -170,16 +188,71 @@ const buildVisualExplanation = (item, currentSeconds) => {
   return `${item.detailedExplanation} This matters now because the speaker is walking through ${currentConcept.toLowerCase()}.`
 }
 
-const buildQuizExplanation = (question, selectedIndex, currentSeconds) => {
-  const selectedOption = question.options[selectedIndex] ?? 'that option'
+// ─── Quiz generator ───────────────────────────────────────────────────────────
+
+const buildQuizPrompt = (currentSeconds, previousQuestions, frequency, quizHistory = []) => {
+  const watchedRows = transcriptRows.filter((r) => r.seconds <= currentSeconds)
+  const transcriptContext = watchedRows.map((r) => `[${r.time}] ${r.text}`).join('\n')
+  const { qualityInstruction } = QUIZ_FREQUENCY_CONFIG[frequency]
+
+  const previousBlock = previousQuestions.length > 0
+    ? `\n\nDo NOT repeat or closely resemble any of these already-asked questions:\n${previousQuestions.map((q, i) => `${i + 1}. ${q}`).join('\n')}`
+    : ''
+
+  const recentHistory = quizHistory.slice(-2)
+  const performanceBlock = recentHistory.length > 0
+    ? `\n\nLearner's recent quiz performance:\n${recentHistory.map((h) => `- "${h.question}" — ${h.isCorrect ? 'answered correctly' : 'answered incorrectly'}`).join('\n')}\n\nUse this to inform the next question: if there are recent incorrect answers, consider approaching that concept from a different angle to reinforce understanding. Do not repeat those exact questions.`
+    : ''
+
+  return `You are a quiz generator for an educational video app focused on knowledge gain.
+
+The learner has watched this portion of "The Essential Main Ideas of Neural Networks" by StatQuest:
+${transcriptContext}${previousBlock}${performanceBlock}
+
+${qualityInstruction}
+
+If generating a question, respond ONLY with a valid JSON object — no markdown, no explanation, nothing else:
+{
+  "question": "...",
+  "options": ["...", "...", "...", "..."],
+  "correctIndex": 0,
+  "explanation": "..."
+}
+
+Rules:
+- Exactly 4 options
+- correctIndex is 0-based
+- Explanation: 1-2 sentences clarifying why the answer is correct and what the key insight is`
+}
+
+const callQuizAPI = async (provider, prompt) => {
+  const res = await fetch('/api/quiz/generate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ provider, prompt }),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err?.error ?? `Server error ${res.status}`)
+  }
+  return res.json()
+}
+
+const generateQuizQuestion = async (provider, currentSeconds, previousQuestions = [], frequency = 'Medium', quizHistory = []) => {
+  const { minNewRows } = QUIZ_FREQUENCY_CONFIG[frequency]
+  const watchedRows = transcriptRows.filter((r) => r.seconds <= currentSeconds)
+  if (watchedRows.length < minNewRows) return { skip: true }
+  return callQuizAPI(provider, buildQuizPrompt(currentSeconds, previousQuestions, frequency, quizHistory))
+}
+
+const buildQuizExplanation = (question, selectedIndex) => {
   const correctOption = question.options[question.correctIndex]
-  const currentConcept = getCurrentConceptSummary(currentSeconds)
 
   if (selectedIndex === question.correctIndex) {
-    return `${question.explanation} This checkpoint sits right after ${currentConcept.toLowerCase()}, so your answer shows the idea has landed.`
+    return question.explanation
   }
 
-  return `The best answer is "${correctOption}". ${question.explanation} The tricky part is that "${selectedOption}" sounds plausible until you connect it back to ${currentConcept.toLowerCase()}.`
+  return `The correct answer is "${correctOption}". ${question.explanation}`
 }
 
 // Returns true when the transcript in the recent window is too dense to interrupt.
@@ -202,10 +275,10 @@ const isTranscriptDense = (currentSeconds, threshold = 3.5) => {
 const PROVIDERS = { GROQ: 'groq', AZURE: 'azure', AZURE_54: 'azure-54', OLLAMA: 'ollama' }
 const PROVIDER_CYCLE = [PROVIDERS.AZURE, PROVIDERS.AZURE_54, PROVIDERS.GROQ, PROVIDERS.OLLAMA]
 const PROVIDER_LABELS = {
-  [PROVIDERS.AZURE]:    '⬡ GPT-4o mini',
-  [PROVIDERS.AZURE_54]: '⬡ GPT-5.4 mini',
-  [PROVIDERS.GROQ]:     '⚡ Groq',
-  [PROVIDERS.OLLAMA]:   '🦙 Ollama',
+  [PROVIDERS.AZURE]:    { label: 'GPT-4o mini', logo: true },
+  [PROVIDERS.AZURE_54]: { label: 'GPT-5.4 mini', logo: true },
+  [PROVIDERS.GROQ]:     { label: '⚡ Groq', logo: false },
+  [PROVIDERS.OLLAMA]:   { label: '🦙 Ollama', logo: false },
 }
 
 const buildSystemPrompt = (currentSeconds, quizHistory = []) => {
@@ -256,15 +329,117 @@ const callAI = async (provider, messages, currentSeconds, sessionId = null, quiz
   return data.reply
 }
 
+// ─── Highlights panel ─────────────────────────────────────────────────────────
+
+function Highlights({ items = [], onSeek, onDetailClick, frequency, onFrequencyChange }) {
+  const prevCountRef = useRef(0)
+  const [newIds, setNewIds] = useState(new Set())
+  const [featuredId, setFeaturedId] = useState(null)
+
+  useEffect(() => {
+    if (items.length > prevCountRef.current) {
+      const added = items.slice(prevCountRef.current).map(h => h.id)
+      setNewIds(new Set(added))
+      const timer = setTimeout(() => setNewIds(new Set()), 1200)
+      setFeaturedId(added[added.length - 1])
+      prevCountRef.current = items.length
+      return () => clearTimeout(timer)
+    }
+    prevCountRef.current = items.length
+  }, [items.length])
+
+  const sorted = [...items].sort((a, b) => (b.arrivedAt ?? 0) - (a.arrivedAt ?? 0))
+  const featured = items.find(h => h.id === featuredId) ?? sorted[0]
+  const older = sorted.filter(h => h.id !== featured?.id)
+
+  const handleItemClick = (h) => {
+    setFeaturedId(h.id)
+    onSeek(h.arrivedAt ?? 0)
+  }
+
+  return (
+    <article className="lp-feature-card">
+      <div className="lp-feature-head">
+        <div className="lp-feature-head-left">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" stroke="#0336ff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+          <h3>Explore highlights</h3>
+        </div>
+      </div>
+      <p className="lp-tip">ⓘ The AI selects key visual moments as you watch.</p>
+      <div className="lp-freq-row">
+        <span>Frequency</span>
+        <div className="lp-freq-pills" role="list" aria-label="Highlight frequency">
+          {FREQUENCY_OPTIONS.map((opt) => (
+            <button
+              key={opt}
+              type="button"
+              className={`lp-freq-pill${frequency === opt ? ' is-active' : ''}`}
+              onClick={() => onFrequencyChange(opt)}
+            >
+              {FREQUENCY_LABELS[opt]}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {featured ? (
+        <>
+          <div
+            className={`lp-highlight-item${newIds.has(featured.id) ? ' lp-highlight-new' : ''}`}
+            onClick={() => handleItemClick(featured)}
+          >
+            <div className="lp-highlight-title">
+              <span className="lp-highlight-dot" />
+              <span>{featured.arrivedStr}</span>
+            </div>
+            <span className="lp-highlight-text">{featured.text}</span>
+            <button
+              type="button"
+              className="lp-highlight-cta"
+              onClick={(e) => { e.stopPropagation(); onDetailClick(featured) }}
+            >
+              Detail
+            </button>
+          </div>
+
+          {older.length > 0 && (
+            <>
+              <div className="lp-highlights-older-label">Earlier ({older.length})</div>
+              <ul className="lp-highlights-older-list">
+                {older.map(h => (
+                  <li
+                    key={h.id}
+                    className={`lp-highlight-compact${newIds.has(h.id) ? ' lp-highlight-new' : ''}`}
+                    onClick={() => handleItemClick(h)}
+                  >
+                    <span className="lp-highlight-compact-time">{h.arrivedStr}</span>
+                    <span className="lp-highlight-compact-text">{h.text}</span>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+        </>
+      ) : null}
+    </article>
+  )
+}
+
 function App() {
   const [selectedFrequency, setSelectedFrequency] = useState('Medium')
   const [videoHighlights, setVideoHighlights] = useState([])
-  const [highlightsPaused, setHighlightsPaused] = useState(false)
+  const [surfacedHighlights, setSurfacedHighlights] = useState([])
+  const [quizFrequency, setQuizFrequency] = useState('Medium')
+  const [videoSource, setVideoSource] = useState('youtube')
+  const [quizPaused, setQuizPaused] = useState(false)
   const [prompt, setPrompt] = useState('')
   const [chatMessages, setChatMessages] = useState([])
   const [savedVisualCards, setSavedVisualCards] = useState([])
   const [laterQueue, setLaterQueue] = useState([])
   const [currentPlaybackSeconds, setCurrentPlaybackSeconds] = useState(0)
+  const [activeTranscriptId, setActiveTranscriptId] = useState(transcriptRows[0]?.id ?? '')
   const [isPlaying, setIsPlaying] = useState(false)
   const [playbackRate, setPlaybackRate] = useState(1)
   const [isMuted, setIsMuted] = useState(false)
@@ -290,7 +465,17 @@ function App() {
   const [quizOutcome, setQuizOutcome] = useState(null)
   const [shownKeywordIds, setShownKeywordIds] = useState([])
   const [shownVisualIds, setShownVisualIds] = useState([])
-  const [shownQuizIds, setShownQuizIds] = useState([])
+  const [quizLoading, setQuizLoading] = useState(false)
+  const [askedQuestions, setAskedQuestions] = useState([])
+  const [quizLog, setQuizLog] = useState([])
+  const [quizLogIdx, setQuizLogIdx] = useState(null)
+  const [consecutiveSkips, setConsecutiveSkips] = useState(0)
+  const [consecutiveAnswered, setConsecutiveAnswered] = useState(0)
+  const [quizFreqToast, setQuizFreqToast] = useState(null)
+  const [freqDownCountdown, setFreqDownCountdown] = useState(null)
+  const freqCountdownTimerRef = useRef(null)
+  const isGeneratingQuizRef = useRef(false)
+  const lastQuizRowIdxRef = useRef(0)
   const [lastInterventionAt, setLastInterventionAt] = useState(-45)
   const [lastQuizAt, setLastQuizAt] = useState(-Infinity)
   const [interactionStats, setInteractionStats] = useState({
@@ -322,6 +507,13 @@ function App() {
   const progressRef = useRef(null)
   const sessionIdRef = useRef(null)
   const chatMessagesRef = useRef(null)
+  const featureGridRef = useRef(null)
+  const localVideoRef = useRef(null)
+  const videoSourceRef = useRef('youtube')
+  const transcriptListRef   = useRef(null)
+  const transcriptItemRefs  = useRef(new Map())
+  const userScrolledRef     = useRef(false)
+  const userScrollTimerRef  = useRef(null)
 
   const logEvent = (eventType, atSeconds) => {
     if (!sessionIdRef.current) return
@@ -331,7 +523,7 @@ function App() {
       body: JSON.stringify({
         sessionId: sessionIdRef.current,
         eventType,
-        currentPlaybackSeconds: Math.floor(atSeconds ?? 0),
+        playbackSeconds: Math.floor(atSeconds ?? 0),
       }),
     }).catch(() => {})
   }
@@ -434,6 +626,45 @@ function App() {
 
   // ── Compact player on scroll ─────────────────────────────────────────────
 
+  // ── Transcript auto-scroll ────────────────────────────────────────────────
+
+  useEffect(() => {
+    if (!transcriptRows.length) return
+    let currentId = transcriptRows[0].id
+    for (let i = 0; i < transcriptRows.length; i += 1) {
+      if (currentPlaybackSeconds >= transcriptRows[i].seconds) {
+        currentId = transcriptRows[i].id
+      } else {
+        break
+      }
+    }
+    setActiveTranscriptId(currentId)
+  }, [currentPlaybackSeconds])
+
+  useEffect(() => {
+    if (userScrolledRef.current) return
+    const list = transcriptListRef.current
+    const activeNode = transcriptItemRefs.current.get(activeTranscriptId)
+    if (!list || !activeNode) return
+    const listRect = list.getBoundingClientRect()
+    const activeRect = activeNode.getBoundingClientRect()
+    const target = list.scrollTop + (activeRect.top - listRect.top) - 8
+    list.scrollTo({ top: Math.max(target, 0), behavior: 'smooth' })
+  }, [activeTranscriptId])
+
+  const setTranscriptItemRef = (id, node) => {
+    if (node) transcriptItemRefs.current.set(id, node)
+    else transcriptItemRefs.current.delete(id)
+  }
+
+  const handleTranscriptScroll = useCallback(() => {
+    userScrolledRef.current = true
+    clearTimeout(userScrollTimerRef.current)
+    userScrollTimerRef.current = setTimeout(() => {
+      userScrolledRef.current = false
+    }, 4000)
+  }, [])
+
   const handleMainScroll = useCallback(() => {
     const el = mainColumnRef.current
     if (!el) return
@@ -466,6 +697,28 @@ function App() {
     return () => document.removeEventListener('mousedown', close)
   }, [showSettings])
 
+  // ── Video source switch ───────────────────────────────────────────────────
+
+  const switchVideoSource = (next) => {
+    if (next === videoSource) { setShowSettings(false); return }
+    const t = videoSourceRef.current === 'local'
+      ? (localVideoRef.current?.currentTime ?? 0)
+      : (playerRef.current?.getCurrentTime?.() ?? 0)
+    if (videoSourceRef.current === 'local') localVideoRef.current?.pause()
+    else playerRef.current?.pauseVideo?.()
+    if (next === 'local') {
+      if (localVideoRef.current) localVideoRef.current.currentTime = t
+    } else {
+      playerRef.current?.seekTo?.(t, true)
+    }
+    videoSourceRef.current = next
+    setVideoSource(next)
+    setShowSettings(false)
+    setShowControls(true)
+    setIsPlaying(false)
+    isPlayingRef.current = false
+  }
+
   // ── Controls mode switch ─────────────────────────────────────────────────
 
   const switchPlayerControls = (next) => {
@@ -475,7 +728,7 @@ function App() {
     setPlayerControlsMode(next)
     setShowControls(true)
     setShowSettings(false)
-    setPlayerKey((k) => k + 1)
+    if (videoSourceRef.current === 'youtube') setPlayerKey((k) => k + 1)
   }
 
   // ── Fetch video highlights from backend ──────────────────────────────────
@@ -485,6 +738,64 @@ function App() {
       .then((r) => r.json())
       .then((data) => { if (Array.isArray(data)) setVideoHighlights(data) })
       .catch(() => {})
+  }, [])
+
+  // ── Local video player events ─────────────────────────────────────────────
+
+  useEffect(() => {
+    const video = localVideoRef.current
+    if (!video) return
+    const onTimeUpdate = () => {
+      if (videoSourceRef.current !== 'local') return
+      const t = video.currentTime
+      if (Number.isFinite(t)) setCurrentPlaybackSeconds(t)
+    }
+    const onLoadedMetadata = () => {
+      if (videoSourceRef.current === 'local') setDuration(video.duration)
+    }
+    const onPlay = () => {
+      if (videoSourceRef.current !== 'local') return
+      isPlayingRef.current = true
+      setIsPlaying(true)
+    }
+    const onPause = () => {
+      if (videoSourceRef.current !== 'local') return
+      isPlayingRef.current = false
+      setIsPlaying(false)
+      setShowControls(true)
+    }
+    const onEnded = () => {
+      if (videoSourceRef.current !== 'local') return
+      isPlayingRef.current = false
+      setIsPlaying(false)
+      setShowControls(true)
+    }
+    video.addEventListener('timeupdate', onTimeUpdate)
+    video.addEventListener('loadedmetadata', onLoadedMetadata)
+    video.addEventListener('play', onPlay)
+    video.addEventListener('pause', onPause)
+    video.addEventListener('ended', onEnded)
+    return () => {
+      video.removeEventListener('timeupdate', onTimeUpdate)
+      video.removeEventListener('loadedmetadata', onLoadedMetadata)
+      video.removeEventListener('play', onPlay)
+      video.removeEventListener('pause', onPause)
+      video.removeEventListener('ended', onEnded)
+    }
+  }, [])
+
+  // ── Sync --feature-row-h to actual grid height (drives transcript sticky) ──
+
+  useLayoutEffect(() => {
+    const el = featureGridRef.current
+    if (!el) return
+    const sync = () => {
+      document.documentElement.style.setProperty('--feature-row-h', `${el.offsetHeight}px`)
+    }
+    sync()
+    const observer = new ResizeObserver(sync)
+    observer.observe(el)
+    return () => observer.disconnect()
   }, [])
 
   useEffect(() => {
@@ -512,24 +823,46 @@ function App() {
     // §3.4 — do not interrupt if the transcript is too dense at this moment
     if (isTranscriptDense(currentPlaybackSeconds)) return
 
-    const quizCandidate = adaptiveStrategy.quizEnabled
-      ? questionsData.find(
-          (question) =>
-            question.timestampSeconds <= currentPlaybackSeconds
-            && !shownQuizIds.includes(question.id)
-            && currentPlaybackSeconds - lastQuizAt >= adaptiveStrategy.quizGap,
-        )
-      : null
+    const { quizGap: effectiveQuizGap, minNewRows } = QUIZ_FREQUENCY_CONFIG[quizFrequency]
+    const currentRowIdx = getActiveTranscriptIndex(currentPlaybackSeconds)
+    const newRowsSinceLast = currentRowIdx - lastQuizRowIdxRef.current
 
-    if (quizCandidate && currentPlaybackSeconds - lastInterventionAt >= Math.max(promptGap, 38)) {
-      setShownQuizIds((current) => [...current, quizCandidate.id])
-      setActiveQuiz(quizCandidate)
-      setQuizSelection(null)
-      setQuizOutcome(null)
-      playerRef.current?.pauseVideo()
-      setLastQuizAt(currentPlaybackSeconds)
+    const quizDue = !quizPaused
+      && !isGeneratingQuizRef.current
+      && currentPlaybackSeconds - lastQuizAt >= effectiveQuizGap
+      && currentPlaybackSeconds - lastInterventionAt >= Math.max(promptGap, 38)
+      && newRowsSinceLast >= minNewRows
+
+    if (quizDue) {
+      isGeneratingQuizRef.current = true
+      setQuizLoading(true)
       setLastInterventionAt(currentPlaybackSeconds)
-      logEvent('quiz_shown', currentPlaybackSeconds)
+      logEvent('quiz_triggered', currentPlaybackSeconds)
+      generateQuizQuestion(aiProvider, currentPlaybackSeconds, askedQuestions, quizFrequency, quizHistory)
+        .then((q) => {
+          if (q.skip) {
+            // AI decided content isn't rich enough — retry after a short window, video keeps playing
+            setLastQuizAt(currentPlaybackSeconds - effectiveQuizGap + 30)
+            return
+          }
+          // Only pause now that we have a real question to show
+          playerRef.current?.pauseVideo()
+          if (videoSourceRef.current === 'local') localVideoRef.current?.pause()
+          setAskedQuestions((prev) => [...prev, q.question])
+          setLastQuizAt(currentPlaybackSeconds)
+          lastQuizRowIdxRef.current = currentRowIdx
+          setActiveQuiz(q)
+          setQuizSelection(null)
+          setQuizOutcome(null)
+        })
+        .catch(() => {
+          // On error, don't pause — just back off and retry later
+          setLastQuizAt(currentPlaybackSeconds - effectiveQuizGap + 30)
+        })
+        .finally(() => {
+          isGeneratingQuizRef.current = false
+          setQuizLoading(false)
+        })
       return
     }
 
@@ -548,9 +881,6 @@ function App() {
       return
     }
 
-    if (highlightsPaused) return
-
-    // Confidence threshold is frequency-controlled and nudged by adaptive strategy.
     const confidenceThreshold = clamp(
       frequency.confidenceThreshold + adaptiveStrategy.confidenceThresholdOffset,
       0,
@@ -565,6 +895,10 @@ function App() {
 
     if (visualCandidate) {
       setShownVisualIds((current) => [...current, visualCandidate.id])
+      setSurfacedHighlights((current) => [
+        ...current,
+        { ...visualCandidate, arrivedAt: visualCandidate.startTime, arrivedStr: formatTime(visualCandidate.startTime), text: visualCandidate.title },
+      ])
       setActiveVisualCue(visualCandidate)
       setLastInterventionAt(currentPlaybackSeconds)
       logEvent('visual_shown', currentPlaybackSeconds)
@@ -575,14 +909,17 @@ function App() {
     activeVisualCard,
     activeVisualCue,
     adaptiveStrategy,
-    highlightsPaused,
+    aiProvider,
+    askedQuestions,
+    quizHistory,
     isPlaying,
     lastInterventionAt,
     lastQuizAt,
     currentPlaybackSeconds,
     selectedFrequency,
+    quizFrequency,
+    quizPaused,
     shownKeywordIds,
-    shownQuizIds,
     shownVisualIds,
     videoHighlights,
   ])
@@ -749,13 +1086,75 @@ function App() {
     playerRef.current?.playVideo()
   }
 
-  const skipQuiz = () => {
-    setInteractionStats((current) => ({ ...current, quizSkipped: current.quizSkipped + 1 }))
-    logEvent('quiz_skipped', currentPlaybackSeconds)
+  const shiftQuizFrequency = (direction, reason) => {
+    const order = ['Low', 'Medium', 'High']
+    setQuizFrequency((current) => {
+      const idx = order.indexOf(current)
+      const next = direction === 'down' ? order[Math.max(0, idx - 1)] : order[Math.min(2, idx + 1)]
+      if (next === current) return current
+      const toastMsg = direction === 'down'
+        ? `Quiz frequency reduced to ${FREQUENCY_LABELS[next]} — ${reason}`
+        : `Quiz frequency increased to ${FREQUENCY_LABELS[next]} — ${reason}`
+      setQuizFreqToast(toastMsg)
+      setTimeout(() => setQuizFreqToast(null), 5000)
+      return next
+    })
+  }
+
+  const dismissQuiz = () => {
     setActiveQuiz(null)
     setQuizSelection(null)
     setQuizOutcome(null)
+    setFreqDownCountdown(null)
     playerRef.current?.playVideo()
+  }
+
+  const skipQuiz = () => {
+    setInteractionStats((current) => ({ ...current, quizSkipped: current.quizSkipped + 1 }))
+    setQuizLog((prev) => [...prev, {
+      id: `ql-${Date.now()}`,
+      question: activeQuiz.question,
+      options: activeQuiz.options,
+      correctIndex: activeQuiz.correctIndex,
+      explanation: activeQuiz.explanation,
+      selectedIndex: null,
+      status: 'skipped',
+      arrivedStr: formatTime(currentPlaybackSeconds),
+    }])
+    setQuizLogIdx(null)
+    setConsecutiveAnswered(0)
+    const nextSkips = consecutiveSkips + 1
+
+    if (nextSkips >= 2) {
+      const order = ['Low', 'Medium', 'High']
+      const nextFreq = order[Math.max(0, order.indexOf(quizFrequency) - 1)]
+      if (nextFreq !== quizFrequency) {
+        // Show countdown — don't dismiss yet
+        setConsecutiveSkips(0)
+        setFreqDownCountdown({ nextFreq })
+        clearTimeout(freqCountdownTimerRef.current)
+        freqCountdownTimerRef.current = setTimeout(() => {
+          setQuizFrequency(nextFreq)
+          setFreqDownCountdown(null)
+          dismissQuiz()
+        }, 5000)
+        logEvent('quiz_skipped', currentPlaybackSeconds)
+        return
+      }
+      setConsecutiveSkips(0)
+    } else {
+      setConsecutiveSkips(nextSkips)
+    }
+
+    logEvent('quiz_skipped', currentPlaybackSeconds)
+    dismissQuiz()
+  }
+
+  const stayOnFrequency = () => {
+    clearTimeout(freqCountdownTimerRef.current)
+    setFreqDownCountdown(null)
+    setConsecutiveSkips(0)
+    dismissQuiz()
   }
 
   const submitQuiz = () => {
@@ -769,6 +1168,26 @@ function App() {
       quizCorrect: current.quizCorrect + (isCorrect ? 1 : 0),
     }))
     setQuizHistory((prev) => [...prev, { question: activeQuiz.question, isCorrect }])
+    setQuizLog((prev) => [...prev, {
+      id: `ql-${Date.now()}`,
+      question: activeQuiz.question,
+      options: activeQuiz.options,
+      correctIndex: activeQuiz.correctIndex,
+      explanation: activeQuiz.explanation,
+      selectedIndex: quizSelection,
+      status: isCorrect ? 'correct' : 'wrong',
+      arrivedStr: formatTime(currentPlaybackSeconds),
+    }])
+    setQuizLogIdx(null)
+    setConsecutiveSkips(0)
+    setConsecutiveAnswered((prev) => {
+      const next = prev + 1
+      if (next >= 3) {
+        shiftQuizFrequency('up', "you've been actively answering questions")
+        return 0
+      }
+      return next
+    })
     logEvent(isCorrect ? 'quiz_correct' : 'quiz_wrong', currentPlaybackSeconds)
   }
 
@@ -789,15 +1208,9 @@ function App() {
     setActiveQuiz(null)
     setQuizSelection(null)
     setQuizOutcome(null)
-    playerRef.current?.playVideo()
   }
 
-  const resumeAfterQuiz = () => {
-    setActiveQuiz(null)
-    setQuizSelection(null)
-    setQuizOutcome(null)
-    playerRef.current?.playVideo()
-  }
+  const resumeAfterQuiz = () => dismissQuiz()
 
   const seekTo = (seconds) => {
     if (activeQuiz) return
@@ -822,17 +1235,31 @@ function App() {
   // ── Custom overlay controls ──────────────────────────────────────────────
 
   const togglePlay = useCallback(() => {
-    const p = playerRef.current
-    if (!p) return
-    isPlayingRef.current ? p.pauseVideo() : p.playVideo()
+    if (videoSourceRef.current === 'local') {
+      const v = localVideoRef.current
+      if (!v) return
+      isPlayingRef.current ? v.pause() : v.play()
+    } else {
+      const p = playerRef.current
+      if (!p) return
+      isPlayingRef.current ? p.pauseVideo() : p.playVideo()
+    }
   }, [])
 
   const seekRelative = useCallback((delta) => {
-    const p = playerRef.current
-    if (!p) return
-    const t = Math.max(0, (p.getCurrentTime() || 0) + delta)
-    p.seekTo(t, true)
-    setCurrentPlaybackSeconds(t)
+    if (videoSourceRef.current === 'local') {
+      const v = localVideoRef.current
+      if (!v) return
+      const t = Math.max(0, v.currentTime + delta)
+      v.currentTime = t
+      setCurrentPlaybackSeconds(t)
+    } else {
+      const p = playerRef.current
+      if (!p) return
+      const t = Math.max(0, (p.getCurrentTime() || 0) + delta)
+      p.seekTo(t, true)
+      setCurrentPlaybackSeconds(t)
+    }
   }, [])
 
   const handleStageMouseMove = useCallback(() => {
@@ -935,7 +1362,14 @@ function App() {
     setLastQuizAt(-Infinity)
     setSavedVisualCards([])
     setLaterQueue([])
-    setInteractionStats({ dismissed: 0, detailed: 0, quizCorrect: 0, quizTotal: 0 })
+    setInteractionStats({
+      keywordIgnored: 0, keywordOpened: 0, keywordDeferred: 0,
+      visualIgnored: 0, visualOpened: 0, visualSaved: 0,
+      quizSkipped: 0, quizAnswered: 0, quizCorrect: 0, detailRequests: 0,
+    })
+    setQuizPaused(false)
+    setSelectedFrequency('Medium')
+    setQuizFrequency('Medium')
 
     // Reset participant
     setParticipantId('')
@@ -1001,7 +1435,32 @@ function App() {
 
               {showSettings && (
                 <div ref={settingsPanelRef} className="lp-settings-panel" role="dialog" aria-label="Settings">
-                  <p className="lp-settings-label">Player controls</p>
+                  <p className="lp-settings-label">Video source</p>
+                  <div className="lp-settings-seg">
+                    <button
+                      type="button"
+                      className={`lp-seg-opt${videoSource === 'youtube' ? ' lp-seg-active' : ''}`}
+                      onClick={() => switchVideoSource('youtube')}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                        <path d="M23 7s-.3-2-1.2-2.8c-1.1-1.2-2.4-1.2-3-1.3C16.3 2.8 12 2.8 12 2.8s-4.3 0-6.8.1c-.6.1-1.9.1-3 1.3C1.3 5 1 7 1 7S.7 9.1.7 11.2v2c0 2.1.3 4.2.3 4.2s.3 2 1.2 2.8c1.1 1.2 2.6 1.1 3.3 1.2C7.3 21.6 12 21.6 12 21.6s4.3 0 6.8-.2c.6-.1 1.9-.1 3-1.3.9-.8 1.2-2.8 1.2-2.8s.3-2.1.3-4.2v-2C23.3 9.1 23 7 23 7zM9.7 15.5V8.4l8.1 3.6-8.1 3.5z"/>
+                      </svg>
+                      On Video
+                    </button>
+                    <button
+                      type="button"
+                      className={`lp-seg-opt${videoSource === 'local' ? ' lp-seg-active' : ''}`}
+                      onClick={() => switchVideoSource('local')}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                        <polyline points="7 10 12 15 17 10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                        <line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                      Downloaded
+                    </button>
+                  </div>
+                  <p className="lp-settings-label" style={{ marginTop: 10 }}>Player controls</p>
                   <div className="lp-settings-seg">
                     <button
                       type="button"
@@ -1043,7 +1502,13 @@ function App() {
               onMouseMove={handleStageMouseMove}
               onMouseLeave={handleStageMouseLeave}
             >
-              <div ref={playerHostRef} className="lp-youtube-player" />
+              <div ref={playerHostRef} className="lp-youtube-player" style={{ display: videoSource === 'local' ? 'none' : 'block' }} />
+              <video
+                ref={localVideoRef}
+                src="/neural-networks.mp4"
+                className="lp-youtube-player"
+                style={{ display: videoSource === 'local' ? 'block' : 'none', objectFit: 'contain', background: '#000' }}
+              />
 
               {/* Click capture — only in custom controls mode */}
               {playerControlsMode === 'custom' && (
@@ -1063,6 +1528,22 @@ function App() {
                   <div className="lp-seek-track">
                     <div className="lp-seek-fill" style={{ width: `${seekPercent}%` }} />
                     <div className="lp-seek-thumb" style={{ left: `${seekPercent}%` }} />
+                    {duration > 0 && surfacedHighlights.map(h => (
+                      <button
+                        key={h.id}
+                        type="button"
+                        className="lp-seek-marker"
+                        style={{ left: `${(h.arrivedAt / duration) * 100}%` }}
+                        aria-label={`Highlight: ${h.text}`}
+                        onPointerDown={e => e.stopPropagation()}
+                        onClick={e => {
+                          e.stopPropagation()
+                          setActiveVisualCard(h)
+                          playerRef.current?.pauseVideo()
+                          if (videoSourceRef.current === 'local') localVideoRef.current?.pause()
+                        }}
+                      />
+                    ))}
                   </div>
                 </div>
                 <div className="lp-controls-row">
@@ -1212,7 +1693,15 @@ function App() {
               ) : null}
 
               {activeVisualCard ? (
-                <article className="visual-detail-card">
+                <article
+                  className="visual-detail-card"
+                  style={{
+                    top:    activeVisualCard.y > 0.52 ? '16px' : 'auto',
+                    bottom: activeVisualCard.y > 0.52 ? 'auto' : '24px',
+                    left:   activeVisualCard.x > 0.52 ? '8px'  : 'auto',
+                    right:  activeVisualCard.x > 0.52 ? 'auto' : '8px',
+                  }}
+                >
                   <div className="visual-card-header">
                     <div>
                       <span className="overlay-kicker">Visual detail</span>
@@ -1239,6 +1728,15 @@ function App() {
                     </button>
                   </div>
                 </article>
+              ) : null}
+
+              {quizLoading && !activeQuiz ? (
+                <div className="quiz-overlay">
+                  <article className="quiz-card quiz-card--loading">
+                    <span className="overlay-kicker">Quick check</span>
+                    <p className="quiz-loading-text">Generating question…</p>
+                  </article>
+                </div>
               ) : null}
 
               {activeQuiz ? (
@@ -1275,7 +1773,19 @@ function App() {
                       })}
                     </div>
 
-                    {quizOutcome ? (
+                    {freqDownCountdown ? (
+                      <div className="quiz-freq-down">
+                        <p className="quiz-freq-down-msg">
+                          Switching to <strong>{FREQUENCY_LABELS[freqDownCountdown.nextFreq]}</strong> frequency…
+                        </p>
+                        <div className="quiz-freq-down-bar">
+                          <div className="quiz-freq-down-fill" />
+                        </div>
+                        <button className="button-secondary" type="button" onClick={stayOnFrequency}>
+                          Stay on {FREQUENCY_LABELS[quizFrequency]}
+                        </button>
+                      </div>
+                    ) : quizOutcome ? (
                       <>
                         <div className={`quiz-feedback${quizOutcome.isCorrect ? ' is-correct' : ' is-wrong'}`}>
                           <strong>{quizOutcome.isCorrect ? 'Correct' : 'Incorrect'}</strong>
@@ -1312,123 +1822,137 @@ function App() {
 
           </section>
 
-          <section className="highlights-card">
-            <div className="section-header">
-              <div className="section-title">
-                <BullseyeIcon />
-                <h2>Explore highlights</h2>
+          <div className="feature-cards-grid" ref={featureGridRef}>
+            <Highlights
+              items={surfacedHighlights}
+              onSeek={(t) => { seekTo(t); playerRef.current?.playVideo() }}
+              onDetailClick={(h) => {
+                setActiveVisualCard(h)
+                playerRef.current?.pauseVideo()
+                if (videoSourceRef.current === 'local') localVideoRef.current?.pause()
+              }}
+              frequency={selectedFrequency}
+              onFrequencyChange={setSelectedFrequency}
+            />
+
+            <article className="lp-feature-card">
+              <div className="lp-feature-head">
+                <div className="lp-feature-head-left">
+                  <svg width="22" height="22" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                    <circle cx="10" cy="10" r="7.2" stroke="#0336ff" strokeWidth="1.8"/>
+                    <path d="M7 10.2l2.1 2.1L13.5 8" stroke="#0336ff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                  <h3>Pop quiz</h3>
+                </div>
+                <button
+                  type="button"
+                  className={quizPaused ? 'is-cta' : ''}
+                  onClick={() => setQuizPaused((current) => !current)}
+                >
+                  {quizPaused ? 'Resume' : 'Pause'}
+                </button>
+              </div>
+              <p className="lp-tip">ⓘ The AI pauses you at key moments with a question based on what you just watched.</p>
+              {quizFreqToast && (
+                <div className="lp-quiz-freq-toast">
+                  {quizFreqToast}
+                </div>
+              )}
+              <div className="lp-freq-row">
+                <span>Frequency</span>
+                <div className="lp-freq-pills" role="list" aria-label="Quiz frequency">
+                  {FREQUENCY_OPTIONS.map((option) => (
+                    <button
+                      key={option}
+                      className={`lp-freq-pill${quizFrequency === option ? ' is-active' : ''}`}
+                      type="button"
+                      onClick={() => setQuizFrequency(option)}
+                    >
+                      {FREQUENCY_LABELS[option]}
+                    </button>
+                  ))}
+                </div>
               </div>
 
-              <button
-                className="button-secondary section-button"
-                type="button"
-                onClick={() => setHighlightsPaused((current) => !current)}
-              >
-                {highlightsPaused ? 'Resume' : 'Pause'}
-              </button>
-            </div>
+              {quizLog.length === 0 && (
+                <p className="lp-qlog-empty">Questions you've answered will appear here.</p>
+              )}
 
-            <div className="highlights-note">
-              <InfoIcon />
-              <p>
-                {highlightsPaused
-                  ? 'Visual monitoring is paused. Transcript and checkpoint logic continue running in the background.'
-                  : 'Parts of the video are highlighted as this lesson progresses. Open any highlighted region to understand diagrams, labels and any visual details which you need to clarify.'}
-              </p>
-            </div>
-
-            <div className="highlight-context">
-              <span className="highlight-context-label">Current visual anchor</span>
-              <p>{currentHighlightAnchor?.text ?? 'Watching for a diagram or region worth surfacing.'}</p>
-            </div>
-
-            <div className="frequency-row">
-              <span>Frequency</span>
-              <div className="frequency-pills" role="list" aria-label="Highlight frequency">
-                {FREQUENCY_OPTIONS.map((option) => (
-                  <button
-                    key={option}
-                    className={`frequency-pill${selectedFrequency === option ? ' is-active' : ''}`}
-                    type="button"
-                    onClick={() => setSelectedFrequency(option)}
-                  >
-                    {option}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {visibleLaterQueue.length > 0 || visibleSavedCards.length > 0 ? (
-              <div className="support-memory">
-                {visibleLaterQueue.length > 0 ? (
-                  <div className="memory-block">
-                    <span>Later queue</span>
-                    <div className="memory-chip-list">
-                      {visibleLaterQueue.map((item) => (
-                        <button
-                          key={item.id}
-                          className="memory-chip"
-                          type="button"
-                          onClick={() => addChatExchange({
-                            source: 'Later queue',
-                            title: `${item.term} • revisit`,
-                            userMessage: `Revisit ${item.term}`,
-                            assistantMessage: buildKeywordExplanation(item, currentPlaybackSeconds),
-                          })}
-                        >
-                          {item.term}
-                        </button>
-                      ))}
-                    </div>
+              {quizLog.length > 0 && (
+                <div className="lp-qlog">
+                  <div className="lp-qlog-pills">
+                    {quizLog.map((entry, i) => (
+                      <button
+                        key={entry.id}
+                        type="button"
+                        className={`lp-qlog-pill lp-qlog-pill--${entry.status}${quizLogIdx === i ? ' is-active' : ''}`}
+                        onClick={() => setQuizLogIdx(quizLogIdx === i ? null : i)}
+                        title={`Q${i + 1} · ${entry.arrivedStr} · ${entry.status}`}
+                      >
+                        {i + 1}
+                      </button>
+                    ))}
                   </div>
-                ) : null}
 
-                {visibleSavedCards.length > 0 ? (
-                  <div className="memory-block">
-                    <span>Saved cards</span>
-                    <div className="memory-chip-list">
-                      {visibleSavedCards.map((item) => (
-                        <button
-                          key={item.id}
-                          className="memory-chip"
-                          type="button"
-                          onClick={() => addChatExchange({
-                            source: 'Saved visual',
-                            title: `${item.title} • revisit`,
-                            userMessage: `Revisit the saved visual detail for ${item.title}`,
-                            assistantMessage: buildVisualExplanation(item, currentPlaybackSeconds),
-                          })}
-                        >
-                          {item.title}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                ) : null}
-              </div>
-            ) : null}
-          </section>
+                  {quizLogIdx !== null && quizLog[quizLogIdx] && (() => {
+                    const e = quizLog[quizLogIdx]
+                    return (
+                      <div className="lp-qlog-detail">
+                        <div className="lp-qlog-meta">
+                          <span className={`lp-qlog-badge lp-qlog-badge--${e.status}`}>
+                            {e.status === 'correct' ? 'Correct' : e.status === 'wrong' ? 'Incorrect' : 'Skipped'}
+                          </span>
+                          <span className="lp-qlog-ts">{e.arrivedStr}</span>
+                        </div>
+                        <p className="lp-qlog-question">{e.question}</p>
+                        {e.status !== 'skipped' && (
+                          <ul className="lp-qlog-options">
+                            {e.options.map((opt, idx) => {
+                              let cls = 'lp-qlog-option'
+                              if (idx === e.correctIndex) cls += ' is-correct'
+                              else if (idx === e.selectedIndex) cls += ' is-wrong'
+                              return (
+                                <li key={idx} className={cls}>
+                                  <span>{String.fromCharCode(65 + idx)}.</span> {opt}
+                                </li>
+                              )
+                            })}
+                          </ul>
+                        )}
+                        {e.explanation && (
+                          <p className="lp-qlog-explanation">{e.explanation}</p>
+                        )}
+                      </div>
+                    )
+                  })()}
+                </div>
+              )}
+            </article>
+          </div>
 
           <section className="transcript-card">
-            <div className="section-title section-title-simple">
+            <div className="transcript-header">
               <h2>Transcripts</h2>
+              <div className="transcript-divider" />
             </div>
 
-            <div className="transcript-divider" />
-
-            <div className="transcript-list">
-              {transcriptWindow.map((row) => (
-                <button
+            <ul
+              className="transcript-list"
+              ref={transcriptListRef}
+              onScroll={handleTranscriptScroll}
+            >
+              {transcriptRows.map((row) => (
+                <li
                   key={row.id}
-                  className={`transcript-row${row.id === transcriptRows[activeTranscriptIndex]?.id ? ' is-active' : ''}`}
-                  type="button"
+                  ref={(node) => setTranscriptItemRef(row.id, node)}
+                  className={`transcript-row${activeTranscriptId === row.id ? ' is-active' : ''}`}
                   onClick={() => seekTo(row.seconds)}
                 >
                   <p className="transcript-time">{row.time}</p>
                   <p className="transcript-copy">{row.text}</p>
-                </button>
+                </li>
               ))}
-            </div>
+            </ul>
           </section>
         </main>
 
@@ -1447,7 +1971,10 @@ function App() {
               }
               title="Switch AI provider"
             >
-              {PROVIDER_LABELS[aiProvider]}
+              {PROVIDER_LABELS[aiProvider].logo && (
+                <img src={chatgptLogo} alt="" className="lp-provider-logo" />
+              )}
+              {PROVIDER_LABELS[aiProvider].label}
             </button>
           </div>
 
@@ -1462,19 +1989,9 @@ function App() {
                     <p className="lp-greet-strong">How can I help you?</p>
                   </div>
                 </div>
-                <div className="chat-context-banner">
-                  <span>Current concept</span>
-                  <p>{getCurrentConceptSummary(currentPlaybackSeconds)}</p>
-                </div>
               </>
             ) : (
               <div className="lp-snap-chat-flow">
-                {/* Proactive-specific context banner */}
-                <div className="chat-context-banner">
-                  <span>Current concept</span>
-                  <p>{getCurrentConceptSummary(currentPlaybackSeconds)}</p>
-                </div>
-
                 {chatMessages.map((msg) =>
                   msg.role === 'user' ? (
                     <div key={msg.id} className="lp-flow-user-end lp-flow-col">
@@ -1651,24 +2168,6 @@ function CaptionsIcon() {
   )
 }
 
-function BullseyeIcon() {
-  return (
-    <svg viewBox="0 0 20 20" aria-hidden="true">
-      <circle cx="10" cy="10" r="6.8" />
-      <circle cx="10" cy="10" r="3.8" />
-      <circle cx="10" cy="10" r="1.4" fill="currentColor" stroke="none" />
-    </svg>
-  )
-}
-
-function InfoIcon() {
-  return (
-    <svg viewBox="0 0 20 20" aria-hidden="true">
-      <circle cx="10" cy="10" r="7.2" />
-      <path d="M10 8.5v4.2M10 6.2h.01" />
-    </svg>
-  )
-}
 
 
 function CloseIcon() {
