@@ -1,35 +1,12 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import './App.css'
 import transcriptRows from './data/transcript.json'
 import glossaryData from './data/glossary.json'
-import highlightsData from './data/highlights.json'
+
 import brandIcon from './assets/brand-icon.svg'
 import palCharacter from './assets/pal-character.svg'
 import chatgptLogo from './assets/Chat GPT logo.png'
-
-const VIDEO_ID = 'CqOfi41LfDw'
-const PLAYLIST_ID = 'PLblh5JKOoLUIxGDQs4LFFD--41Vzf-ME1'
-
-let ytApiPromise = null
-const loadYouTubeIframeApi = () => {
-  if (window.YT && window.YT.Player) return Promise.resolve(window.YT)
-  if (ytApiPromise) return ytApiPromise
-  ytApiPromise = new Promise((resolve) => {
-    const previousReady = window.onYouTubeIframeAPIReady
-    window.onYouTubeIframeAPIReady = () => {
-      if (typeof previousReady === 'function') previousReady()
-      resolve(window.YT)
-    }
-    const existing = document.querySelector('script[src="https://www.youtube.com/iframe_api"]')
-    if (!existing) {
-      const script = document.createElement('script')
-      script.src = 'https://www.youtube.com/iframe_api'
-      document.body.appendChild(script)
-    }
-  })
-  return ytApiPromise
-}
 
 const QUICK_SUGGESTIONS = [
   'Give me a summary in simple terms',
@@ -41,63 +18,41 @@ const FREQUENCY_OPTIONS = ['Low', 'Medium', 'High']
 const FREQUENCY_LABELS  = { Low: 'Lower', Medium: 'Default', High: 'Higher' }
 const PLAYBACK_SPEEDS = [1, 1.25, 1.5]
 
-// confidenceThreshold: minimum highlight confidence (0–1) to surface at each frequency.
-// Low  → only very high-confidence highlights; High → surface more liberally.
-const FREQUENCY_CONFIG = {
-  Low:    { confidenceThreshold: 0.9, promptGap: 60 },
-  Medium: { confidenceThreshold: 0.8, promptGap: 42 },
-  High:   { confidenceThreshold: 0.6, promptGap: 28 },
-}
+// Analyse always fires every ANALYSE_GAP_ROWS new transcript rows (matches
+// Continuous's glossary logic). Keyword popups run on this fixed cadence and
+// have no user-facing control.
+const ANALYSE_GAP_ROWS = 4
+
+// Visual nudge cooldown by Highlights frequency — a deliberate "look here"
+// intervention should be well-spaced. Time is measured in playback seconds
+// since the last nudge appeared.
+const VISUAL_NUDGE_COOLDOWN = { Low: 60, Medium: 40, High: 25 }
+
+// How long after a nudge appears (in playback seconds) before it auto-dismisses.
+// Pausing the video pauses this clock — the nudge waits for the learner.
+const VISUAL_NUDGE_LIFETIME = 5
 
 const QUIZ_FREQUENCY_CONFIG = {
   Low: {
-    quizGap:    300,
-    minNewRows: 8,
+    minNewKeywords: 5,
     qualityInstruction: `Only generate a question if the recent transcript introduces a non-obvious, foundational concept that genuinely rewards deeper understanding.
 If the content is too shallow or transitional to support a meaningful question, respond with exactly {"skip":true} and nothing else.
 When you do generate: the question must require genuine conceptual understanding. Prefer WHY and HOW over WHAT. The learner should only be able to answer it correctly if they truly grasped the idea — not just heard the words.`,
   },
   Medium: {
-    quizGap:    135,
-    minNewRows: 5,
+    minNewKeywords: 3,
     qualityInstruction: `Generate a question that requires genuine understanding, not surface recall. Prefer "why" and "how" over "what". The learner should need to reason through the concept, not just repeat a definition.`,
   },
   High: {
-    quizGap:    75,
-    minNewRows: 3,
+    minNewKeywords: 2,
     qualityInstruction: `Generate a useful question from the content just covered. It can test recall, understanding, or application — prioritise questions that reinforce the core idea of the current segment.`,
   },
 }
 
-const PROACTIVE_KEYWORD_EVENTS = [
-  {
-    id: 'pk1',
-    term: 'Back propogation',
-    timestampSeconds: 222,
-    importance: 2,
-    reason: 'This is a key term that may be important for understanding the next section.',
-    detailPrompt: 'Explain back propagation in simple terms',
-    fallbackExplanation: 'Backpropagation is the training process that sends the prediction error backward through the network so each weight and bias can be adjusted.',
-  },
-  {
-    id: 'pk2',
-    term: 'Parameters',
-    timestampSeconds: 235,
-    importance: 3,
-    reason: 'These values control how each connection changes the signal inside the network.',
-    detailPrompt: 'Explain what parameters mean in this neural network example',
-    fallbackExplanation: 'Parameters are the learnable numbers on the connections. Weights scale the signal and biases shift it before the next node uses it.',
-  },
-  {
-    id: 'pk3',
-    term: 'Activation Function',
-    timestampSeconds: 343,
-    importance: 3,
-    reason: 'This idea unlocks why the network can fit a squiggle instead of a straight line.',
-    detailPrompt: 'Explain activation functions with a simple example',
-    fallbackExplanation: 'An activation function bends the signal inside a node. That bend is what lets the whole network create non-linear shapes.',
-  },
-]
+// Hard floor between two consecutive quizzes (regardless of frequency) so that
+// a burst of keywords doesn't cause back-to-back quizzes.
+const QUIZ_MIN_SPACING_SECONDS = 30
+
 
 
 const createMessageId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
@@ -131,66 +86,15 @@ const getRecentTranscriptRows = (currentSeconds, count = 3) => {
   return transcriptRows.slice(Math.max(0, activeIndex - count + 1), activeIndex + 1)
 }
 
-const getCurrentHighlightAnchor = (currentSeconds) => {
-  let anchor = null
-  for (let index = 0; index < highlightsData.length; index += 1) {
-    if (highlightsData[index].timestampSeconds <= currentSeconds) anchor = highlightsData[index]
-    else break
-  }
-  return anchor
-}
-
-const getCurrentConceptSummary = (currentSeconds) => {
-  const highlight = getCurrentHighlightAnchor(currentSeconds)
-  if (highlight) return highlight.text
-  return getRecentTranscriptRows(currentSeconds, 1)[0]?.text ?? 'the current neural network walkthrough'
-}
-
-const findGlossaryEntry = (term) => {
-  const normalizedTerm = normalizeText(term)
-  return glossaryData.find((entry) => {
-    const normalizedEntry = normalizeText(entry.term)
-    return normalizedEntry === normalizedTerm
-      || normalizedEntry.includes(normalizedTerm)
-      || normalizedTerm.includes(normalizedEntry)
-  })
-}
-
 const buildAdaptiveStrategy = (stats) => {
-  let keywordThreshold = 2
   let promptGapBonus = 0
-
-  if (stats.keywordIgnored >= 2) {
-    keywordThreshold = 3
-    promptGapBonus += 16
-  }
-  if (stats.keywordOpened >= 2 && stats.keywordIgnored === 0) {
-    keywordThreshold = 1
-  }
-
-  // Adjust confidence threshold based on engagement with visual highlights.
-  // Positive offset → raise threshold (more selective); negative → lower it (show more).
-  let confidenceThresholdOffset = 0
-  if (stats.visualIgnored >= 2 && stats.visualOpened === 0) confidenceThresholdOffset = 0.08
-  if (stats.visualOpened >= 2) confidenceThresholdOffset = -0.08
-
-  return { keywordThreshold, promptGapBonus, confidenceThresholdOffset }
-}
-
-const buildKeywordExplanation = (item, currentSeconds) => {
-  const glossaryEntry = findGlossaryEntry(item.term)
-  const currentConcept = getCurrentConceptSummary(currentSeconds)
-  return `${glossaryEntry?.definition ?? item.fallbackExplanation} Right now the lesson is focused on ${currentConcept.toLowerCase()}.`
-}
-
-const buildVisualExplanation = (item, currentSeconds) => {
-  const currentConcept = getCurrentConceptSummary(currentSeconds)
-  return `${item.detailedExplanation} This matters now because the speaker is walking through ${currentConcept.toLowerCase()}.`
+  if (stats.keywordIgnored >= 2) promptGapBonus += 16
+  return { promptGapBonus }
 }
 
 // ─── Quiz generator ───────────────────────────────────────────────────────────
 
-const buildQuizPrompt = (currentSeconds, previousQuestions, frequency, quizHistory = []) => {
+const buildQuizPrompt = (currentSeconds, previousQuestions, frequency, quizHistory = [], coveredConcepts = []) => {
   const watchedRows = transcriptRows.filter((r) => r.seconds <= currentSeconds)
   const transcriptContext = watchedRows.map((r) => `[${r.time}] ${r.text}`).join('\n')
   const { qualityInstruction } = QUIZ_FREQUENCY_CONFIG[frequency]
@@ -204,15 +108,26 @@ const buildQuizPrompt = (currentSeconds, previousQuestions, frequency, quizHisto
     ? `\n\nLearner's recent quiz performance:\n${recentHistory.map((h) => `- "${h.question}" — ${h.isCorrect ? 'answered correctly' : 'answered incorrectly'}`).join('\n')}\n\nUse this to inform the next question: if there are recent incorrect answers, consider approaching that concept from a different angle to reinforce understanding. Do not repeat those exact questions.`
     : ''
 
+  const conceptsBlock = coveredConcepts.length > 0
+    ? `\n\nThe learner has been shown keyword popups for these concepts so far (these are the anchors of "what has actually been taught"):\n${coveredConcepts.map((c, i) => `${i + 1}. ${c}`).join('\n')}\n\nPrefer to test one of these concepts. If you must test something outside this list, it MUST have been substantively explained in the transcript above — not merely mentioned, name-dropped, or referenced as a forward concept.`
+    : `\n\nNo keyword concepts have been surfaced yet. Only generate a question if the watched transcript on its own contains a substantively explained concept that genuinely rewards understanding. Otherwise respond with {"skip":true}.`
+
   return `You are a quiz generator for an educational video app focused on knowledge gain.
 
 The learner has watched this portion of "The Essential Main Ideas of Neural Networks" by StatQuest:
-${transcriptContext}${previousBlock}${performanceBlock}
+${transcriptContext}${conceptsBlock}${previousBlock}${performanceBlock}
 
 ${qualityInstruction}
 
-If generating a question, respond ONLY with a valid JSON object — no markdown, no explanation, nothing else:
+QUALITY GATE — read carefully:
+- The question MUST test understanding of a concept that has been substantively explained in the transcript above. Skim mentions, name-drops, and forward references ("we'll cover this later") DO NOT count as explained.
+- If you cannot identify a substantively-explained concept worth testing right now, respond with EXACTLY {"skip":true} and nothing else.
+- Do NOT invent context. Do NOT test general background knowledge that wasn't covered in the transcript.
+- Better to skip than to ask a weak or vague question.
+
+If you ARE generating a question, respond ONLY with a valid JSON object — no markdown, no explanation, nothing else:
 {
+  "concept": "name of the concept being tested (must appear in or be clearly grounded in the transcript)",
   "question": "...",
   "options": ["...", "...", "...", "..."],
   "correctIndex": 0,
@@ -238,11 +153,8 @@ const callQuizAPI = async (provider, prompt) => {
   return res.json()
 }
 
-const generateQuizQuestion = async (provider, currentSeconds, previousQuestions = [], frequency = 'Medium', quizHistory = []) => {
-  const { minNewRows } = QUIZ_FREQUENCY_CONFIG[frequency]
-  const watchedRows = transcriptRows.filter((r) => r.seconds <= currentSeconds)
-  if (watchedRows.length < minNewRows) return { skip: true }
-  return callQuizAPI(provider, buildQuizPrompt(currentSeconds, previousQuestions, frequency, quizHistory))
+const generateQuizQuestion = async (provider, currentSeconds, previousQuestions = [], frequency = 'Medium', quizHistory = [], coveredConcepts = []) => {
+  return callQuizAPI(provider, buildQuizPrompt(currentSeconds, previousQuestions, frequency, quizHistory, coveredConcepts))
 }
 
 const buildQuizExplanation = (question, selectedIndex) => {
@@ -314,12 +226,22 @@ Never reference the video, transcript, or presenter as a source. Do not say "the
 Format your responses using markdown: use **bold** for key terms, bullet points or numbered lists for multi-part answers, and short paragraphs. Keep it conversational and clear — like a brilliant tutor who genuinely loves the subject.`
 }
 
-const callAI = async (provider, messages, currentSeconds, sessionId = null, quizHistory = []) => {
+const callAnalyse = async (provider, chunk, previousTerms, previousHighlights, frameBase64 = null, chatContext = '', highlightFrequency = 'Medium') => {
+  const res = await fetch('/api/analyse', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ provider, chunk, previousTerms, previousHighlights, frameBase64, chatContext, highlightFrequency }),
+  })
+  if (!res.ok) throw new Error(`Analyse error ${res.status}`)
+  return res.json()
+}
+
+const callAI = async (provider, messages, currentSeconds, sessionId = null, quizHistory = [], source = 'chat') => {
   const systemPrompt = buildSystemPrompt(currentSeconds, quizHistory)
   const res = await fetch('/api/chat', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ provider, messages, systemPrompt, sessionId }),
+    body: JSON.stringify({ provider, messages, systemPrompt, sessionId, source }),
   })
   if (!res.ok) {
     const err = await res.json().catch(() => ({}))
@@ -331,17 +253,15 @@ const callAI = async (provider, messages, currentSeconds, sessionId = null, quiz
 
 // ─── Highlights panel ─────────────────────────────────────────────────────────
 
-function Highlights({ items = [], onSeek, onDetailClick, frequency, onFrequencyChange }) {
+function Highlights({ items = [], onDetailClick, frequency, onFrequencyChange }) {
   const prevCountRef = useRef(0)
   const [newIds, setNewIds] = useState(new Set())
-  const [featuredId, setFeaturedId] = useState(null)
 
   useEffect(() => {
     if (items.length > prevCountRef.current) {
       const added = items.slice(prevCountRef.current).map(h => h.id)
       setNewIds(new Set(added))
       const timer = setTimeout(() => setNewIds(new Set()), 1200)
-      setFeaturedId(added[added.length - 1])
       prevCountRef.current = items.length
       return () => clearTimeout(timer)
     }
@@ -349,13 +269,6 @@ function Highlights({ items = [], onSeek, onDetailClick, frequency, onFrequencyC
   }, [items.length])
 
   const sorted = [...items].sort((a, b) => (b.arrivedAt ?? 0) - (a.arrivedAt ?? 0))
-  const featured = items.find(h => h.id === featuredId) ?? sorted[0]
-  const older = sorted.filter(h => h.id !== featured?.id)
-
-  const handleItemClick = (h) => {
-    setFeaturedId(h.id)
-    onSeek(h.arrivedAt ?? 0)
-  }
 
   return (
     <article className="lp-feature-card">
@@ -367,7 +280,7 @@ function Highlights({ items = [], onSeek, onDetailClick, frequency, onFrequencyC
           <h3>Explore highlights</h3>
         </div>
       </div>
-      <p className="lp-tip">ⓘ The AI selects key visual moments as you watch.</p>
+      <p className="lp-tip">ⓘ The AI nudges your attention to specific on-screen moments worth examining.</p>
       <div className="lp-freq-row">
         <span>Frequency</span>
         <div className="lp-freq-pills" role="list" aria-label="Highlight frequency">
@@ -384,55 +297,34 @@ function Highlights({ items = [], onSeek, onDetailClick, frequency, onFrequencyC
         </div>
       </div>
 
-      {featured ? (
-        <>
-          <div
-            className={`lp-highlight-item${newIds.has(featured.id) ? ' lp-highlight-new' : ''}`}
-            onClick={() => handleItemClick(featured)}
-          >
-            <div className="lp-highlight-title">
-              <span className="lp-highlight-dot" />
-              <span>{featured.arrivedStr}</span>
-            </div>
-            <span className="lp-highlight-text">{featured.text}</span>
-            <button
-              type="button"
-              className="lp-highlight-cta"
-              onClick={(e) => { e.stopPropagation(); onDetailClick(featured) }}
-            >
-              Detail
-            </button>
-          </div>
-
-          {older.length > 0 && (
-            <>
-              <div className="lp-highlights-older-label">Earlier ({older.length})</div>
-              <ul className="lp-highlights-older-list">
-                {older.map(h => (
-                  <li
-                    key={h.id}
-                    className={`lp-highlight-compact${newIds.has(h.id) ? ' lp-highlight-new' : ''}`}
-                    onClick={() => handleItemClick(h)}
-                  >
-                    <span className="lp-highlight-compact-time">{h.arrivedStr}</span>
-                    <span className="lp-highlight-compact-text">{h.text}</span>
-                  </li>
-                ))}
-              </ul>
-            </>
-          )}
-        </>
-      ) : null}
+      {items.length === 0 ? (
+        <p className="lp-highlights-empty">Nothing yet — keep watching and the AI will highlight interesting moments on screen for you.</p>
+      ) : (
+        <ul className="lp-nudge-log">
+          {sorted.map((h) => (
+            <li key={h.id}>
+              <button
+                type="button"
+                className={`lp-nudge-entry${newIds.has(h.id) ? ' lp-nudge-new' : ''}`}
+                onClick={() => onDetailClick(h)}
+              >
+                <span className="lp-nudge-time">{h.arrivedStr}</span>
+                <span className="lp-nudge-label">{h.text}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
     </article>
   )
 }
 
 function App() {
   const [selectedFrequency, setSelectedFrequency] = useState('Medium')
-  const [videoHighlights, setVideoHighlights] = useState([])
   const [surfacedHighlights, setSurfacedHighlights] = useState([])
+  const [liveKeywords, setLiveKeywords] = useState([])
+  const [frameRegions, setFrameRegions] = useState([])
   const [quizFrequency, setQuizFrequency] = useState('Medium')
-  const [videoSource, setVideoSource] = useState('youtube')
   const [quizPaused, setQuizPaused] = useState(false)
   const [prompt, setPrompt] = useState('')
   const [chatMessages, setChatMessages] = useState([])
@@ -449,22 +341,17 @@ function App() {
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [showSpeedMenu, setShowSpeedMenu] = useState(false)
   const [isCompact, setIsCompact] = useState(false)
-  const [playerControlsMode, setPlayerControlsMode] = useState('custom')
-  const [playerKey, setPlayerKey] = useState(0)
-  const [showSettings, setShowSettings] = useState(false)
-  const [aiProvider, setAiProvider] = useState(PROVIDERS.AZURE)
+  const [aiProvider, setAiProvider] = useState(PROVIDERS.AZURE_54)
   const [isLoading, setIsLoading] = useState(false)
   const [aiError, setAiError] = useState(null)
   const [quizHistory, setQuizHistory] = useState([])
   const [participantId, setParticipantId] = useState('')
   const [activeKeywordPrompt, setActiveKeywordPrompt] = useState(null)
-  const [activeVisualCue, setActiveVisualCue] = useState(null)
   const [activeVisualCard, setActiveVisualCard] = useState(null)
   const [activeQuiz, setActiveQuiz] = useState(null)
   const [quizSelection, setQuizSelection] = useState(null)
   const [quizOutcome, setQuizOutcome] = useState(null)
   const [shownKeywordIds, setShownKeywordIds] = useState([])
-  const [shownVisualIds, setShownVisualIds] = useState([])
   const [quizLoading, setQuizLoading] = useState(false)
   const [askedQuestions, setAskedQuestions] = useState([])
   const [quizLog, setQuizLog] = useState([])
@@ -475,14 +362,30 @@ function App() {
   const [freqDownCountdown, setFreqDownCountdown] = useState(null)
   const freqCountdownTimerRef = useRef(null)
   const isGeneratingQuizRef = useRef(false)
-  const lastQuizRowIdxRef = useRef(0)
+  // Counts new glossary terms surfaced since the last quiz fired. Quiz triggers
+  // when this crosses the frequency-specific threshold — purely content-driven,
+  // not time-driven.
+  const newKeywordsSinceQuizRef = useRef(0)
+  const lastAnalysedRowRef = useRef(0)
+  const isAnalysingRef = useRef(false)
+  const canvasRef = useRef(null)
+  const liveKeywordsRef = useRef([])
+  const surfacedHighlightsRef = useRef([])
+  const shownKeywordTermsRef = useRef([])
+  const frameRegionsRef = useRef([])
+  const lastVisualNudgeAtRef = useRef(-Infinity)
+  const activeKeywordPromptRef = useRef(null)
+  const activeQuizRef = useRef(null)
+  const activeVisualCardRef = useRef(null)
+  const pausedRegionRef = useRef(null)
   const [lastInterventionAt, setLastInterventionAt] = useState(-45)
-  const [lastQuizAt, setLastQuizAt] = useState(-Infinity)
+  // Initialize to 0 so the first quiz can't fire until a full quizGap has elapsed —
+  // prevents quizzes during the intro before any concept has been introduced.
+  const [lastQuizAt, setLastQuizAt] = useState(0)
   const [interactionStats, setInteractionStats] = useState({
     keywordIgnored: 0,
     keywordOpened: 0,
     keywordDeferred: 0,
-    visualIgnored: 0,
     visualOpened: 0,
     visualSaved: 0,
     quizSkipped: 0,
@@ -491,130 +394,48 @@ function App() {
     detailRequests: 0,
   })
 
-  const playerHostRef = useRef(null)
-  const playerRef = useRef(null)
-  const playbackPollRef = useRef(null)
   const playerStageRef = useRef(null)
   const mainColumnRef = useRef(null)
   const isPlayingRef = useRef(false)
   const isCompactRef = useRef(false)
   const controlsTimerRef = useRef(null)
   const isSeekingRef = useRef(false)
-  const savedTimeRef = useRef(0)
-  const playerControlsModeRef = useRef('custom')
-  const settingsPanelRef = useRef(null)
-  const gearBtnRef = useRef(null)
   const progressRef = useRef(null)
   const sessionIdRef = useRef(null)
   const chatMessagesRef = useRef(null)
   const featureGridRef = useRef(null)
   const localVideoRef = useRef(null)
-  const videoSourceRef = useRef('youtube')
-  const transcriptListRef   = useRef(null)
-  const transcriptItemRefs  = useRef(new Map())
-  const userScrolledRef     = useRef(false)
-  const userScrollTimerRef  = useRef(null)
+  const transcriptListRef  = useRef(null)
+  const transcriptItemRefs = useRef(new Map())
+  const userScrolledRef    = useRef(false)
+  const userScrollTimerRef = useRef(null)
 
-  const logEvent = (eventType, atSeconds) => {
+  const logEvent = (eventType, atSeconds, meta = null) => {
     if (!sessionIdRef.current) return
-    fetch('/api/events', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        sessionId: sessionIdRef.current,
-        eventType,
-        playbackSeconds: Math.floor(atSeconds ?? 0),
-      }),
-    }).catch(() => {})
+    const body = JSON.stringify({
+      sessionId: sessionIdRef.current,
+      eventType,
+      playbackSeconds: Math.floor(atSeconds ?? 0),
+      meta,
+    })
+    if (eventType === 'session_end') {
+      navigator.sendBeacon('/api/events', new Blob([body], { type: 'application/json' }))
+    } else {
+      fetch('/api/events', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body,
+      }).catch(() => {})
+    }
   }
 
-  const activeTranscriptIndex = getActiveTranscriptIndex(currentPlaybackSeconds)
-  const transcriptWindow = transcriptRows.slice(
-    Math.max(0, activeTranscriptIndex - 1),
-    Math.min(transcriptRows.length, activeTranscriptIndex + 5),
-  )
-  const currentHighlightAnchor = getCurrentHighlightAnchor(currentPlaybackSeconds)
-  const adaptiveStrategy = buildAdaptiveStrategy(interactionStats)
+  const adaptiveStrategy = useMemo(() => buildAdaptiveStrategy(interactionStats), [interactionStats])
   const seekPercent = duration > 0 ? (currentPlaybackSeconds / duration) * 100 : 0
 
 
   // ── YouTube player setup ─────────────────────────────────────────────────
 
-  useEffect(() => {
-    let disposed = false
-
-    const startPlaybackPolling = () => {
-      window.clearInterval(playbackPollRef.current)
-      playbackPollRef.current = window.setInterval(() => {
-        const player = playerRef.current
-        if (!player || typeof player.getCurrentTime !== 'function') return
-        const current = player.getCurrentTime()
-        if (Number.isFinite(current)) setCurrentPlaybackSeconds(current)
-      }, 500)
-    }
-
-    const initPlayer = async () => {
-      await loadYouTubeIframeApi()
-      if (disposed || !playerHostRef.current || !window.YT?.Player) return
-
-      playerRef.current = new window.YT.Player(playerHostRef.current, {
-        host: 'https://www.youtube-nocookie.com',
-        videoId: VIDEO_ID,
-        playerVars: {
-          controls: playerControlsModeRef.current === 'native' ? 1 : 0,
-          rel: 0,
-          modestbranding: 1,
-          iv_load_policy: 3,
-          playsinline: 1,
-          list: PLAYLIST_ID,
-          autoplay: 0,
-        },
-        events: {
-          onReady: (e) => {
-            startPlaybackPolling()
-            if (savedTimeRef.current > 0) {
-              e.target.seekTo(savedTimeRef.current, true)
-              savedTimeRef.current = 0
-            }
-            const d = e.target.getDuration()
-            if (d > 0) setDuration(d)
-            setVolume(e.target.getVolume())
-            setIsMuted(e.target.isMuted())
-          },
-          onStateChange: (e) => {
-            const playing = e.data === 1
-            const ended  = e.data === 0
-            isPlayingRef.current = playing
-            setIsPlaying(playing)
-            const d = e.target.getDuration()
-            if (d > 0) setDuration(d)
-            if (playerControlsModeRef.current === 'custom') {
-              if (playing) {
-                clearTimeout(controlsTimerRef.current)
-                controlsTimerRef.current = setTimeout(() => setShowControls(false), 3000)
-              } else {
-                clearTimeout(controlsTimerRef.current)
-                setShowControls(true)
-              }
-            }
-            void ended
-          },
-        },
-      })
-    }
-
-    initPlayer()
-
-    return () => {
-      disposed = true
-      window.clearInterval(playbackPollRef.current)
-      clearTimeout(controlsTimerRef.current)
-      if (playerRef.current && typeof playerRef.current.destroy === 'function') {
-        playerRef.current.destroy()
-      }
-      playerRef.current = null
-    }
-  }, [playerKey])
+  useEffect(() => () => clearTimeout(controlsTimerRef.current), [])
 
   // ── Fullscreen sync ─────────────────────────────────────────────────────
 
@@ -622,6 +443,25 @@ function App() {
     const onFsChange = () => setIsFullscreen(!!document.fullscreenElement)
     document.addEventListener('fullscreenchange', onFsChange)
     return () => document.removeEventListener('fullscreenchange', onFsChange)
+  }, [])
+
+  // Log session_end with final position on unload
+  useEffect(() => {
+    const handleUnload = () => {
+      logEvent('session_end', localVideoRef.current?.currentTime ?? 0)
+    }
+    window.addEventListener('beforeunload', handleUnload)
+    return () => window.removeEventListener('beforeunload', handleUnload)
+  }, [])
+
+  // Tab focus / blur — engagement signal
+  useEffect(() => {
+    const onVisibility = () => {
+      const pos = localVideoRef.current?.currentTime ?? 0
+      logEvent(document.hidden ? 'tab_blurred' : 'tab_focused', pos)
+    }
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => document.removeEventListener('visibilitychange', onVisibility)
   }, [])
 
   // ── Compact player on scroll ─────────────────────────────────────────────
@@ -641,8 +481,12 @@ function App() {
     setActiveTranscriptId(currentId)
   }, [currentPlaybackSeconds])
 
+  // Effect 2: scroll the list to the active line (fires only when active line changes)
+  // Uses list.scrollTo() — NOT scrollIntoView() — so only the transcript list scrolls,
+  // never the main column.
   useEffect(() => {
     if (userScrolledRef.current) return
+    if (isSeekingRef.current) return
     const list = transcriptListRef.current
     const activeNode = transcriptItemRefs.current.get(activeTranscriptId)
     if (!list || !activeNode) return
@@ -684,90 +528,37 @@ function App() {
     if (el) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' })
   }, [chatMessages, isLoading])
 
-  // ── Settings panel (close on outside click) ──────────────────────────────
-
-  useEffect(() => {
-    if (!showSettings) return
-    const close = (e) => {
-      if (settingsPanelRef.current?.contains(e.target)) return
-      if (gearBtnRef.current?.contains(e.target)) return
-      setShowSettings(false)
-    }
-    document.addEventListener('mousedown', close)
-    return () => document.removeEventListener('mousedown', close)
-  }, [showSettings])
-
-  // ── Video source switch ───────────────────────────────────────────────────
-
-  const switchVideoSource = (next) => {
-    if (next === videoSource) { setShowSettings(false); return }
-    const t = videoSourceRef.current === 'local'
-      ? (localVideoRef.current?.currentTime ?? 0)
-      : (playerRef.current?.getCurrentTime?.() ?? 0)
-    if (videoSourceRef.current === 'local') localVideoRef.current?.pause()
-    else playerRef.current?.pauseVideo?.()
-    if (next === 'local') {
-      if (localVideoRef.current) localVideoRef.current.currentTime = t
-    } else {
-      playerRef.current?.seekTo?.(t, true)
-    }
-    videoSourceRef.current = next
-    setVideoSource(next)
-    setShowSettings(false)
-    setShowControls(true)
-    setIsPlaying(false)
-    isPlayingRef.current = false
-  }
-
-  // ── Controls mode switch ─────────────────────────────────────────────────
-
-  const switchPlayerControls = (next) => {
-    if (next === playerControlsMode) { setShowSettings(false); return }
-    savedTimeRef.current = playerRef.current?.getCurrentTime?.() ?? 0
-    playerControlsModeRef.current = next
-    setPlayerControlsMode(next)
-    setShowControls(true)
-    setShowSettings(false)
-    if (videoSourceRef.current === 'youtube') setPlayerKey((k) => k + 1)
-  }
-
-  // ── Fetch video highlights from backend ──────────────────────────────────
-
-  useEffect(() => {
-    fetch('/api/videos/neural-networks/highlights')
-      .then((r) => r.json())
-      .then((data) => { if (Array.isArray(data)) setVideoHighlights(data) })
-      .catch(() => {})
-  }, [])
-
   // ── Local video player events ─────────────────────────────────────────────
 
   useEffect(() => {
     const video = localVideoRef.current
     if (!video) return
     const onTimeUpdate = () => {
-      if (videoSourceRef.current !== 'local') return
+      if (isSeekingRef.current) return
       const t = video.currentTime
       if (Number.isFinite(t)) setCurrentPlaybackSeconds(t)
     }
-    const onLoadedMetadata = () => {
-      if (videoSourceRef.current === 'local') setDuration(video.duration)
-    }
+    const onLoadedMetadata = () => setDuration(video.duration)
     const onPlay = () => {
-      if (videoSourceRef.current !== 'local') return
       isPlayingRef.current = true
       setIsPlaying(true)
+      if (pausedRegionRef.current === null && frameRegionsRef.current[0]?.pinned) {
+        setFrameRegions([])
+        frameRegionsRef.current = []
+      }
+      clearTimeout(controlsTimerRef.current)
+      controlsTimerRef.current = setTimeout(() => setShowControls(false), 3000)
     }
     const onPause = () => {
-      if (videoSourceRef.current !== 'local') return
       isPlayingRef.current = false
       setIsPlaying(false)
+      clearTimeout(controlsTimerRef.current)
       setShowControls(true)
     }
     const onEnded = () => {
-      if (videoSourceRef.current !== 'local') return
       isPlayingRef.current = false
       setIsPlaying(false)
+      clearTimeout(controlsTimerRef.current)
       setShowControls(true)
     }
     video.addEventListener('timeupdate', onTimeUpdate)
@@ -785,17 +576,24 @@ function App() {
   }, [])
 
   // ── Sync --feature-row-h to actual grid height (drives transcript sticky) ──
+  // Debounced so rapid Highlights panel growth doesn't cause the transcript
+  // header sticky threshold to shift on every animation frame.
 
   useLayoutEffect(() => {
     const el = featureGridRef.current
     if (!el) return
+    let timer = null
     const sync = () => {
-      document.documentElement.style.setProperty('--feature-row-h', `${el.offsetHeight}px`)
+      clearTimeout(timer)
+      timer = setTimeout(() => {
+        document.documentElement.style.setProperty('--feature-row-h', `${el.offsetHeight}px`)
+      }, 120)
     }
-    sync()
+    // Sync immediately once (no debounce on mount)
+    document.documentElement.style.setProperty('--feature-row-h', `${el.offsetHeight}px`)
     const observer = new ResizeObserver(sync)
     observer.observe(el)
-    return () => observer.disconnect()
+    return () => { observer.disconnect(); clearTimeout(timer) }
   }, [])
 
   useEffect(() => {
@@ -805,6 +603,7 @@ function App() {
       body: JSON.stringify({
         videoId: 'proactive-neural-networks',
         videoTitle: 'The Essential Main Ideas of Neural Networks',
+        paradigm: 'proactive',
       }),
     })
       .then((r) => r.json())
@@ -814,50 +613,50 @@ function App() {
 
   useEffect(() => {
     if (!isPlaying) return
-    if (activeKeywordPrompt || activeVisualCue || activeVisualCard || activeQuiz) return
+    if (activeKeywordPrompt || activeVisualCard || activeQuiz) return
 
-    const frequency = FREQUENCY_CONFIG[selectedFrequency]
-    const promptGap = frequency.promptGap + adaptiveStrategy.promptGapBonus
+    const basePromptGap = selectedFrequency === 'Low' ? 60 : selectedFrequency === 'High' ? 28 : 42
+    const promptGap = basePromptGap + adaptiveStrategy.promptGapBonus
     if (currentPlaybackSeconds - lastInterventionAt < promptGap) return
 
     // §3.4 — do not interrupt if the transcript is too dense at this moment
     if (isTranscriptDense(currentPlaybackSeconds)) return
 
-    const { quizGap: effectiveQuizGap, minNewRows } = QUIZ_FREQUENCY_CONFIG[quizFrequency]
-    const currentRowIdx = getActiveTranscriptIndex(currentPlaybackSeconds)
-    const newRowsSinceLast = currentRowIdx - lastQuizRowIdxRef.current
+    const { minNewKeywords } = QUIZ_FREQUENCY_CONFIG[quizFrequency]
 
     const quizDue = !quizPaused
       && !isGeneratingQuizRef.current
-      && currentPlaybackSeconds - lastQuizAt >= effectiveQuizGap
+      && newKeywordsSinceQuizRef.current >= minNewKeywords
+      && currentPlaybackSeconds - lastQuizAt >= QUIZ_MIN_SPACING_SECONDS
       && currentPlaybackSeconds - lastInterventionAt >= Math.max(promptGap, 38)
-      && newRowsSinceLast >= minNewRows
 
     if (quizDue) {
       isGeneratingQuizRef.current = true
       setQuizLoading(true)
       setLastInterventionAt(currentPlaybackSeconds)
       logEvent('quiz_triggered', currentPlaybackSeconds)
-      generateQuizQuestion(aiProvider, currentPlaybackSeconds, askedQuestions, quizFrequency, quizHistory)
+      generateQuizQuestion(aiProvider, currentPlaybackSeconds, askedQuestions, quizFrequency, quizHistory, shownKeywordTermsRef.current)
         .then((q) => {
           if (q.skip) {
-            // AI decided content isn't rich enough — retry after a short window, video keeps playing
-            setLastQuizAt(currentPlaybackSeconds - effectiveQuizGap + 30)
+            // AI judged content not rich enough. Decay the counter (don't fully
+            // reset) so we'll retry once another keyword or two arrive.
+            newKeywordsSinceQuizRef.current = Math.max(0, newKeywordsSinceQuizRef.current - 1)
+            setLastQuizAt(currentPlaybackSeconds)
             return
           }
-          // Only pause now that we have a real question to show
-          playerRef.current?.pauseVideo()
-          if (videoSourceRef.current === 'local') localVideoRef.current?.pause()
+          // Real question — pause and show.
+          localVideoRef.current?.pause()
           setAskedQuestions((prev) => [...prev, q.question])
           setLastQuizAt(currentPlaybackSeconds)
-          lastQuizRowIdxRef.current = currentRowIdx
+          newKeywordsSinceQuizRef.current = 0
           setActiveQuiz(q)
           setQuizSelection(null)
           setQuizOutcome(null)
         })
         .catch(() => {
-          // On error, don't pause — just back off and retry later
-          setLastQuizAt(currentPlaybackSeconds - effectiveQuizGap + 30)
+          // On error, back off slightly without resetting the counter.
+          setLastQuizAt(currentPlaybackSeconds)
+          newKeywordsSinceQuizRef.current = Math.max(0, newKeywordsSinceQuizRef.current - 1)
         })
         .finally(() => {
           isGeneratingQuizRef.current = false
@@ -866,48 +665,26 @@ function App() {
       return
     }
 
-    const keywordCandidate = PROACTIVE_KEYWORD_EVENTS.find(
+    const keywordCandidate = liveKeywords.find(
       (item) =>
-        item.timestampSeconds <= currentPlaybackSeconds
-        && !shownKeywordIds.includes(item.id)
-        && item.importance >= adaptiveStrategy.keywordThreshold,
+        item.arrivedAt <= currentPlaybackSeconds
+        && !shownKeywordIds.includes(item.id),
     )
 
     if (keywordCandidate) {
       setShownKeywordIds((current) => [...current, keywordCandidate.id])
+      shownKeywordTermsRef.current = [...shownKeywordTermsRef.current, keywordCandidate.term]
+      // Quiz counter advances only when a keyword is actually shown — insulates
+      // the quiz trigger from over-eager analyse output that never surfaces.
+      newKeywordsSinceQuizRef.current += 1
       setActiveKeywordPrompt(keywordCandidate)
       setLastInterventionAt(currentPlaybackSeconds)
       logEvent('keyword_shown', currentPlaybackSeconds)
-      return
-    }
-
-    const confidenceThreshold = clamp(
-      frequency.confidenceThreshold + adaptiveStrategy.confidenceThresholdOffset,
-      0,
-      1,
-    )
-    const visualCandidate = videoHighlights.find(
-      (item) =>
-        item.startTime <= currentPlaybackSeconds
-        && !shownVisualIds.includes(item.id)
-        && item.confidence >= confidenceThreshold,
-    )
-
-    if (visualCandidate) {
-      setShownVisualIds((current) => [...current, visualCandidate.id])
-      setSurfacedHighlights((current) => [
-        ...current,
-        { ...visualCandidate, arrivedAt: visualCandidate.startTime, arrivedStr: formatTime(visualCandidate.startTime), text: visualCandidate.title },
-      ])
-      setActiveVisualCue(visualCandidate)
-      setLastInterventionAt(currentPlaybackSeconds)
-      logEvent('visual_shown', currentPlaybackSeconds)
     }
   }, [
     activeKeywordPrompt,
     activeQuiz,
     activeVisualCard,
-    activeVisualCue,
     adaptiveStrategy,
     aiProvider,
     askedQuestions,
@@ -920,8 +697,7 @@ function App() {
     quizFrequency,
     quizPaused,
     shownKeywordIds,
-    shownVisualIds,
-    videoHighlights,
+    liveKeywords,
   ])
 
   useEffect(() => {
@@ -936,17 +712,119 @@ function App() {
     return () => window.clearTimeout(timer)
   }, [activeKeywordPrompt])
 
+  // Keep refs in sync with state so the analyse callback (which runs after a
+  // network round-trip) can check current intervention state without staleness.
+  useEffect(() => { activeKeywordPromptRef.current = activeKeywordPrompt }, [activeKeywordPrompt])
+  useEffect(() => { activeQuizRef.current           = activeQuiz           }, [activeQuiz])
+  useEffect(() => { activeVisualCardRef.current     = activeVisualCard     }, [activeVisualCard])
+
+  // Visual-nudge auto-dismiss: clear when playback has moved more than
+  // VISUAL_NUDGE_LIFETIME seconds past the nudge's arrivedAt. Gated on
+  // currentPlaybackSeconds so pausing pauses the clock — the nudge waits
+  // for the learner.
   useEffect(() => {
-    if (!activeVisualCue) return undefined
+    if (frameRegions.length === 0) return
+    const region = frameRegions[0]
+    if (region.pinned) return
+    if (currentPlaybackSeconds > region.arrivedAt + VISUAL_NUDGE_LIFETIME) {
+      setFrameRegions([])
+      frameRegionsRef.current = []
+    }
+  }, [currentPlaybackSeconds, frameRegions])
 
-    const timer = window.setTimeout(() => {
-      setInteractionStats((current) => ({ ...current, visualIgnored: current.visualIgnored + 1 }))
-      setActiveVisualCue(null)
-      logEvent('visual_ignored', currentPlaybackSeconds)
-    }, 6500)
+  // ── AI analyse trigger — generates keyword popups and visual nudges ──
 
-    return () => window.clearTimeout(timer)
-  }, [activeVisualCue])
+  useEffect(() => {
+    if (!isPlayingRef.current) return
+    const coveredRows = transcriptRows.filter((r) => r.seconds <= currentPlaybackSeconds)
+    if (coveredRows.length < 4) return
+    const lastIdx = coveredRows.length - 1
+    if (lastIdx - lastAnalysedRowRef.current < ANALYSE_GAP_ROWS) return
+    if (isAnalysingRef.current) return
+
+    const chunkStart = lastAnalysedRowRef.current + 1
+    const chunk = coveredRows.slice(chunkStart, chunkStart + 12)
+    if (chunk.length === 0) return
+
+    let frameBase64 = null
+    if (isPlayingRef.current) {
+      const video = localVideoRef.current
+      const canvas = canvasRef.current
+      if (video && canvas && video.readyState >= 2) {
+        canvas.width = 480
+        canvas.height = 270
+        canvas.getContext('2d').drawImage(video, 0, 0, 480, 270)
+        frameBase64 = canvas.toDataURL('image/jpeg', 0.65).replace('data:image/jpeg;base64,', '')
+      }
+    }
+
+    const chatContext = chatMessages
+      .filter((m) => m.role === 'user')
+      .slice(-3)
+      .map((m) => m.content)
+      .join(' | ')
+
+    isAnalysingRef.current = true
+    const arrivedAt = currentPlaybackSeconds
+    const arrivedStr = formatTime(arrivedAt)
+    const prevTerms = shownKeywordTermsRef.current
+    const prevHighlights = surfacedHighlightsRef.current.map((h) => h.text)
+
+    callAnalyse(aiProvider, chunk, prevTerms, prevHighlights, frameBase64, chatContext, selectedFrequency)
+      .then((result) => {
+        const hasContent = result.glossaryTerms?.length || result.regions?.length
+        const advance = hasContent ? chunk.length : Math.max(2, Math.floor(chunk.length / 2))
+        lastAnalysedRowRef.current = chunkStart + advance - 1
+        const stamp = { arrivedAt, arrivedStr }
+
+        if (result.glossaryTerms?.length) {
+          const newKeywords = result.glossaryTerms.map((g, i) => ({
+            ...g, id: `kw-${Date.now()}-${i}`, ...stamp,
+          }))
+          liveKeywordsRef.current = [...liveKeywordsRef.current, ...newKeywords]
+          setLiveKeywords((prev) => [...prev, ...newKeywords])
+        }
+
+        // Visual nudge — gated by cooldown and intervention guards. The AI may
+        // return a region, but we only surface it when nothing else is competing
+        // for the learner's attention and the per-frequency cooldown has passed.
+        if (result.regions?.length) {
+          const cooldown = VISUAL_NUDGE_COOLDOWN[selectedFrequency] ?? VISUAL_NUDGE_COOLDOWN.Medium
+          const interventionActive = activeKeywordPromptRef.current
+            || activeQuizRef.current
+            || activeVisualCardRef.current
+            || frameRegionsRef.current.length > 0
+          const cooledDown = arrivedAt - lastVisualNudgeAtRef.current >= cooldown
+
+          if (!interventionActive && cooledDown) {
+            const reg = result.regions[0]
+            const nudge = { ...reg, id: `fr-${Date.now()}`, ...stamp }
+
+            // Panel log entry — short label only, no description.
+            const panelEntry = {
+              id: `fh-${nudge.id}`,
+              text: nudge.label,
+              arrivedAt: nudge.arrivedAt,
+              arrivedStr: nudge.arrivedStr,
+              regions: [nudge],
+            }
+            surfacedHighlightsRef.current = [...surfacedHighlightsRef.current, panelEntry]
+            setSurfacedHighlights((prev) => [...prev, panelEntry])
+
+            setFrameRegions([nudge])
+            frameRegionsRef.current = [nudge]
+            lastVisualNudgeAtRef.current = arrivedAt
+          }
+        }
+      })
+      .catch((err) => {
+        // On failure, advance by only 2 rows so we retry soon rather than skipping a big window
+        lastAnalysedRowRef.current = chunkStart + 1
+        console.error('[analyse] failed — check that the server is running and /api/analyse is registered:', err.message)
+      })
+      .finally(() => { isAnalysingRef.current = false })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPlaybackSeconds, aiProvider])
 
   const addChatExchange = ({ source, title, userMessage, assistantMessage }) => {
     setChatMessages((current) => [
@@ -966,7 +844,7 @@ function App() {
     ])
   }
 
-  const sendMessage = async (nextPrompt = prompt.trim()) => {
+  const sendMessage = async (nextPrompt = prompt.trim(), source = 'chat') => {
     if (!nextPrompt || isLoading) return
 
     const userMsg = {
@@ -979,9 +857,11 @@ function App() {
     setAiError(null)
     setIsLoading(true)
 
+    logEvent('chat_message_sent', currentPlaybackSeconds, { char_count: nextPrompt.length, source })
+
     try {
       const history = [...chatMessages, userMsg].map(({ role, content }) => ({ role, content }))
-      const reply = await callAI(aiProvider, history, currentPlaybackSeconds, sessionIdRef.current, quizHistory)
+      const reply = await callAI(aiProvider, history, currentPlaybackSeconds, sessionIdRef.current, quizHistory, source)
       setChatMessages((prev) => [
         ...prev,
         {
@@ -1008,12 +888,8 @@ function App() {
     if (!activeKeywordPrompt) return
 
     if (action === 'detail') {
-      addChatExchange({
-        source: 'Keyword prompt',
-        title: `${activeKeywordPrompt.term} • ${formatTime(currentPlaybackSeconds)}`,
-        userMessage: activeKeywordPrompt.detailPrompt,
-        assistantMessage: buildKeywordExplanation(activeKeywordPrompt, currentPlaybackSeconds),
-      })
+      localVideoRef.current?.pause()
+      sendMessage(`A term just appeared while I was watching: "${activeKeywordPrompt.term}" — briefly defined as "${activeKeywordPrompt.definition}". Can you explain this in depth with intuitive analogies, real-world examples, and how it fits into neural networks?`, 'keyword_detail')
       setInteractionStats((current) => ({
         ...current,
         keywordOpened: current.keywordOpened + 1,
@@ -1042,12 +918,20 @@ function App() {
     setActiveKeywordPrompt(null)
   }
 
-  const openVisualCard = () => {
-    if (!activeVisualCue) return
+  const openRegionCard = (region) => {
     setInteractionStats((current) => ({ ...current, visualOpened: current.visualOpened + 1 }))
-    setActiveVisualCard(activeVisualCue)
-    setActiveVisualCue(null)
-    playerRef.current?.pauseVideo()
+    setActiveVisualCard({
+      id: region.id,
+      x: region.x / 100,
+      y: region.y / 100,
+      title: region.label,
+      shortExplanation: region.description,
+      detailPrompt: `Explain "${region.label}" in this neural network diagram: ${region.description}`,
+    })
+    pausedRegionRef.current = region
+    setFrameRegions([])
+    frameRegionsRef.current = []
+    localVideoRef.current?.pause()
     logEvent('visual_opened', currentPlaybackSeconds)
   }
 
@@ -1065,12 +949,7 @@ function App() {
     }
 
     if (action === 'detail') {
-      addChatExchange({
-        source: 'Visual detail',
-        title: `${activeVisualCard.title} • ${formatTime(currentPlaybackSeconds)}`,
-        userMessage: activeVisualCard.detailPrompt,
-        assistantMessage: buildVisualExplanation(activeVisualCard, currentPlaybackSeconds),
-      })
+      sendMessage(`The AI highlighted something on screen: "${activeVisualCard.title}" — ${activeVisualCard.shortExplanation}. Can you explain this in depth with intuitive analogies, real-world examples, and its role in neural networks?`, 'visual_detail')
       setInteractionStats((current) => ({
         ...current,
         detailRequests: current.detailRequests + 1,
@@ -1079,11 +958,20 @@ function App() {
     }
 
     if (action === 'close') {
+      if (pausedRegionRef.current) {
+        const pinned = { ...pausedRegionRef.current, pinned: true }
+        setFrameRegions([pinned])
+        frameRegionsRef.current = [pinned]
+      }
+      pausedRegionRef.current = null
       logEvent('visual_closed', currentPlaybackSeconds)
     }
 
+    if (action === 'detail' || action === 'save') {
+      pausedRegionRef.current = null
+    }
+
     setActiveVisualCard(null)
-    playerRef.current?.playVideo()
   }
 
   const shiftQuizFrequency = (direction, reason) => {
@@ -1106,7 +994,7 @@ function App() {
     setQuizSelection(null)
     setQuizOutcome(null)
     setFreqDownCountdown(null)
-    playerRef.current?.playVideo()
+    localVideoRef.current?.play()
   }
 
   const skipQuiz = () => {
@@ -1214,52 +1102,38 @@ function App() {
 
   const seekTo = (seconds) => {
     if (activeQuiz) return
-    const player = playerRef.current
-    if (player && typeof player.seekTo === 'function') {
-      player.seekTo(Math.max(0, seconds), true)
-      setCurrentPlaybackSeconds(Math.max(0, seconds))
-    }
+    const clamped = Math.max(0, seconds)
+    if (localVideoRef.current) localVideoRef.current.currentTime = clamped
+    setCurrentPlaybackSeconds(clamped)
     setActiveKeywordPrompt(null)
-    setActiveVisualCue(null)
+    setFrameRegions([])
     if (activeVisualCard) {
       setActiveVisualCard(null)
-      player?.playVideo()
+      localVideoRef.current?.play()
     }
   }
 
   const stepPlayback = (deltaSeconds) => {
-    const p = playerRef.current
-    seekTo(Math.max(0, (p?.getCurrentTime?.() ?? currentPlaybackSeconds) + deltaSeconds))
+    const current = localVideoRef.current?.currentTime ?? currentPlaybackSeconds
+    seekTo(Math.max(0, current + deltaSeconds))
   }
 
   // ── Custom overlay controls ──────────────────────────────────────────────
 
   const togglePlay = useCallback(() => {
-    if (videoSourceRef.current === 'local') {
-      const v = localVideoRef.current
-      if (!v) return
-      isPlayingRef.current ? v.pause() : v.play()
-    } else {
-      const p = playerRef.current
-      if (!p) return
-      isPlayingRef.current ? p.pauseVideo() : p.playVideo()
-    }
+    const v = localVideoRef.current
+    if (!v) return
+    isPlayingRef.current ? v.pause() : v.play()
   }, [])
 
   const seekRelative = useCallback((delta) => {
-    if (videoSourceRef.current === 'local') {
-      const v = localVideoRef.current
-      if (!v) return
-      const t = Math.max(0, v.currentTime + delta)
-      v.currentTime = t
-      setCurrentPlaybackSeconds(t)
-    } else {
-      const p = playerRef.current
-      if (!p) return
-      const t = Math.max(0, (p.getCurrentTime() || 0) + delta)
-      p.seekTo(t, true)
-      setCurrentPlaybackSeconds(t)
-    }
+    const v = localVideoRef.current
+    if (!v) return
+    const from = v.currentTime
+    const t = Math.max(0, from + delta)
+    v.currentTime = t
+    setCurrentPlaybackSeconds(t)
+    logEvent('video_seek', from, { to_seconds: t, delta, source: 'button' })
   }, [])
 
   const handleStageMouseMove = useCallback(() => {
@@ -1278,10 +1152,13 @@ function App() {
   const seekToRatio = (clientX) => {
     const rect = progressRef.current?.getBoundingClientRect()
     if (!rect || !duration) return
-    const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width))
-    const t = ratio * duration
+    const t = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width)) * duration
+    const from = localVideoRef.current?.currentTime ?? 0
+    if (localVideoRef.current) localVideoRef.current.currentTime = t
     setCurrentPlaybackSeconds(t)
-    playerRef.current?.seekTo(t, true)
+    if (Math.abs(t - from) > 1.5) {
+      logEvent('video_seek', from, { to_seconds: t, delta: t - from, source: 'scrubber' })
+    }
   }
 
   const handleSeekPointerDown = (e) => {
@@ -1298,25 +1175,21 @@ function App() {
   const handleSeekPointerUp = () => { isSeekingRef.current = false }
 
   const handleVolumeChange = (val) => {
-    const p = playerRef.current
-    if (!p) return
     setVolume(val)
-    p.setVolume(val)
-    if (val === 0) { p.mute(); setIsMuted(true) }
-    else if (isMuted) { p.unMute(); setIsMuted(false) }
+    const v = localVideoRef.current
+    if (!v) return
+    v.volume = val / 100
+    v.muted = val === 0
+    if (val === 0) setIsMuted(true)
+    else if (isMuted) setIsMuted(false)
   }
 
   const toggleMute = () => {
-    const p = playerRef.current
-    if (!p) return
-    if (isMuted) {
-      p.unMute()
-      setIsMuted(false)
-      if (volume === 0) { setVolume(50); p.setVolume(50) }
-    } else {
-      p.mute()
-      setIsMuted(true)
-    }
+    const v = localVideoRef.current
+    if (!v) return
+    v.muted = !isMuted
+    setIsMuted(!isMuted)
+    if (isMuted && volume === 0) { setVolume(50); v.volume = 0.5 }
   }
 
   const toggleFullscreen = () => {
@@ -1338,8 +1211,9 @@ function App() {
 
   const resetSession = () => {
     // Pause and rewind video
-    playerRef.current?.pauseVideo?.()
-    playerRef.current?.seekTo?.(0, true)
+    const v = localVideoRef.current
+    if (v) { v.pause(); v.currentTime = 0 }
+    setCurrentPlaybackSeconds(0)
 
     // Reset all AI + chat state
     setChatMessages([])
@@ -1350,21 +1224,28 @@ function App() {
 
     // Reset all proactive intervention state
     setActiveKeywordPrompt(null)
-    setActiveVisualCue(null)
     setActiveVisualCard(null)
     setActiveQuiz(null)
     setQuizSelection(null)
     setQuizOutcome(null)
     setShownKeywordIds([])
-    setShownVisualIds([])
-    setShownQuizIds([])
+    setLiveKeywords([])
+    setFrameRegions([])
+    setSurfacedHighlights([])
+    liveKeywordsRef.current = []
+    surfacedHighlightsRef.current = []
+    lastAnalysedRowRef.current = 0
+    newKeywordsSinceQuizRef.current = 0
+    lastVisualNudgeAtRef.current = -Infinity
+    frameRegionsRef.current = []
+    setFrameRegions([])
     setLastInterventionAt(-45)
-    setLastQuizAt(-Infinity)
+    setLastQuizAt(0)
     setSavedVisualCards([])
     setLaterQueue([])
     setInteractionStats({
       keywordIgnored: 0, keywordOpened: 0, keywordDeferred: 0,
-      visualIgnored: 0, visualOpened: 0, visualSaved: 0,
+      visualOpened: 0, visualSaved: 0,
       quizSkipped: 0, quizAnswered: 0, quizCorrect: 0, detailRequests: 0,
     })
     setQuizPaused(false)
@@ -1381,6 +1262,7 @@ function App() {
       body: JSON.stringify({
         videoId: 'proactive-neural-networks',
         videoTitle: 'The Essential Main Ideas of Neural Networks',
+        paradigm: 'proactive',
       }),
     })
       .then((r) => r.json())
@@ -1388,12 +1270,15 @@ function App() {
       .catch(() => {})
   }
 
+  const applyPlaybackRate = (rate) => {
+    setPlaybackRate(rate)
+    if (localVideoRef.current) localVideoRef.current.playbackRate = rate
+  }
+
   const cyclePlaybackRate = () => {
     const currentIndex = PLAYBACK_SPEEDS.indexOf(playbackRate)
-    const nextIndex = currentIndex === PLAYBACK_SPEEDS.length - 1 ? 0 : currentIndex + 1
-    const next = PLAYBACK_SPEEDS[nextIndex]
-    setPlaybackRate(next)
-    playerRef.current?.setPlaybackRate(next)
+    const next = PLAYBACK_SPEEDS[currentIndex === PLAYBACK_SPEEDS.length - 1 ? 0 : currentIndex + 1]
+    applyPlaybackRate(next)
   }
 
   const visibleSavedCards = savedVisualCards.slice(-2)
@@ -1418,76 +1303,6 @@ function App() {
           </button>
 
           <div className="lp-left-bottom">
-            <div className="lp-settings-anchor">
-              <button
-                ref={gearBtnRef}
-                className={`lp-icon-btn${showSettings ? ' lp-icon-btn-active' : ''}`}
-                type="button"
-                aria-label="Settings"
-                aria-expanded={showSettings}
-                onClick={() => setShowSettings((v) => !v)}
-              >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                  <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-                  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </button>
-
-              {showSettings && (
-                <div ref={settingsPanelRef} className="lp-settings-panel" role="dialog" aria-label="Settings">
-                  <p className="lp-settings-label">Video source</p>
-                  <div className="lp-settings-seg">
-                    <button
-                      type="button"
-                      className={`lp-seg-opt${videoSource === 'youtube' ? ' lp-seg-active' : ''}`}
-                      onClick={() => switchVideoSource('youtube')}
-                    >
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                        <path d="M23 7s-.3-2-1.2-2.8c-1.1-1.2-2.4-1.2-3-1.3C16.3 2.8 12 2.8 12 2.8s-4.3 0-6.8.1c-.6.1-1.9.1-3 1.3C1.3 5 1 7 1 7S.7 9.1.7 11.2v2c0 2.1.3 4.2.3 4.2s.3 2 1.2 2.8c1.1 1.2 2.6 1.1 3.3 1.2C7.3 21.6 12 21.6 12 21.6s4.3 0 6.8-.2c.6-.1 1.9-.1 3-1.3.9-.8 1.2-2.8 1.2-2.8s.3-2.1.3-4.2v-2C23.3 9.1 23 7 23 7zM9.7 15.5V8.4l8.1 3.6-8.1 3.5z"/>
-                      </svg>
-                      On Video
-                    </button>
-                    <button
-                      type="button"
-                      className={`lp-seg-opt${videoSource === 'local' ? ' lp-seg-active' : ''}`}
-                      onClick={() => switchVideoSource('local')}
-                    >
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-                        <polyline points="7 10 12 15 17 10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-                        <line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-                      </svg>
-                      Downloaded
-                    </button>
-                  </div>
-                  <p className="lp-settings-label" style={{ marginTop: 10 }}>Player controls</p>
-                  <div className="lp-settings-seg">
-                    <button
-                      type="button"
-                      className={`lp-seg-opt${playerControlsMode === 'custom' ? ' lp-seg-active' : ''}`}
-                      onClick={() => switchPlayerControls('custom')}
-                    >
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                        <path d="M8 5v14l11-7z"/>
-                      </svg>
-                      Custom
-                    </button>
-                    <button
-                      type="button"
-                      className={`lp-seg-opt${playerControlsMode === 'native' ? ' lp-seg-active' : ''}`}
-                      onClick={() => switchPlayerControls('native')}
-                    >
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                        <rect x="2" y="4" width="20" height="16" rx="2" stroke="currentColor" strokeWidth="1.8"/>
-                        <path d="M8 10l2.5 2.5L8 15M12 15h4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-                      </svg>
-                      YouTube
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-
             <div className="lp-user-avatar" aria-label="User profile">
               P
             </div>
@@ -1498,25 +1313,22 @@ function App() {
           <section className={`player-card${isCompact ? ' player-card-compact' : ''}`}>
             <div
               ref={playerStageRef}
-              className={`player-stage${playerControlsMode === 'custom' && !showControls ? ' player-nocursor' : ''}${activeQuiz || activeVisualCard ? ' is-dimmed' : ''}`}
+              className={`player-stage${!showControls ? ' player-nocursor' : ''}${activeQuiz || activeVisualCard ? ' is-dimmed' : ''}`}
               onMouseMove={handleStageMouseMove}
               onMouseLeave={handleStageMouseLeave}
             >
-              <div ref={playerHostRef} className="lp-youtube-player" style={{ display: videoSource === 'local' ? 'none' : 'block' }} />
               <video
                 ref={localVideoRef}
                 src="/neural-networks.mp4"
                 className="lp-youtube-player"
-                style={{ display: videoSource === 'local' ? 'block' : 'none', objectFit: 'contain', background: '#000' }}
+                style={{ objectFit: 'contain', background: '#000' }}
               />
 
-              {/* Click capture — only in custom controls mode */}
-              {playerControlsMode === 'custom' && (
-                <div className="lp-player-click-capture" onClick={togglePlay} aria-hidden="true" />
-              )}
+              {/* Hidden canvas for frame capture */}
+              <canvas ref={canvasRef} style={{ display: 'none' }} aria-hidden="true" />
 
-              {/* Custom controls overlay — hidden in native mode */}
-              {playerControlsMode === 'custom' && (
+              <div className="lp-player-click-capture" onClick={togglePlay} aria-hidden="true" />
+
               <div className={`lp-controls${showControls ? ' lp-controls-visible' : ''}`}>
                 <div
                   className="lp-seek-bar"
@@ -1539,8 +1351,7 @@ function App() {
                         onClick={e => {
                           e.stopPropagation()
                           setActiveVisualCard(h)
-                          playerRef.current?.pauseVideo()
-                          if (videoSourceRef.current === 'local') localVideoRef.current?.pause()
+                          localVideoRef.current?.pause()
                         }}
                       />
                     ))}
@@ -1618,8 +1429,7 @@ function App() {
                               className={`lp-speed-opt${playbackRate === r ? ' lp-speed-current' : ''}`}
                               onClick={(e) => {
                                 e.stopPropagation()
-                                playerRef.current?.setPlaybackRate(r)
-                                setPlaybackRate(r)
+                                applyPlaybackRate(r)
                                 setShowSpeedMenu(false)
                               }}
                             >
@@ -1643,24 +1453,22 @@ function App() {
                   </div>
                 </div>
               </div>
-              )}
 
-              {activeVisualCue ? (
+              {frameRegions.map((region) => (
                 <button
-                  className="visual-cue"
+                  key={region.id}
+                  className="lp-frame-dot"
                   type="button"
                   style={{
-                    left:   `${activeVisualCue.x      * 100}%`,
-                    top:    `${activeVisualCue.y      * 100}%`,
-                    width:  `${activeVisualCue.width  * 100}%`,
-                    height: `${activeVisualCue.height * 100}%`,
+                    left: `${region.x + region.width  / 2}%`,
+                    top:  `${region.y + region.height / 2}%`,
                   }}
-                  aria-label={`Open explanation for ${activeVisualCue.title}`}
-                  onClick={openVisualCard}
+                  aria-label={`Visual nudge: ${region.label}`}
+                  onClick={() => openRegionCard(region)}
                 >
-                  <span />
+                  <span className="lp-frame-dot-core" />
                 </button>
-              ) : null}
+              ))}
 
               {activeKeywordPrompt ? (
                 <article className="proactive-alert">
@@ -1679,7 +1487,7 @@ function App() {
                     </button>
                   </div>
 
-                  <p>{activeKeywordPrompt.reason}</p>
+                  <p>{activeKeywordPrompt.definition}</p>
 
                   <div className="proactive-alert-actions">
                     <button className="button-primary" type="button" onClick={() => handleKeywordResponse('detail')}>
@@ -1742,79 +1550,85 @@ function App() {
               {activeQuiz ? (
                 <div className="quiz-overlay">
                   <article className="quiz-card">
-                    <div className="quiz-card-header">
-                      <span className="overlay-kicker">Quick check</span>
-                      <h2>{activeQuiz.question}</h2>
-                    </div>
-
-                    <div className="quiz-options">
-                      {activeQuiz.options.map((option, index) => {
-                        let className = 'quiz-option'
-
-                        if (quizOutcome) {
-                          if (index === activeQuiz.correctIndex) className += ' is-correct'
-                          else if (index === quizSelection) className += ' is-wrong'
-                        } else if (index === quizSelection) {
-                          className += ' is-selected'
-                        }
-
-                        return (
-                          <button
-                            key={option}
-                            className={className}
-                            type="button"
-                            disabled={!!quizOutcome}
-                            onClick={() => setQuizSelection(index)}
-                          >
-                            <span>{String.fromCharCode(65 + index)}</span>
-                            {option}
-                          </button>
-                        )
-                      })}
-                    </div>
-
-                    {freqDownCountdown ? (
-                      <div className="quiz-freq-down">
-                        <p className="quiz-freq-down-msg">
-                          Switching to <strong>{FREQUENCY_LABELS[freqDownCountdown.nextFreq]}</strong> frequency…
-                        </p>
-                        <div className="quiz-freq-down-bar">
-                          <div className="quiz-freq-down-fill" />
-                        </div>
-                        <button className="button-secondary" type="button" onClick={stayOnFrequency}>
-                          Stay on {FREQUENCY_LABELS[quizFrequency]}
-                        </button>
+                    <div className="quiz-card-body">
+                      <div className="quiz-card-header">
+                        <span className="overlay-kicker">Quick check</span>
+                        <h2>{activeQuiz.question}</h2>
                       </div>
-                    ) : quizOutcome ? (
-                      <>
+
+                      <div className="quiz-options">
+                        {activeQuiz.options.map((option, index) => {
+                          let className = 'quiz-option'
+                          if (quizOutcome) {
+                            if (index === activeQuiz.correctIndex) className += ' is-correct'
+                            else if (index === quizSelection) className += ' is-wrong'
+                          } else if (index === quizSelection) {
+                            className += ' is-selected'
+                          }
+                          return (
+                            <button
+                              key={option}
+                              className={className}
+                              type="button"
+                              disabled={!!quizOutcome}
+                              onClick={() => setQuizSelection(index)}
+                            >
+                              <span>{String.fromCharCode(65 + index)}</span>
+                              {option}
+                            </button>
+                          )
+                        })}
+                      </div>
+
+                      {quizOutcome && (
                         <div className={`quiz-feedback${quizOutcome.isCorrect ? ' is-correct' : ' is-wrong'}`}>
                           <strong>{quizOutcome.isCorrect ? 'Correct' : 'Incorrect'}</strong>
                           <p>{activeQuiz.explanation}</p>
                         </div>
-                        <div className="quiz-actions">
+                      )}
+
+                      {freqDownCountdown && (
+                        <div className="quiz-freq-down">
+                          <p className="quiz-freq-down-msg">
+                            Switching to <strong>{FREQUENCY_LABELS[freqDownCountdown.nextFreq]}</strong> frequency…
+                          </p>
+                          <div className="quiz-freq-down-bar">
+                            <div className="quiz-freq-down-fill" />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="quiz-actions">
+                      {freqDownCountdown ? (
+                        <button className="button-secondary" type="button" onClick={stayOnFrequency}>
+                          Stay on {FREQUENCY_LABELS[quizFrequency]}
+                        </button>
+                      ) : quizOutcome ? (
+                        <>
                           <button className="button-secondary" type="button" onClick={resumeAfterQuiz}>
                             Resume
                           </button>
                           <button className="button-primary" type="button" onClick={explainQuizInAskPal}>
                             Explain in Ask Pal
                           </button>
-                        </div>
-                      </>
-                    ) : (
-                      <div className="quiz-actions">
-                        <button className="button-secondary" type="button" onClick={skipQuiz}>
-                          Skip
-                        </button>
-                        <button
-                          className="button-primary"
-                          type="button"
-                          disabled={quizSelection === null}
-                          onClick={submitQuiz}
-                        >
-                          Submit
-                        </button>
-                      </div>
-                    )}
+                        </>
+                      ) : (
+                        <>
+                          <button className="button-secondary" type="button" onClick={skipQuiz}>
+                            Skip
+                          </button>
+                          <button
+                            className="button-primary"
+                            type="button"
+                            disabled={quizSelection === null}
+                            onClick={submitQuiz}
+                          >
+                            Submit
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </article>
                 </div>
               ) : null}
@@ -1825,11 +1639,8 @@ function App() {
           <div className="feature-cards-grid" ref={featureGridRef}>
             <Highlights
               items={surfacedHighlights}
-              onSeek={(t) => { seekTo(t); playerRef.current?.playVideo() }}
               onDetailClick={(h) => {
-                setActiveVisualCard(h)
-                playerRef.current?.pauseVideo()
-                if (videoSourceRef.current === 'local') localVideoRef.current?.pause()
+                if (h.regions?.[0]) openRegionCard(h.regions[0])
               }}
               frequency={selectedFrequency}
               onFrequencyChange={setSelectedFrequency}
@@ -2053,7 +1864,10 @@ function App() {
                     key={s}
                     type="button"
                     className="lp-suggestion-chip"
-                    onClick={() => sendMessage(s)}
+                    onClick={() => {
+                      logEvent('chat_suggestion_clicked', currentPlaybackSeconds, { suggestion: s })
+                      sendMessage(s, 'chat_suggestion')
+                    }}
                     disabled={isLoading}
                   >
                     {s}
@@ -2084,11 +1898,11 @@ function App() {
         </button>
         <a
           className="lp-researcher-export"
-          href="/api/export"
+          href="/api/export/all"
           target="_blank"
           rel="noreferrer"
         >
-          Export CSV
+          Export Excel
         </a>
       </div>
     </div>
