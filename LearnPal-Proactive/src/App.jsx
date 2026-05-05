@@ -21,7 +21,7 @@ const PLAYBACK_SPEEDS = [1, 1.25, 1.5]
 // Analyse always fires every ANALYSE_GAP_ROWS new transcript rows (matches
 // Continuous's glossary logic). Keyword popups run on this fixed cadence and
 // have no user-facing control.
-const ANALYSE_GAP_ROWS = 4
+const ANALYSE_GAP_ROWS = 2
 
 // Visual nudge cooldown by Highlights frequency — a deliberate "look here"
 // intervention should be well-spaced. Time is measured in playback seconds
@@ -34,24 +34,24 @@ const VISUAL_NUDGE_LIFETIME = 5
 
 const QUIZ_FREQUENCY_CONFIG = {
   Low: {
-    minNewKeywords: 5,
+    quizInterval: 180,  // one quiz roughly every 3 minutes
     qualityInstruction: `Only generate a question if the recent transcript introduces a non-obvious, foundational concept that genuinely rewards deeper understanding.
 If the content is too shallow or transitional to support a meaningful question, respond with exactly {"skip":true} and nothing else.
 When you do generate: the question must require genuine conceptual understanding. Prefer WHY and HOW over WHAT. The learner should only be able to answer it correctly if they truly grasped the idea — not just heard the words.`,
   },
   Medium: {
-    minNewKeywords: 3,
-    qualityInstruction: `Generate a question that requires genuine understanding, not surface recall. Prefer "why" and "how" over "what". The learner should need to reason through the concept, not just repeat a definition.`,
+    quizInterval: 102,  // ~10 quizzes across a 17-minute video
+    qualityInstruction: `Generate a question that tests understanding of the key concept just covered. Prefer "why" and "how" over "what". Only skip if the content is purely transitional or introductory with nothing substantive to test.`,
   },
   High: {
-    minNewKeywords: 2,
+    quizInterval: 60,   // one quiz roughly every minute
     qualityInstruction: `Generate a useful question from the content just covered. It can test recall, understanding, or application — prioritise questions that reinforce the core idea of the current segment.`,
   },
 }
 
-// Hard floor between two consecutive quizzes (regardless of frequency) so that
-// a burst of keywords doesn't cause back-to-back quizzes.
-const QUIZ_MIN_SPACING_SECONDS = 30
+// Minimum gap after any other intervention (keyword/nudge) before a quiz fires,
+// so a keyword popup and a quiz don't stack immediately on top of each other.
+const QUIZ_POST_INTERVENTION_GAP = 15
 
 
 
@@ -130,14 +130,20 @@ If you ARE generating a question, respond ONLY with a valid JSON object — no m
   "concept": "name of the concept being tested (must appear in or be clearly grounded in the transcript)",
   "question": "...",
   "options": ["...", "...", "...", "..."],
-  "correctIndex": 0,
+  "correctIndex": <integer 0-3>,
   "explanation": "..."
 }
 
 Rules:
 - Exactly 4 options
-- correctIndex is 0-based
-- Explanation: 1-2 sentences clarifying why the answer is correct and what the key insight is`
+- correctIndex is 0-based — vary which position is correct across questions; the option order is randomised after generation, so DO NOT bias toward index 0
+- Distractor quality (CRITICAL):
+  · Every wrong option must be a plausible misconception a learner could genuinely hold — not an obvious throwaway
+  · All four options must be similar in length, grammatical structure, and level of detail (no "long correct option, short wrong options" tell)
+  · Distractors should reflect partial understanding, common confusions, or near-miss alternatives — not unrelated facts
+  · No joke options, no "all of the above", no "none of the above", no "I don't know"
+  · Avoid options that can be eliminated by surface features (tone, hedging words like "always"/"never", category mismatch)
+- Explanation: 1-2 sentences clarifying why the answer is correct AND why the most tempting distractor is wrong`
 }
 
 const callQuizAPI = async (provider, prompt) => {
@@ -185,7 +191,7 @@ const isTranscriptDense = (currentSeconds, threshold = 3.5) => {
 }
 
 const PROVIDERS = { GROQ: 'groq', AZURE: 'azure', AZURE_54: 'azure-54', OLLAMA: 'ollama' }
-const PROVIDER_CYCLE = [PROVIDERS.AZURE, PROVIDERS.AZURE_54, PROVIDERS.GROQ, PROVIDERS.OLLAMA]
+const PROVIDER_CYCLE = [PROVIDERS.AZURE_54, PROVIDERS.AZURE, PROVIDERS.GROQ, PROVIDERS.OLLAMA]
 const PROVIDER_LABELS = {
   [PROVIDERS.AZURE]:    { label: 'GPT-4o mini', logo: true },
   [PROVIDERS.AZURE_54]: { label: 'GPT-5.4 mini', logo: true },
@@ -193,7 +199,7 @@ const PROVIDER_LABELS = {
   [PROVIDERS.OLLAMA]:   { label: '🦙 Ollama', logo: false },
 }
 
-const buildSystemPrompt = (currentSeconds, quizHistory = []) => {
+const buildSystemPrompt = (currentSeconds, quizHistory = [], surfacedKeywords = [], surfacedVisuals = []) => {
   const mins = Math.floor(currentSeconds / 60)
   const secs = Math.floor(currentSeconds % 60)
   const timeStr = `${mins}:${String(secs).padStart(2, '0')}`
@@ -210,7 +216,17 @@ const buildSystemPrompt = (currentSeconds, quizHistory = []) => {
         .join('\n')}`
     : ''
 
-  const sessionContext = quizBlock ? `\n--- Session context ---${quizBlock}\n` : ''
+  const keywordBlock = surfacedKeywords.length > 0
+    ? `\nKeywords already surfaced to the learner via popup (don't re-explain from scratch — assume they have a working sense of these):\n${surfacedKeywords.slice(-10).map((t) => `- ${t}`).join('\n')}`
+    : ''
+
+  const visualBlock = surfacedVisuals.length > 0
+    ? `\nOn-screen visual elements the system has highlighted to the learner:\n${surfacedVisuals.slice(-5).map((v) => `- ${v}`).join('\n')}`
+    : ''
+
+  const sessionContext = (quizBlock || keywordBlock || visualBlock)
+    ? `\n--- Session context ---${quizBlock}${keywordBlock}${visualBlock}\n`
+    : ''
 
   return `You are Pal, a friendly learning assistant embedded in LearnPal, a video learning app.
 
@@ -222,6 +238,8 @@ ${sessionContext}
 You are a subject-matter expert in machine learning and neural networks. Explain every concept from first principles, with full depth — don't summarise, don't simplify away important detail, and never truncate. Go beyond the immediate question: bring in related concepts, real-world applications, intuitive analogies, and historical context where they add value. Your goal is to leave the user with a genuinely deeper understanding than any single video could provide.
 
 Never reference the video, transcript, or presenter as a source. Do not say "the transcript says", "in the video", "the presenter mentions", "as stated", or anything similar. You simply know this material — explain it that way. The background topics above are only to help you stay contextually relevant; they are not a script to follow or cite.
+
+Use the session context to personalise your responses — if the user got a quiz question wrong, directly address that misconception with a clear, corrective explanation. If a keyword has already been surfaced, build on that rather than re-defining it from scratch.
 
 Format your responses using markdown: use **bold** for key terms, bullet points or numbered lists for multi-part answers, and short paragraphs. Keep it conversational and clear — like a brilliant tutor who genuinely loves the subject.`
 }
@@ -236,8 +254,8 @@ const callAnalyse = async (provider, chunk, previousTerms, previousHighlights, f
   return res.json()
 }
 
-const callAI = async (provider, messages, currentSeconds, sessionId = null, quizHistory = [], source = 'chat') => {
-  const systemPrompt = buildSystemPrompt(currentSeconds, quizHistory)
+const callAI = async (provider, messages, currentSeconds, sessionId = null, quizHistory = [], source = 'chat', surfacedKeywords = [], surfacedVisuals = []) => {
+  const systemPrompt = buildSystemPrompt(currentSeconds, quizHistory, surfacedKeywords, surfacedVisuals)
   const res = await fetch('/api/chat', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -253,9 +271,11 @@ const callAI = async (provider, messages, currentSeconds, sessionId = null, quiz
 
 // ─── Highlights panel ─────────────────────────────────────────────────────────
 
-function Highlights({ items = [], onDetailClick, frequency, onFrequencyChange }) {
+function Highlights({ items = [], onDetailClick, frequency, onFrequencyChange, paused, onPausedChange }) {
   const prevCountRef = useRef(0)
   const [newIds, setNewIds] = useState(new Set())
+  const [tipOpen, setTipOpen] = useState(false)
+  const tipRef = useRef(null)
 
   useEffect(() => {
     if (items.length > prevCountRef.current) {
@@ -268,6 +288,13 @@ function Highlights({ items = [], onDetailClick, frequency, onFrequencyChange })
     prevCountRef.current = items.length
   }, [items.length])
 
+  useEffect(() => {
+    if (!tipOpen) return
+    const close = (e) => { if (!tipRef.current?.contains(e.target)) setTipOpen(false) }
+    document.addEventListener('mousedown', close)
+    return () => document.removeEventListener('mousedown', close)
+  }, [tipOpen])
+
   const sorted = [...items].sort((a, b) => (b.arrivedAt ?? 0) - (a.arrivedAt ?? 0))
 
   return (
@@ -278,9 +305,34 @@ function Highlights({ items = [], onDetailClick, frequency, onFrequencyChange })
             <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" stroke="#0336ff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
           <h3>Explore highlights</h3>
+          <div className="lp-info-tip" ref={tipRef}>
+            <button
+              type="button"
+              className={`lp-info-tip-btn${tipOpen ? ' lp-info-tip-btn--open' : ''}`}
+              onClick={() => setTipOpen((v) => !v)}
+              aria-label="About this section"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.8"/>
+                <line x1="12" y1="8" x2="12" y2="8.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                <line x1="12" y1="11" x2="12" y2="16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+              </svg>
+            </button>
+            {tipOpen && (
+              <div className="lp-tip-bubble lp-tip-bubble--open" role="tooltip">
+                <strong>Explore highlights</strong> — the AI nudges your attention to specific on-screen moments worth examining. Each highlight links to the exact point in the video. Use the frequency control to make nudges more or less frequent.
+              </div>
+            )}
+          </div>
         </div>
+        <button
+          type="button"
+          className={paused ? 'is-cta' : ''}
+          onClick={() => onPausedChange(!paused)}
+        >
+          {paused ? 'Resume' : 'Pause'}
+        </button>
       </div>
-      <p className="lp-tip">ⓘ The AI nudges your attention to specific on-screen moments worth examining.</p>
       <div className="lp-freq-row">
         <span>Frequency</span>
         <div className="lp-freq-pills" role="list" aria-label="Highlight frequency">
@@ -325,7 +377,11 @@ function App() {
   const [liveKeywords, setLiveKeywords] = useState([])
   const [frameRegions, setFrameRegions] = useState([])
   const [quizFrequency, setQuizFrequency] = useState('Medium')
+  const [highlightsPaused, setHighlightsPaused] = useState(false)
   const [quizPaused, setQuizPaused] = useState(false)
+  const [quizTipOpen, setQuizTipOpen] = useState(false)
+  const quizTipRef = useRef(null)
+  const highlightsPausedRef = useRef(false)
   const [prompt, setPrompt] = useState('')
   const [chatMessages, setChatMessages] = useState([])
   const [savedVisualCards, setSavedVisualCards] = useState([])
@@ -346,12 +402,17 @@ function App() {
   const [aiError, setAiError] = useState(null)
   const [quizHistory, setQuizHistory] = useState([])
   const [participantId, setParticipantId] = useState('')
+  const [pidInput, setPidInput] = useState('')
+  const [pidConfirmed, setPidConfirmed] = useState(false)
+  const [modalDismissed, setModalDismissed] = useState(false)  // skip = dismiss modal without creating a session
   const [activeKeywordPrompt, setActiveKeywordPrompt] = useState(null)
   const [activeVisualCard, setActiveVisualCard] = useState(null)
   const [activeQuiz, setActiveQuiz] = useState(null)
   const [quizSelection, setQuizSelection] = useState(null)
   const [quizOutcome, setQuizOutcome] = useState(null)
   const [shownKeywordIds, setShownKeywordIds] = useState([])
+  const [keywordLog, setKeywordLog] = useState([])
+  const [keywordLogOpen, setKeywordLogOpen] = useState(false)
   const [quizLoading, setQuizLoading] = useState(false)
   const [askedQuestions, setAskedQuestions] = useState([])
   const [quizLog, setQuizLog] = useState([])
@@ -411,7 +472,7 @@ function App() {
   const userScrollTimerRef = useRef(null)
 
   const logEvent = (eventType, atSeconds, meta = null) => {
-    if (!sessionIdRef.current) return
+    if (!pidConfirmed || !sessionIdRef.current) return
     const body = JSON.stringify({
       sessionId: sessionIdRef.current,
       eventType,
@@ -436,6 +497,14 @@ function App() {
   // ── YouTube player setup ─────────────────────────────────────────────────
 
   useEffect(() => () => clearTimeout(controlsTimerRef.current), [])
+
+  // Close the Pop-quiz info tooltip on outside click
+  useEffect(() => {
+    if (!quizTipOpen) return
+    const close = (e) => { if (!quizTipRef.current?.contains(e.target)) setQuizTipOpen(false) }
+    document.addEventListener('mousedown', close)
+    return () => document.removeEventListener('mousedown', close)
+  }, [quizTipOpen])
 
   // ── Fullscreen sync ─────────────────────────────────────────────────────
 
@@ -597,6 +666,7 @@ function App() {
   }, [])
 
   useEffect(() => {
+    if (!pidConfirmed) return
     fetch('/api/sessions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -604,31 +674,33 @@ function App() {
         videoId: 'proactive-neural-networks',
         videoTitle: 'The Essential Main Ideas of Neural Networks',
         paradigm: 'proactive',
+        participantId: pidInput.trim() || null,
       }),
     })
       .then((r) => r.json())
       .then((data) => { sessionIdRef.current = data.id })
       .catch(() => {})
-  }, [])
+  }, [pidConfirmed])
 
   useEffect(() => {
     if (!isPlaying) return
     if (activeKeywordPrompt || activeVisualCard || activeQuiz) return
 
-    const basePromptGap = selectedFrequency === 'Low' ? 60 : selectedFrequency === 'High' ? 28 : 42
+    const basePromptGap = selectedFrequency === 'Low' ? 35 : selectedFrequency === 'High' ? 12 : 20
     const promptGap = basePromptGap + adaptiveStrategy.promptGapBonus
-    if (currentPlaybackSeconds - lastInterventionAt < promptGap) return
 
     // §3.4 — do not interrupt if the transcript is too dense at this moment
     if (isTranscriptDense(currentPlaybackSeconds)) return
 
-    const { minNewKeywords } = QUIZ_FREQUENCY_CONFIG[quizFrequency]
+    const { quizInterval } = QUIZ_FREQUENCY_CONFIG[quizFrequency]
 
+    // Quiz is time-driven and independent of keyword count. It fires when enough
+    // playback time has elapsed since the last quiz, with a short cooldown after
+    // any other intervention so keyword popups and quizzes don't stack.
     const quizDue = !quizPaused
       && !isGeneratingQuizRef.current
-      && newKeywordsSinceQuizRef.current >= minNewKeywords
-      && currentPlaybackSeconds - lastQuizAt >= QUIZ_MIN_SPACING_SECONDS
-      && currentPlaybackSeconds - lastInterventionAt >= Math.max(promptGap, 38)
+      && currentPlaybackSeconds - lastQuizAt >= quizInterval
+      && currentPlaybackSeconds - lastInterventionAt >= QUIZ_POST_INTERVENTION_GAP
 
     if (quizDue) {
       isGeneratingQuizRef.current = true
@@ -638,13 +710,11 @@ function App() {
       generateQuizQuestion(aiProvider, currentPlaybackSeconds, askedQuestions, quizFrequency, quizHistory, shownKeywordTermsRef.current)
         .then((q) => {
           if (q.skip) {
-            // AI judged content not rich enough. Decay the counter (don't fully
-            // reset) so we'll retry once another keyword or two arrive.
-            newKeywordsSinceQuizRef.current = Math.max(0, newKeywordsSinceQuizRef.current - 1)
-            setLastQuizAt(currentPlaybackSeconds)
+            // AI judged content not rich enough — advance lastQuizAt by half the
+            // interval so we retry sooner rather than waiting the full interval.
+            setLastQuizAt(currentPlaybackSeconds - Math.floor(quizInterval / 2))
             return
           }
-          // Real question — pause and show.
           localVideoRef.current?.pause()
           setAskedQuestions((prev) => [...prev, q.question])
           setLastQuizAt(currentPlaybackSeconds)
@@ -654,9 +724,7 @@ function App() {
           setQuizOutcome(null)
         })
         .catch(() => {
-          // On error, back off slightly without resetting the counter.
-          setLastQuizAt(currentPlaybackSeconds)
-          newKeywordsSinceQuizRef.current = Math.max(0, newKeywordsSinceQuizRef.current - 1)
+          setLastQuizAt(currentPlaybackSeconds - Math.floor(quizInterval / 2))
         })
         .finally(() => {
           isGeneratingQuizRef.current = false
@@ -664,6 +732,9 @@ function App() {
         })
       return
     }
+
+    // Keywords and visual nudges use the shared promptGap cooldown.
+    if (currentPlaybackSeconds - lastInterventionAt < promptGap) return
 
     const keywordCandidate = liveKeywords.find(
       (item) =>
@@ -674,10 +745,10 @@ function App() {
     if (keywordCandidate) {
       setShownKeywordIds((current) => [...current, keywordCandidate.id])
       shownKeywordTermsRef.current = [...shownKeywordTermsRef.current, keywordCandidate.term]
-      // Quiz counter advances only when a keyword is actually shown — insulates
-      // the quiz trigger from over-eager analyse output that never surfaces.
       newKeywordsSinceQuizRef.current += 1
-      setActiveKeywordPrompt(keywordCandidate)
+      const numbered = { ...keywordCandidate, number: shownKeywordTermsRef.current.length }
+      setKeywordLog((prev) => [...prev, { ...numbered, pinned: false }])
+      setActiveKeywordPrompt(numbered)
       setLastInterventionAt(currentPlaybackSeconds)
       logEvent('keyword_shown', currentPlaybackSeconds)
     }
@@ -717,6 +788,7 @@ function App() {
   useEffect(() => { activeKeywordPromptRef.current = activeKeywordPrompt }, [activeKeywordPrompt])
   useEffect(() => { activeQuizRef.current           = activeQuiz           }, [activeQuiz])
   useEffect(() => { activeVisualCardRef.current     = activeVisualCard     }, [activeVisualCard])
+  useEffect(() => { highlightsPausedRef.current     = highlightsPaused     }, [highlightsPaused])
 
   // Visual-nudge auto-dismiss: clear when playback has moved more than
   // VISUAL_NUDGE_LIFETIME seconds past the nudge's arrivedAt. Gated on
@@ -737,7 +809,7 @@ function App() {
   useEffect(() => {
     if (!isPlayingRef.current) return
     const coveredRows = transcriptRows.filter((r) => r.seconds <= currentPlaybackSeconds)
-    if (coveredRows.length < 4) return
+    if (coveredRows.length < 2) return
     const lastIdx = coveredRows.length - 1
     if (lastIdx - lastAnalysedRowRef.current < ANALYSE_GAP_ROWS) return
     if (isAnalysingRef.current) return
@@ -767,7 +839,10 @@ function App() {
     isAnalysingRef.current = true
     const arrivedAt = currentPlaybackSeconds
     const arrivedStr = formatTime(arrivedAt)
-    const prevTerms = shownKeywordTermsRef.current
+    // Include BOTH shown and pending-queue keywords so the model doesn't
+    // regenerate a term that's already in flight but hasn't surfaced yet.
+    const queuedTerms = liveKeywordsRef.current.map((k) => k.term)
+    const prevTerms = Array.from(new Set([...shownKeywordTermsRef.current, ...queuedTerms]))
     const prevHighlights = surfacedHighlightsRef.current.map((h) => h.text)
 
     callAnalyse(aiProvider, chunk, prevTerms, prevHighlights, frameBase64, chatContext, selectedFrequency)
@@ -796,7 +871,7 @@ function App() {
             || frameRegionsRef.current.length > 0
           const cooledDown = arrivedAt - lastVisualNudgeAtRef.current >= cooldown
 
-          if (!interventionActive && cooledDown) {
+          if (!interventionActive && cooledDown && !highlightsPausedRef.current) {
             const reg = result.regions[0]
             const nudge = { ...reg, id: `fr-${Date.now()}`, ...stamp }
 
@@ -861,7 +936,11 @@ function App() {
 
     try {
       const history = [...chatMessages, userMsg].map(({ role, content }) => ({ role, content }))
-      const reply = await callAI(aiProvider, history, currentPlaybackSeconds, sessionIdRef.current, quizHistory, source)
+      // Pass cross-feature context so chat is aware of what the learner has
+      // already seen via keyword popups and visual highlight cards.
+      const surfacedKeywords = shownKeywordTermsRef.current
+      const surfacedVisuals = surfacedHighlightsRef.current.map((h) => h.text)
+      const reply = await callAI(aiProvider, history, currentPlaybackSeconds, sessionIdRef.current, quizHistory, source, surfacedKeywords, surfacedVisuals)
       setChatMessages((prev) => [
         ...prev,
         {
@@ -882,6 +961,13 @@ function App() {
   const handleSubmit = (event) => {
     event.preventDefault()
     sendMessage()
+  }
+
+  const handlePinKeyword = () => {
+    if (!activeKeywordPrompt) return
+    setKeywordLog((prev) => prev.map((k) => k.id === activeKeywordPrompt.id ? { ...k, pinned: true } : k))
+    setActiveKeywordPrompt(null)
+    logEvent('keyword_pinned', currentPlaybackSeconds, { term: activeKeywordPrompt.term })
   }
 
   const handleKeywordResponse = (action) => {
@@ -922,8 +1008,8 @@ function App() {
     setInteractionStats((current) => ({ ...current, visualOpened: current.visualOpened + 1 }))
     setActiveVisualCard({
       id: region.id,
-      x: region.x / 100,
-      y: region.y / 100,
+      x: (region.x + region.width  / 2) / 100,
+      y: (region.y + region.height / 2) / 100,
       title: region.label,
       shortExplanation: region.description,
       detailPrompt: `Explain "${region.label}" in this neural network diagram: ${region.description}`,
@@ -1229,6 +1315,8 @@ function App() {
     setQuizSelection(null)
     setQuizOutcome(null)
     setShownKeywordIds([])
+    setKeywordLog([])
+    setKeywordLogOpen(false)
     setLiveKeywords([])
     setFrameRegions([])
     setSurfacedHighlights([])
@@ -1249,28 +1337,21 @@ function App() {
       quizSkipped: 0, quizAnswered: 0, quizCorrect: 0, detailRequests: 0,
     })
     setQuizPaused(false)
+    setHighlightsPaused(false)
     setSelectedFrequency('Medium')
     setQuizFrequency('Medium')
 
-    // Reset participant
+    // Reset participant flow — drop the session and re-show the PID modal so the
+    // next participant types their ID before any data is logged.
+    sessionIdRef.current = null
     setParticipantId('')
-
-    // Create a fresh session
-    fetch('/api/sessions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        videoId: 'proactive-neural-networks',
-        videoTitle: 'The Essential Main Ideas of Neural Networks',
-        paradigm: 'proactive',
-      }),
-    })
-      .then((r) => r.json())
-      .then((data) => { sessionIdRef.current = data.id })
-      .catch(() => {})
+    setPidInput('')
+    setPidConfirmed(false)
+    setModalDismissed(false)
   }
 
   const applyPlaybackRate = (rate) => {
+    logEvent('playback_speed_changed', localVideoRef.current?.currentTime ?? 0, { from: playbackRate, to: rate })
     setPlaybackRate(rate)
     if (localVideoRef.current) localVideoRef.current.playbackRate = rate
   }
@@ -1284,8 +1365,44 @@ function App() {
   const visibleSavedCards = savedVisualCards.slice(-2)
   const visibleLaterQueue = laterQueue.slice(-2)
 
+  const confirmPid = () => {
+    const trimmed = pidInput.trim()
+    if (!trimmed) return
+    setParticipantId(trimmed)
+    saveParticipantId(trimmed)
+    setPidConfirmed(true)
+  }
+
   return (
     <div className="proactive-app">
+      {!pidConfirmed && !modalDismissed && (
+        <div className="lp-pid-backdrop">
+          <button className="lp-pid-skip" type="button" onClick={() => setModalDismissed(true)}>skip</button>
+          <div className="lp-pid-modal">
+            <div>
+              <h2>Enter Participant ID</h2>
+              <p style={{ marginTop: 6 }}>Enter the participant ID assigned by the researcher before starting the session.</p>
+            </div>
+            <input
+              className="lp-pid-input"
+              type="text"
+              placeholder="e.g. P01"
+              value={pidInput}
+              autoFocus
+              onChange={(e) => setPidInput(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') confirmPid() }}
+            />
+            <button
+              className="lp-pid-submit"
+              type="button"
+              disabled={!pidInput.trim()}
+              onClick={confirmPid}
+            >
+              Start Session
+            </button>
+          </div>
+        </div>
+      )}
       <header className="app-header">
         <div className="brand-lockup">
           <img className="brand-mark" src={brandIcon} alt="LearnPal brand icon" />
@@ -1439,16 +1556,11 @@ function App() {
                         </div>
                       )}
                     </div>
-                    <button type="button" className="lp-ctrl-btn" onClick={toggleFullscreen} aria-label={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}>
-                      {isFullscreen ? (
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                          <path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z" />
-                        </svg>
-                      ) : (
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                          <path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z" />
-                        </svg>
-                      )}
+                    {/* Fullscreen — disabled for study */}
+                    <button type="button" className="lp-ctrl-btn lp-ctrl-btn--disabled" title="Fullscreen is disabled for this study" aria-disabled="true">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                        <path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z" />
+                      </svg>
                     </button>
                   </div>
                 </div>
@@ -1457,16 +1569,18 @@ function App() {
               {frameRegions.map((region) => (
                 <button
                   key={region.id}
-                  className="lp-frame-dot"
+                  className="lp-frame-region"
                   type="button"
                   style={{
-                    left: `${region.x + region.width  / 2}%`,
-                    top:  `${region.y + region.height / 2}%`,
+                    left:   `${region.x}%`,
+                    top:    `${region.y}%`,
+                    width:  `${region.width}%`,
+                    height: `${region.height}%`,
                   }}
                   aria-label={`Visual nudge: ${region.label}`}
                   onClick={() => openRegionCard(region)}
                 >
-                  <span className="lp-frame-dot-core" />
+                  <span className="lp-frame-region-pulse" />
                 </button>
               ))}
 
@@ -1475,16 +1589,30 @@ function App() {
                   <div className="proactive-alert-header">
                     <div className="proactive-alert-title">
                       <img src={brandIcon} alt="" />
+                      <span className="lp-kw-number">#{activeKeywordPrompt.number + 1}</span>
                       <h2>{activeKeywordPrompt.term}</h2>
                     </div>
-                    <button
-                      className="icon-dismiss"
-                      type="button"
-                      aria-label="Dismiss proactive prompt"
-                      onClick={() => handleKeywordResponse('close')}
-                    >
-                      <CloseIcon />
-                    </button>
+                    <div className="proactive-alert-header-actions">
+                      <button
+                        className="lp-kw-pin-btn"
+                        type="button"
+                        aria-label="Pin keyword"
+                        onClick={handlePinKeyword}
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                          <path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"/>
+                        </svg>
+                        Pin
+                      </button>
+                      <button
+                        className="icon-dismiss"
+                        type="button"
+                        aria-label="Dismiss proactive prompt"
+                        onClick={() => handleKeywordResponse('close')}
+                      >
+                        <CloseIcon />
+                      </button>
+                    </div>
                   </div>
 
                   <p>{activeKeywordPrompt.definition}</p>
@@ -1538,88 +1666,92 @@ function App() {
                 </article>
               ) : null}
 
-              {quizLoading && !activeQuiz ? (
-                <div className="quiz-overlay">
-                  <article className="quiz-card quiz-card--loading">
-                    <span className="overlay-kicker">Quick check</span>
-                    <p className="quiz-loading-text">Generating question…</p>
-                  </article>
-                </div>
-              ) : null}
-
-              {activeQuiz ? (
-                <div className="quiz-overlay">
-                  <article className="quiz-card">
-                    <div className="quiz-card-body">
-                      <div className="quiz-card-header">
-                        <span className="overlay-kicker">Quick check</span>
-                        <h2>{activeQuiz.question}</h2>
-                      </div>
-
-                      <div className="quiz-options">
-                        {activeQuiz.options.map((option, index) => {
-                          let className = 'quiz-option'
-                          if (quizOutcome) {
-                            if (index === activeQuiz.correctIndex) className += ' is-correct'
-                            else if (index === quizSelection) className += ' is-wrong'
-                          } else if (index === quizSelection) {
-                            className += ' is-selected'
-                          }
-                          return (
-                            <button
-                              key={option}
-                              className={className}
-                              type="button"
-                              disabled={!!quizOutcome}
-                              onClick={() => setQuizSelection(index)}
-                            >
-                              <span>{String.fromCharCode(65 + index)}</span>
-                              {option}
-                            </button>
-                          )
-                        })}
-                      </div>
-
-                      {quizOutcome && (
-                        <div className={`quiz-feedback${quizOutcome.isCorrect ? ' is-correct' : ' is-wrong'}`}>
-                          <strong>{quizOutcome.isCorrect ? 'Correct' : 'Incorrect'}</strong>
-                          <p>{activeQuiz.explanation}</p>
-                        </div>
-                      )}
-
-                      {freqDownCountdown && (
-                        <div className="quiz-freq-down">
-                          <p className="quiz-freq-down-msg">
-                            Switching to <strong>{FREQUENCY_LABELS[freqDownCountdown.nextFreq]}</strong> frequency…
-                          </p>
-                          <div className="quiz-freq-down-bar">
-                            <div className="quiz-freq-down-fill" />
-                          </div>
-                        </div>
-                      )}
+              {(quizLoading && !activeQuiz) || activeQuiz ? (
+                <div className="lp-modal-backdrop">
+                  <section className="lp-quiz-modal" role="dialog" aria-modal="true" aria-label="Quick check">
+                    <div className="lp-quiz-modal-top">
+                      <h3>Quick check</h3>
                     </div>
+                    <p className="lp-quiz-meta">Generated from what you've watched so far.</p>
 
-                    <div className="quiz-actions">
+                    {quizLoading && !activeQuiz && (
+                      <div className="lp-quiz-loading">
+                        <div className="lp-typing-indicator"><span /><span /><span /></div>
+                        <p>Generating question…</p>
+                      </div>
+                    )}
+
+                    {activeQuiz && (
+                      <>
+                        <p className="lp-quiz-question">{activeQuiz.question}</p>
+
+                        <div className="lp-quiz-options">
+                          {activeQuiz.options.map((option, index) => {
+                            const isCorrect = !!quizOutcome && index === activeQuiz.correctIndex
+                            const isWrong = !!quizOutcome && index === quizSelection && index !== activeQuiz.correctIndex
+                            return (
+                              <button
+                                key={option}
+                                type="button"
+                                className={`lp-quiz-option${!quizOutcome && quizSelection === index ? ' lp-selected' : ''}${isCorrect ? ' lp-correct' : ''}${isWrong ? ' lp-wrong' : ''}`}
+                                disabled={!!quizOutcome}
+                                onClick={() => setQuizSelection(index)}
+                              >
+                                {option}
+                              </button>
+                            )
+                          })}
+                        </div>
+
+                        {quizOutcome && (
+                          <div className="lp-quiz-feedback">
+                            <div className={`lp-feedback-result lp-feedback-result--${quizOutcome.isCorrect ? 'correct' : 'wrong'}`}>
+                              <span className="lp-feedback-icon">{quizOutcome.isCorrect ? '✓' : '✗'}</span>
+                              <span className="lp-feedback-label">
+                                {quizOutcome.isCorrect ? 'Correct' : 'Incorrect — the right answer is: '}
+                                {!quizOutcome.isCorrect && <strong>{activeQuiz.options[activeQuiz.correctIndex]}</strong>}
+                              </span>
+                            </div>
+                            <div className="lp-feedback-explanation">
+                              <span className="lp-feedback-explanation-label">Explanation</span>
+                              <p>{activeQuiz.explanation}</p>
+                            </div>
+                          </div>
+                        )}
+
+                        {freqDownCountdown && (
+                          <div className="quiz-freq-down">
+                            <p className="quiz-freq-down-msg">
+                              Switching to <strong>{FREQUENCY_LABELS[freqDownCountdown.nextFreq]}</strong> frequency…
+                            </p>
+                            <div className="quiz-freq-down-bar">
+                              <div className="quiz-freq-down-fill" />
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    )}
+
+                    <div className="lp-quiz-actions">
                       {freqDownCountdown ? (
-                        <button className="button-secondary" type="button" onClick={stayOnFrequency}>
+                        <button type="button" className="lp-secondary" onClick={stayOnFrequency}>
                           Stay on {FREQUENCY_LABELS[quizFrequency]}
                         </button>
                       ) : quizOutcome ? (
                         <>
-                          <button className="button-secondary" type="button" onClick={resumeAfterQuiz}>
+                          <button type="button" className="lp-secondary" onClick={resumeAfterQuiz}>
                             Resume
                           </button>
-                          <button className="button-primary" type="button" onClick={explainQuizInAskPal}>
+                          <button type="button" onClick={explainQuizInAskPal}>
                             Explain in Ask Pal
                           </button>
                         </>
-                      ) : (
+                      ) : activeQuiz ? (
                         <>
-                          <button className="button-secondary" type="button" onClick={skipQuiz}>
+                          <button type="button" className="lp-secondary" onClick={skipQuiz}>
                             Skip
                           </button>
                           <button
-                            className="button-primary"
                             type="button"
                             disabled={quizSelection === null}
                             onClick={submitQuiz}
@@ -1627,9 +1759,9 @@ function App() {
                             Submit
                           </button>
                         </>
-                      )}
+                      ) : null}
                     </div>
-                  </article>
+                  </section>
                 </div>
               ) : null}
             </div>
@@ -1643,7 +1775,15 @@ function App() {
                 if (h.regions?.[0]) openRegionCard(h.regions[0])
               }}
               frequency={selectedFrequency}
-              onFrequencyChange={setSelectedFrequency}
+              onFrequencyChange={(next) => {
+                logEvent('frequency_changed', localVideoRef.current?.currentTime ?? 0, { type: 'highlights', from: selectedFrequency, to: next })
+                setSelectedFrequency(next)
+              }}
+              paused={highlightsPaused}
+              onPausedChange={(next) => {
+                logEvent(next ? 'highlights_paused' : 'highlights_resumed', localVideoRef.current?.currentTime ?? 0)
+                setHighlightsPaused(next)
+              }}
             />
 
             <article className="lp-feature-card">
@@ -1654,6 +1794,25 @@ function App() {
                     <path d="M7 10.2l2.1 2.1L13.5 8" stroke="#0336ff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>
                   <h3>Pop quiz</h3>
+                  <div className="lp-info-tip" ref={quizTipRef}>
+                    <button
+                      type="button"
+                      className={`lp-info-tip-btn${quizTipOpen ? ' lp-info-tip-btn--open' : ''}`}
+                      onClick={() => setQuizTipOpen((v) => !v)}
+                      aria-label="About this section"
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.8"/>
+                        <line x1="12" y1="8" x2="12" y2="8.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                        <line x1="12" y1="11" x2="12" y2="16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+                      </svg>
+                    </button>
+                    {quizTipOpen && (
+                      <div className="lp-tip-bubble lp-tip-bubble--open" role="tooltip">
+                        <strong>Pop quiz</strong> — the AI pauses you at key moments with a question based on what you just watched. Use the frequency control to make pop quizzes more or less frequent. Pause stops new quizzes from being generated.
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <button
                   type="button"
@@ -1663,7 +1822,6 @@ function App() {
                   {quizPaused ? 'Resume' : 'Pause'}
                 </button>
               </div>
-              <p className="lp-tip">ⓘ The AI pauses you at key moments with a question based on what you just watched.</p>
               {quizFreqToast && (
                 <div className="lp-quiz-freq-toast">
                   {quizFreqToast}
@@ -1757,7 +1915,7 @@ function App() {
                   key={row.id}
                   ref={(node) => setTranscriptItemRef(row.id, node)}
                   className={`transcript-row${activeTranscriptId === row.id ? ' is-active' : ''}`}
-                  onClick={() => seekTo(row.seconds)}
+                  onClick={() => { logEvent('transcript_clicked', localVideoRef.current?.currentTime ?? 0, { to_seconds: row.seconds }); seekTo(row.seconds) }}
                 >
                   <p className="transcript-time">{row.time}</p>
                   <p className="transcript-copy">{row.text}</p>
@@ -1857,22 +2015,27 @@ function App() {
             </div>
 
             {chatMessages.length === 0 && (
-              <div className="lp-suggestions-wrap">
-                <h4>Quick suggestions</h4>
-                {QUICK_SUGGESTIONS.map((s) => (
-                  <button
-                    key={s}
-                    type="button"
-                    className="lp-suggestion-chip"
-                    onClick={() => {
-                      logEvent('chat_suggestion_clicked', currentPlaybackSeconds, { suggestion: s })
-                      sendMessage(s, 'chat_suggestion')
-                    }}
-                    disabled={isLoading}
-                  >
-                    {s}
-                  </button>
-                ))}
+              <div className="lp-suggestions-inline">
+                <p className="lp-suggestions-label">Try asking</p>
+                <div className="lp-suggestions-grid">
+                  {QUICK_SUGGESTIONS.map((s) => (
+                    <button
+                      key={s}
+                      type="button"
+                      className="lp-suggestion-card"
+                      onClick={() => {
+                        logEvent('chat_suggestion_clicked', currentPlaybackSeconds, { suggestion: s })
+                        sendMessage(s, 'chat_suggestion')
+                      }}
+                      disabled={isLoading}
+                    >
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true" className="lp-suggestion-arrow">
+                        <path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                      {s}
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
           </section>
@@ -1904,6 +2067,48 @@ function App() {
         >
           Export Excel
         </a>
+      </div>
+
+      {/* Keyword log — fixed bottom-right */}
+      <div className="lp-kw-log-wrap">
+        {keywordLogOpen && (
+          <div className="lp-kw-log-panel">
+            <div className="lp-kw-log-header">
+              <span>Keywords</span>
+              <button type="button" onClick={() => setKeywordLogOpen(false)}>×</button>
+            </div>
+            {keywordLog.length === 0 ? (
+              <p className="lp-kw-log-empty">No keywords yet.</p>
+            ) : (
+              <ul className="lp-kw-log-list">
+                {keywordLog.map((k) => (
+                  <li key={k.id} className={`lp-kw-log-item${k.pinned ? ' lp-kw-log-item--pinned' : ''}`}>
+                    <span className="lp-kw-number">#{k.number + 1}</span>
+                    <div className="lp-kw-log-item-body">
+                      <strong>{k.term}</strong>
+                      <p>{k.definition}</p>
+                    </div>
+                    {k.pinned && <span className="lp-kw-pinned-badge">Pinned</span>}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+        <button
+          type="button"
+          className="lp-kw-log-btn"
+          title="Keyword log"
+          onClick={() => setKeywordLogOpen((v) => !v)}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            <line x1="7" y1="7" x2="7.01" y2="7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+          {keywordLog.length > 0 && (
+            <span className="lp-kw-log-count">{keywordLog.length}</span>
+          )}
+        </button>
       </div>
     </div>
   )
