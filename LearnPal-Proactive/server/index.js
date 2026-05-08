@@ -1,6 +1,9 @@
 import 'dotenv/config'
 import express from 'express'
 import cors from 'cors'
+import { join, dirname } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { existsSync } from 'node:fs'
 import sessionsRouter from './routes/sessions.js'
 import chatRouter from './routes/chat.js'
 import quizRouter from './routes/quiz.js'
@@ -10,10 +13,15 @@ import exportRouter from './routes/export.js'
 import highlightsRouter from './routes/highlights.js'
 import analyseRouter from './routes/analyse.js'
 
+const __dirname = dirname(fileURLToPath(import.meta.url))
+
 const app = express()
 const PORT = process.env.PORT || 3003
 
-app.use(cors({ origin: 'http://localhost:5175' }))
+const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGIN
+  ? [process.env.ALLOWED_ORIGIN, 'http://localhost:5175']
+  : ['http://localhost:5175']
+app.use(cors({ origin: ALLOWED_ORIGINS }))
 app.use(express.json({ limit: '10mb' }))  // 10mb for base64 snap images
 
 app.use('/api/sessions', sessionsRouter)
@@ -24,6 +32,13 @@ app.use('/api/events',   eventsRouter)
 app.use('/api/export',   exportRouter)
 app.use('/api/videos',  highlightsRouter)
 app.use('/api/analyse', analyseRouter)
+
+// Serve the React build in production
+const distPath = join(__dirname, '../dist')
+if (existsSync(distPath)) {
+  app.use(express.static(distPath))
+  app.get('*', (_req, res) => res.sendFile(join(distPath, 'index.html')))
+}
 
 // ── Startup env-var sanity check ─────────────────────────────────────────────
 const checkEnv = () => {
