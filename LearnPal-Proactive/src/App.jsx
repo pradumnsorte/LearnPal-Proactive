@@ -8,6 +8,10 @@ import brandIcon from './assets/brand-icon.svg'
 import palCharacter from './assets/pal-character.svg'
 import chatgptLogo from './assets/Chat GPT logo.png'
 
+const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === 'true'
+  || (typeof window !== 'undefined' && window.location.hostname.endsWith('.onrender.com'))
+const VIDEO_SRC = import.meta.env.VITE_VIDEO_URL || '/neural-networks.mp4'
+
 const QUICK_SUGGESTIONS = [
   'Give me a summary in simple terms',
   'Explain the topic in simple terms',
@@ -404,7 +408,7 @@ function App() {
   const [participantId, setParticipantId] = useState('')
   const [pidInput, setPidInput] = useState('')
   const [pidConfirmed, setPidConfirmed] = useState(false)
-  const [modalDismissed, setModalDismissed] = useState(false)  // skip = dismiss modal without creating a session
+  const [modalDismissed, setModalDismissed] = useState(DEMO_MODE)  // skip = dismiss modal without creating a session
   const [activeKeywordPrompt, setActiveKeywordPrompt] = useState(null)
   const [activeVisualCard, setActiveVisualCard] = useState(null)
   const [activeQuiz, setActiveQuiz] = useState(null)
@@ -1436,7 +1440,7 @@ function App() {
             >
               <video
                 ref={localVideoRef}
-                src="/neural-networks.mp4"
+                src={VIDEO_SRC}
                 className="lp-youtube-player"
                 style={{ objectFit: 'contain', background: '#000' }}
               />
@@ -2045,7 +2049,7 @@ function App() {
       </div>
 
       {/* Researcher panel — fixed top-right, fades unless hovered */}
-      <div className="lp-researcher-panel">
+      {!DEMO_MODE && <div className="lp-researcher-panel">
         <input
           type="text"
           className="lp-researcher-input"
@@ -2067,7 +2071,7 @@ function App() {
         >
           Export Excel
         </a>
-      </div>
+      </div>}
 
       {/* Keyword log — fixed bottom-right */}
       <div className="lp-kw-log-wrap">
