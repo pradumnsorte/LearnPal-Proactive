@@ -1,0 +1,36 @@
+%% Intermittent paradigm — learner-initiated only.
+%% AI never fires unless the user explicitly clicks Snap or Quiz.
+
+flowchart TD
+    Start(["Learner watches video"]):::user
+    Decision{Wants help?}:::user
+
+    Start --> Decision
+
+    Decision -->|No| Continue["Continue watching"]:::user
+    Continue --> Decision
+
+    Decision -->|"Snap region"| Snap1["Click 'Select Area'"]:::user
+    Snap1 --> Snap2["Drag bounding box<br/>on video frame"]:::user
+    Snap2 --> Snap3["Optional: type question"]:::user
+    Snap3 --> Snap4["Click 'Ask Pal'"]:::user
+    Snap4 --> SnapAI["Capture frame +<br/>send to /api/chat<br/>(with image)"]:::ai
+    SnapAI --> SnapResp["AI response<br/>shown in chat"]:::ai
+    SnapResp --> Decision
+
+    Decision -->|"Self-test"| Q1["Click 'Start Quiz'"]:::user
+    Q1 --> QGen["/api/quiz/generate<br/>(watched transcript +<br/>difficulty + history)"]:::ai
+    QGen --> QShow["Show MCQ in modal<br/>(options Fisher-Yates<br/>shuffled)"]:::ai
+    QShow --> QAns["Learner submits answer"]:::user
+    QAns --> QFB{Correct?}:::ai
+    QFB -->|Yes| QStreak["consecutive++<br/>if =2 => difficulty++"]:::ai
+    QFB -->|No| QReset["consecutive=0<br/>show explanation"]:::ai
+    QStreak --> Decision
+    QReset --> Decision
+
+    Decision -->|"Free-form question"| Chat1["Type in chat sidebar"]:::user
+    Chat1 --> ChatAI["/api/chat with<br/>system prompt =<br/>transcript + quiz<br/>history + snap history"]:::ai
+    ChatAI --> Decision
+
+    classDef user fill:#fef3c7,stroke:#f59e0b,color:#000
+    classDef ai fill:#dbeafe,stroke:#3b82f6,color:#000

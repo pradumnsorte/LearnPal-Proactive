@@ -1,0 +1,44 @@
+%% ICAP framework mapping — what activities each prototype supports.
+%% Higher rungs (Interactive >Constructive >Active >Passive) are
+%% associated with deeper learning in Chi & Wylie's framework.
+
+flowchart BT
+    P["Passive<br/>(only watching, no input)"]:::passive
+    A["Active<br/>(pause, seek, scroll<br/>transcript, click glossary)"]:::active
+    C["Constructive<br/>(generate own content:<br/>chat, snap, answer quiz)"]:::constructive
+    I["Interactive<br/>(genuine back-and-forth<br/>dialogue with AI)"]:::interactive
+
+    P --> A --> C --> I
+
+    subgraph Inter ["Intermittent"]
+        IA["Active: pause, seek,<br/>transcript click"]
+        IC["Constructive:<br/>chat, snap-to-ask,<br/>quiz answer"]
+        II["Interactive:<br/>multi-turn chat<br/>after snap/quiz"]
+    end
+
+    subgraph Cont ["Continuous"]
+        CA["Active: pause, seek,<br/>glossary click,<br/>transcript click"]
+        CC["Constructive:<br/>chat, feed quiz answer,<br/>highlight detail"]
+        CI["Interactive:<br/>chat builds on<br/>surfaced terms /<br/>highlights"]
+    end
+
+    subgraph Pro ["Proactive"]
+        PA["Active: pause, seek,<br/>transcript click,<br/>keyword pin"]
+        PC["Constructive:<br/>chat, pop-quiz answer,<br/>visual detail"]
+        PI["Interactive:<br/>chat after<br/>keyword/region/<br/>quiz prompt"]
+    end
+
+    A -.- IA
+    A -.- CA
+    A -.- PA
+    C -.- IC
+    C -.- CC
+    C -.- PC
+    I -.- II
+    I -.- CI
+    I -.- PI
+
+    classDef passive fill:#e5e7eb,color:#000
+    classDef active fill:#fef3c7,color:#000
+    classDef constructive fill:#dbeafe,color:#000
+    classDef interactive fill:#dcfce7,color:#000

@@ -1,0 +1,41 @@
+%% Continuous paradigm — ambient assistance.
+%% The /analyse loop fires every 4 transcript rows in the background;
+%% three parallel feeds accumulate; the learner can also chat at any time.
+
+flowchart TD
+    Play(["Video playing"]):::user
+    Tick["currentPlaybackSeconds<br/>updates every 500 ms"]:::sys
+
+    Play --> Tick
+    Tick --> RowGate{"covered rows<br/>≥ lastAnalysed + 4?"}:::sys
+    RowGate -->|No| Tick
+    RowGate -->|Yes| Capture["Capture frame<br/>(480×270 JPEG, 65%)"]:::sys
+    Capture --> Analyse["/api/analyse<br/>chunk + frame +<br/>previousTerms +<br/>previousHighlights +<br/>previousQuestions +<br/>chatContext"]:::ai
+
+    Analyse --> Out1[/"glossaryTerms []"/]:::ai
+    Analyse --> Out2[/"highlights []"/]:::ai
+    Analyse --> Out3[/"questions []"/]:::ai
+    Analyse --> Out4[/"regions []"/]:::ai
+
+    Out1 --> Filter1["Server: blocklist +<br/>case-insensitive dedup"]:::sys
+    Out2 --> Filter2["Server: fuzzy<br/>substring dedup"]:::sys
+    Out3 --> ThrottleQ{"100 s since<br/>last question?"}:::sys
+    Out4 --> ClampR["Server: clamp +<br/>min size 3%"]:::sys
+
+    Filter1 --> Glossary["Glossary feed<br/>(right column)"]:::ui
+    Filter2 --> Highlights["Highlights feed<br/>(secondary row)"]:::ui
+    ThrottleQ -->|Yes| QFeed["Live question feed<br/>(secondary row)"]:::ui
+    ThrottleQ -->|No| Drop["Drop"]:::sys
+    ClampR --> RegionDots["Concentric markers<br/>over video<br/>(4 s lifetime)"]:::ui
+
+    Glossary --> LearnerView(["Learner sees<br/>accumulated content"]):::user
+    Highlights --> LearnerView
+    QFeed --> LearnerView
+    RegionDots --> LearnerView
+
+    LearnerView -.->|"chat at any time"| ChatBox["/api/chat<br/>with cross-feature<br/>context"]:::ai
+
+    classDef user fill:#fef3c7,stroke:#f59e0b,color:#000
+    classDef ai fill:#dbeafe,stroke:#3b82f6,color:#000
+    classDef sys fill:#f3f4f6,stroke:#6b7280,color:#000
+    classDef ui fill:#dcfce7,stroke:#16a34a,color:#000

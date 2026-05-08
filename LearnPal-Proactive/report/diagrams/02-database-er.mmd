@@ -1,0 +1,63 @@
+%% Database ER diagram — shared schema across all three prototypes.
+%% All non-session tables cascade-delete on session removal.
+
+erDiagram
+    sessions ||--o{ messages : "logs chat"
+    sessions ||--o{ quiz_attempts : "logs quiz"
+    sessions ||--o{ events : "logs behaviour"
+    sessions ||--o{ snaps : "logs snaps (Intermittent)"
+
+    sessions {
+        INTEGER id PK
+        TEXT video_id
+        TEXT video_title
+        TEXT participant_id "P01, C01, I01..."
+        TEXT paradigm "intermittent | continuous | proactive"
+        TEXT created_at
+    }
+
+    messages {
+        INTEGER id PK
+        INTEGER session_id FK
+        TEXT role "user | assistant"
+        TEXT content
+        TEXT provider "azure, groq..."
+        TEXT source "chat, snap_ask, quiz_explain..."
+        TEXT created_at
+    }
+
+    quiz_attempts {
+        INTEGER id PK
+        INTEGER session_id FK
+        TEXT question
+        TEXT options "JSON 4-array"
+        INTEGER correct_index
+        INTEGER selected_index
+        INTEGER is_correct "0 / 1 / NULL"
+        INTEGER difficulty "1-3"
+        TEXT provider
+        REAL time_to_answer_seconds
+        TEXT created_at
+    }
+
+    events {
+        INTEGER id PK
+        INTEGER session_id FK
+        TEXT event_type
+        REAL playback_seconds
+        TEXT meta "JSON metadata"
+        TEXT created_at
+    }
+
+    snaps {
+        INTEGER id PK
+        INTEGER session_id FK
+        TEXT image_data "base64 JPEG"
+        REAL timestamp_seconds
+        TEXT timestamp_str
+        TEXT region "JSON bbox"
+        TEXT user_prompt
+        TEXT ai_response
+        TEXT provider
+        TEXT created_at
+    }

@@ -1,0 +1,42 @@
+%% Proactive paradigm — AI-initiated interruptions, gated by frequency setting.
+%% Three intervention types fire on independent schedules with cooldowns and density checks.
+
+flowchart TD
+    Play(["Video playing"]):::user
+    Tick["Every 2 transcript rows"]:::sys
+    Play --> Tick
+
+    Tick --> Capture["Capture frame +<br/>build chunk"]:::sys
+    Capture --> Analyse["/api/analyse<br/>(chunk + frame +<br/>highlightFrequency +<br/>previousTerms +<br/>previousHighlights +<br/>chatContext)"]:::ai
+
+    Analyse --> Filter["Server filters:<br/>blocklist, dedup,<br/>region strictness<br/>(Low/Med/High)"]:::sys
+    Filter --> Queue["Queue:<br/>liveKeywords +<br/>frameRegions"]:::sys
+
+    %% Keyword pipeline
+    Queue --> KGate{"No active<br/>intervention?<br/>+ promptGap elapsed<br/>+ transcript not dense"}:::sys
+    KGate -->|Yes| KPopup["Numbered keyword<br/>popup (7.8 s)"]:::ui
+    KPopup --> KAct{Learner action?}:::user
+    KAct -->|Detail| KChat["Append to chat<br/>(source=keyword_detail)"]:::ai
+    KAct -->|Later| KQueue["Add to keyword log"]:::sys
+    KAct -->|Ignore 7.8 s| KIgnore["keyword_ignored event<br/>=>cooldown bonus"]:::sys
+
+    %% Region pipeline
+    Queue --> RGate{"Cooldown elapsed?<br/>(60/40/25 s by frequency)"}:::sys
+    RGate -->|Yes| RDot["Pulsing amber dot<br/>over video frame<br/>(5 s playback)"]:::ui
+    RDot --> RAct{Learner clicks?}:::user
+    RAct -->|Yes| RCard["Visual detail card<br/>=>Detail/Save/Close"]:::ai
+    RAct -->|No| RDismiss["Auto-dismiss"]:::sys
+
+    %% Quiz pipeline (independent, time-driven)
+    Tick --> QGate{"quizInterval elapsed?<br/>(180/102/60 s)<br/>+ ≥15 s since last<br/>intervention<br/>+ not dense"}:::sys
+    QGate -->|Yes| QGen["/api/quiz/generate<br/>(may return skip:true)"]:::ai
+    QGen --> QShow["Pause video<br/>=>Pop quiz modal"]:::ui
+    QShow --> QAct{Learner action?}:::user
+    QAct -->|Answer correct| QCorrect["consecutiveAnswered++<br/>if ≥3 =>upgrade frequency"]:::sys
+    QAct -->|Answer wrong| QWrong["Reset streaks<br/>show explanation"]:::sys
+    QAct -->|Skip| QSkip["consecutiveSkips++<br/>if ≥2 =>downgrade<br/>(5 s countdown,<br/>cancellable)"]:::sys
+
+    classDef user fill:#fef3c7,stroke:#f59e0b,color:#000
+    classDef ai fill:#dbeafe,stroke:#3b82f6,color:#000
+    classDef sys fill:#f3f4f6,stroke:#6b7280,color:#000
+    classDef ui fill:#dcfce7,stroke:#16a34a,color:#000

@@ -1,0 +1,45 @@
+%% System architecture — common across all three LearnPal prototypes.
+%% Each prototype is an independent React + Express + SQLite stack;
+%% only the frontend logic and one server route (/analyse) differ.
+
+flowchart LR
+    subgraph Browser ["Browser (React + Vite)"]
+        UI["UI components<br/>(video player, chat,<br/>feature panels)"]
+        State["React state +<br/>refs (live data,<br/>session, AI provider)"]
+        UI <--> State
+    end
+
+    subgraph Server ["Express server (Node)"]
+        SR["/api/sessions"]
+        CR["/api/chat"]
+        QR["/api/quiz"]
+        AR["/api/analyse<br/>(Continuous + Proactive only)"]
+        ER["/api/events"]
+        XR["/api/export"]
+        SNR["/api/snaps<br/>(Intermittent only)"]
+    end
+
+    subgraph DB ["SQLite (better-sqlite3, WAL mode)"]
+        Sess[(sessions)]
+        Msgs[(messages)]
+        Quiz[(quiz_attempts)]
+        Evts[(events)]
+        Snaps[(snaps)]
+    end
+
+    subgraph LLM ["AI providers (selectable per request)"]
+        Azure["Azure OpenAI<br/>(GPT-4o mini /<br/>GPT-5.4 mini)"]
+        Groq["Groq<br/>(Llama-3.3-70b)"]
+        Claude["Anthropic<br/>(Claude Sonnet 4.6)"]
+        OAI["OpenAI<br/>(GPT-4o)"]
+        Ollama["Ollama<br/>(local Llama 3.2)"]
+    end
+
+    Browser -->|HTTPS / fetch| Server
+    Server --> DB
+
+    CR --> LLM
+    QR --> LLM
+    AR --> LLM
+
+    XR -->|XLSX / CSV| Browser
