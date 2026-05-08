@@ -130,7 +130,7 @@ Every chat exchange is also tagged in the database with a `source` label (`chat`
 
 ## 2a.7 Events that are unique to this prototype
 
-In addition to the shared events listed in §1.5, the Intermittent prototype logs:
+In addition to the shared events listed in Section 1.5, the Intermittent prototype logs:
 
 | Event | When it fires | What it tells us |
 |---|---|---|
