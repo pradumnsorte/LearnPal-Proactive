@@ -1,9 +1,7 @@
 import 'dotenv/config'
 import express from 'express'
 import cors from 'cors'
-import { join, dirname } from 'node:path'
-import { fileURLToPath } from 'node:url'
-import { existsSync } from 'node:fs'
+import { join } from 'node:path'
 import sessionsRouter from './routes/sessions.js'
 import chatRouter from './routes/chat.js'
 import quizRouter from './routes/quiz.js'
@@ -12,8 +10,6 @@ import eventsRouter from './routes/events.js'
 import exportRouter from './routes/export.js'
 import highlightsRouter from './routes/highlights.js'
 import analyseRouter from './routes/analyse.js'
-
-const __dirname = dirname(fileURLToPath(import.meta.url))
 
 const app = express()
 const PORT = process.env.PORT || 3003
@@ -34,11 +30,9 @@ app.use('/api/videos',  highlightsRouter)
 app.use('/api/analyse', analyseRouter)
 
 // Serve the React build in production
-const distPath = join(__dirname, '../dist')
-if (existsSync(distPath)) {
-  app.use(express.static(distPath))
-  app.get('*', (_req, res) => res.sendFile(join(distPath, 'index.html')))
-}
+const distPath = join(process.cwd(), 'dist')
+app.use(express.static(distPath))
+app.get('*', (_req, res) => res.sendFile(join(distPath, 'index.html')))
 
 // ── Startup env-var sanity check ─────────────────────────────────────────────
 const checkEnv = () => {
