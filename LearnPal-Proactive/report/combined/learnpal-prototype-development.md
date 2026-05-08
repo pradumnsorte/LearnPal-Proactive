@@ -17,6 +17,8 @@ A walkthrough of three functional prototypes built to compare three different pa
 
 # Section 1: The Shared Foundation
 
+> **Try the prototypes:** all three are deployed and accessible at **[learn-pal-demos.vercel.app](https://learn-pal-demos.vercel.app/)**. The three cards on that page open the Intermittent, Continuous, and Proactive versions respectively. The first load of each may take ~30 seconds while the free-tier service warms up; subsequent navigation is instant. The deployed versions match the study build, with the participant-tracking instrumentation disabled (see §4.9).
+
 Before describing the three prototypes individually, this section walks through what they have in common. All three are built on the same technical base, with the same data model, the same instrumentation, and the same set of safeguards around the AI's output. Only one route on the server, and the on-screen panels themselves, actually differ between them. Isolating the shared parts here first allows the per-prototype sections to stay focused on what makes each design distinctive.
 
 A reader who reads only this section should walk away with a clear picture of three things: how the apps are structured, how a study session flows from open-the-page to export-the-data, and what guardrails are in place so that the AI does not undermine the comparison.
@@ -1002,3 +1004,9 @@ A few things were on the table and were intentionally not included, to keep the 
 - **Difficulty propagation between Continuous's two quiz paths.** The legacy modal quiz and the live feed quiz keep separate difficulty state.
 
 Each of these was a deliberate scoping decision rather than an oversight.
+
+## 4.9 The public deployment
+
+The same three prototypes are also deployed to a public URL ([learn-pal-demos.vercel.app](https://learn-pal-demos.vercel.app/)) so that they can be tried without the researcher being present. The deployed build is the same code as the study build, with three deliberate differences: (i) the participant-ID modal is auto-skipped, (ii) the researcher panel (Reset and Export buttons) is hidden, and (iii) no events, sessions, or messages are written to a database — every logging call is short-circuited by the same guard that prevents writes when no participant ID is set. The public deployment is therefore safe to share without contaminating the real study data.
+
+Three small operational notes follow from this. The video file is served from a public mirror on the Internet Archive rather than from the local `public/` folder, because the archive supports the cross-origin headers that the Continuous and Proactive prototypes need for canvas-based frame capture. The free-tier hosting spins down after fifteen minutes of inactivity, so the first request after a quiet period takes around thirty seconds to wake the server. And each prototype has its own `deploy/demo` git branch, kept in lock-step with `main` plus the demo-mode flag — this isolation guarantees that improvements made for the public deployment cannot accidentally land in the study build.
