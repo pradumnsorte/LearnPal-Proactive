@@ -467,6 +467,7 @@ function App() {
   const isSeekingRef = useRef(false)
   const progressRef = useRef(null)
   const sessionIdRef = useRef(null)
+  const firstInteractionLoggedRef = useRef(false)  // ensures first_interaction is logged only once per session
   const chatMessagesRef = useRef(null)
   const featureGridRef = useRef(null)
   const localVideoRef = useRef(null)
@@ -936,6 +937,10 @@ function App() {
     setAiError(null)
     setIsLoading(true)
 
+    if (!firstInteractionLoggedRef.current) {
+      firstInteractionLoggedRef.current = true
+      logEvent('first_interaction', currentPlaybackSeconds)
+    }
     logEvent('chat_message_sent', currentPlaybackSeconds, { char_count: nextPrompt.length, source })
 
     try {
@@ -985,6 +990,10 @@ function App() {
         keywordOpened: current.keywordOpened + 1,
         detailRequests: current.detailRequests + 1,
       }))
+      if (!firstInteractionLoggedRef.current) {
+        firstInteractionLoggedRef.current = true
+        logEvent('first_interaction', currentPlaybackSeconds)
+      }
       logEvent('keyword_detail', currentPlaybackSeconds)
     } else if (action === 'later') {
       setLaterQueue((current) => (
@@ -1035,6 +1044,10 @@ function App() {
           : [...current, activeVisualCard]
       ))
       setInteractionStats((current) => ({ ...current, visualSaved: current.visualSaved + 1 }))
+      if (!firstInteractionLoggedRef.current) {
+        firstInteractionLoggedRef.current = true
+        logEvent('first_interaction', currentPlaybackSeconds)
+      }
       logEvent('visual_saved', currentPlaybackSeconds)
     }
 
@@ -1044,6 +1057,10 @@ function App() {
         ...current,
         detailRequests: current.detailRequests + 1,
       }))
+      if (!firstInteractionLoggedRef.current) {
+        firstInteractionLoggedRef.current = true
+        logEvent('first_interaction', currentPlaybackSeconds)
+      }
       logEvent('visual_detail', currentPlaybackSeconds)
     }
 
@@ -1166,6 +1183,10 @@ function App() {
       }
       return next
     })
+    if (!firstInteractionLoggedRef.current) {
+      firstInteractionLoggedRef.current = true
+      logEvent('first_interaction', currentPlaybackSeconds)
+    }
     logEvent(isCorrect ? 'quiz_correct' : 'quiz_wrong', currentPlaybackSeconds)
 
     // Save attempt to backend — fire and forget. Mirrors the pattern used by
@@ -1366,6 +1387,7 @@ function App() {
     // Reset participant flow — drop the session and re-show the PID modal so the
     // next participant types their ID before any data is logged.
     sessionIdRef.current = null
+    firstInteractionLoggedRef.current = false
     setParticipantId('')
     setPidInput('')
     setPidConfirmed(false)
