@@ -11,7 +11,7 @@ A reader who reads only this section should walk away with a clear picture of th
 Every prototype is a small web application. The participant opens it in a browser; behind the scenes, three things are at work.
 
 1. A **frontend** written in React. This is the visible interface, including the video player, the chat sidebar, and the panels and overlays that vary by paradigm.
-2. A **backend** written in Node.js (using Express). This handles five kinds of request: chat messages, quiz generation, transcript-chunk analysis, behaviour event logging, and data export.
+2. A **backend** written in Node.js (using Express). This handles a handful of request types: session creation, chat messages, quiz generation, snap captures, behaviour event logging, and data export. Two of the three prototypes also have an *analyse* route that runs the AI on transcript chunks in the background — but that one is what differs, and is covered in those sections.
 3. A **local SQLite database file** that stores everything for the session.
 
 These three pieces talk to one or more **AI providers** over the internet, or to a local model running on the same machine where one is available. Whichever provider is selected, the prompts and the response handling are identical. Only the message format differs slightly between vendors.

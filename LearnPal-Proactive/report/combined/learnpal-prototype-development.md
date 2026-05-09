@@ -28,7 +28,7 @@ A reader who reads only this section should walk away with a clear picture of th
 Every prototype is a small web application. The participant opens it in a browser; behind the scenes, three things are at work.
 
 1. A **frontend** written in React. This is the visible interface, including the video player, the chat sidebar, and the panels and overlays that vary by paradigm.
-2. A **backend** written in Node.js (using Express). This handles five kinds of request: chat messages, quiz generation, transcript-chunk analysis, behaviour event logging, and data export.
+2. A **backend** written in Node.js (using Express). This handles a handful of request types: session creation, chat messages, quiz generation, snap captures, behaviour event logging, and data export. Two of the three prototypes also have an *analyse* route that runs the AI on transcript chunks in the background — but that one is what differs, and is covered in those sections.
 3. A **local SQLite database file** that stores everything for the session.
 
 These three pieces talk to one or more **AI providers** over the internet, or to a local model running on the same machine where one is available. Whichever provider is selected, the prompts and the response handling are identical. Only the message format differs slightly between vendors.
@@ -306,7 +306,7 @@ default_viewing → selection_mode → selection_confirm → default_viewing
 default_viewing → quiz_loading → quiz_open → quiz_feedback → default_viewing
 ```
 
-There is **no background loop**. The server has no `/api/analyse` route at all; that route exists only in the other two prototypes. The Intermittent server is genuinely smaller, with only five endpoints (sessions, chat, quiz, snaps, events, plus export). This is part of why the project was built as three separate apps rather than one with toggles: the differences are visible all the way down to the file system.
+There is **no background loop**. The server has no `/api/analyse` route at all; that route exists only in the other two prototypes. The Intermittent server is genuinely smaller, with only six endpoints (sessions, chat, quiz, snaps, events, and export). This is part of why the project was built as three separate apps rather than one with toggles: the differences are visible all the way down to the file system.
 
 The pieces of state that matter most:
 
@@ -987,10 +987,6 @@ A few things are worth being upfront about.
 **The transcript is fixed.** Real-world video lectures vary in pace, density, and clarity. A single video does not tell us whether the paradigm differences generalise across content types.
 
 **The AI is non-deterministic.** Two participants in the same condition do not see exactly the same content. The blocklists and dedup rules reduce this to a tolerable level, but it is not zero.
-
-**No cross-session memory.** Each session is isolated; the AI does not remember the participant from one session to the next.
-
-**The Proactive skip-gate trusts the AI.** When the AI returns `{"skip": true}` saying the recent material is not substantive, no quiz fires. If the AI is wrong about that, the participant simply does not see a quiz they could have benefited from. There is no fallback.
 
 ## 4.8 What was deliberately left out
 

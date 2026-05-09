@@ -86,10 +86,6 @@ A few things are worth being upfront about.
 
 **The AI is non-deterministic.** Two participants in the same condition do not see exactly the same content. The blocklists and dedup rules reduce this to a tolerable level, but it is not zero.
 
-**No cross-session memory.** Each session is isolated; the AI does not remember the participant from one session to the next.
-
-**The Proactive skip-gate trusts the AI.** When the AI returns `{"skip": true}` saying the recent material is not substantive, no quiz fires. If the AI is wrong about that, the participant simply does not see a quiz they could have benefited from. There is no fallback.
-
 ## 4.8 What was deliberately left out
 
 A few things were on the table and were intentionally not included, to keep the comparison clean.

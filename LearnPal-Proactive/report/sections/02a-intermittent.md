@@ -103,7 +103,7 @@ default_viewing → selection_mode → selection_confirm → default_viewing
 default_viewing → quiz_loading → quiz_open → quiz_feedback → default_viewing
 ```
 
-There is **no background loop**. The server has no `/api/analyse` route at all; that route exists only in the other two prototypes. The Intermittent server is genuinely smaller, with only five endpoints (sessions, chat, quiz, snaps, events, plus export). This is part of why the project was built as three separate apps rather than one with toggles: the differences are visible all the way down to the file system.
+There is **no background loop**. The server has no `/api/analyse` route at all; that route exists only in the other two prototypes. The Intermittent server is genuinely smaller, with only six endpoints (sessions, chat, quiz, snaps, events, and export). This is part of why the project was built as three separate apps rather than one with toggles: the differences are visible all the way down to the file system.
 
 The pieces of state that matter most:
 
