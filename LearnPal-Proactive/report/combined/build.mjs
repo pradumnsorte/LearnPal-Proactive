@@ -1,5 +1,5 @@
-// Combines all section markdown files into a single chapter.md and a
-// self-contained chapter.html (with Mermaid CDN for rendered diagrams).
+// Combines all section markdown files into a single learnpal-prototype-development.md and a
+// self-contained learnpal-prototype-development.html (with Mermaid CDN for rendered diagrams).
 // Re-run after editing any section or diagram source: `node build.mjs`.
 
 import { readFileSync, writeFileSync } from 'node:fs'
@@ -23,7 +23,7 @@ const inlineDiagrams = (md) =>
 // Each screenshot callout in the section sources looks like:
 //   > **Screenshot 2a-A:** caption text...
 // We replace each with an HTML <figure> referencing the actual PNG. The path
-// is relative to `report/combined/chapter.html`, walking up to repo root.
+// is relative to `report/combined/learnpal-prototype-development.html`, walking up to repo root.
 const SCREENSHOT_DIR = '../../src/assets/Report-ss'
 const inlineScreenshots = (md) =>
   md.replace(
@@ -91,7 +91,7 @@ A walkthrough of three functional prototypes built to compare three different pa
 
 const combined = front + sections.map((p) => inlineScreenshots(inlineDiagrams(read(p)))).join('\n\n---\n\n')
 
-writeFileSync(resolve(here, 'chapter.md'), combined)
+writeFileSync(resolve(here, 'learnpal-prototype-development.md'), combined)
 
 // --- HTML build: render markdown + mermaid in a single self-contained file. ---
 const BRAND_ICON = '../../src/assets/brand-icon.svg'
@@ -344,7 +344,7 @@ const html = `<!DOCTYPE html>
 </html>
 `
 
-writeFileSync(resolve(here, 'chapter.html'), html)
+writeFileSync(resolve(here, 'learnpal-prototype-development.html'), html)
 
-console.log('Wrote chapter.md and chapter.html')
-console.log('Open chapter.html in any browser to view with rendered diagrams.')
+console.log('Wrote learnpal-prototype-development.md and learnpal-prototype-development.html')
+console.log('Open learnpal-prototype-development.html in any browser to view with rendered diagrams.')

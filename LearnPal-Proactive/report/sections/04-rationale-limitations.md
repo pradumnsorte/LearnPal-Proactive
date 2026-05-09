@@ -86,10 +86,6 @@ A few things are worth being upfront about.
 
 **The AI is non-deterministic.** Two participants in the same condition do not see exactly the same content. The blocklists and dedup rules reduce this to a tolerable level, but it is not zero.
 
-**No cross-session memory.** Each session is isolated; the AI does not remember the participant from one session to the next.
-
-**The Proactive skip-gate trusts the AI.** When the AI returns `{"skip": true}` saying the recent material is not substantive, no quiz fires. If the AI is wrong about that, the participant simply does not see a quiz they could have benefited from. There is no fallback.
-
 ## 4.8 What was deliberately left out
 
 A few things were on the table and were intentionally not included, to keep the comparison clean.
@@ -102,3 +98,9 @@ A few things were on the table and were intentionally not included, to keep the 
 - **Difficulty propagation between Continuous's two quiz paths.** The legacy modal quiz and the live feed quiz keep separate difficulty state.
 
 Each of these was a deliberate scoping decision rather than an oversight.
+
+## 4.9 The public deployment
+
+The same three prototypes are also deployed to a public URL ([learn-pal-demos.vercel.app](https://learn-pal-demos.vercel.app/)) so that they can be tried without the researcher being present. The deployed build is the same code as the study build, with three deliberate differences: (i) the participant-ID modal is auto-skipped, (ii) the researcher panel (Reset and Export buttons) is hidden, and (iii) no events, sessions, or messages are written to a database — every logging call is short-circuited by the same guard that prevents writes when no participant ID is set. The public deployment is therefore safe to share without contaminating the real study data.
+
+Three small operational notes follow from this. The video file is served from a public mirror on the Internet Archive rather than from the local `public/` folder, because the archive supports the cross-origin headers that the Continuous and Proactive prototypes need for canvas-based frame capture. The free-tier hosting spins down after fifteen minutes of inactivity, so the first request after a quiet period takes around thirty seconds to wake the server. And each prototype has its own `deploy/demo` git branch, kept in lock-step with `main` plus the demo-mode flag — this isolation guarantees that improvements made for the public deployment cannot accidentally land in the study build.

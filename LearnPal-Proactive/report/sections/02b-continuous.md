@@ -130,7 +130,7 @@ The new server route in this prototype is `/api/analyse`. Given a transcript chu
 
 ## 2b.8 Events that are unique to this prototype
 
-Beyond the shared events listed in §1.5, Continuous logs:
+Beyond the shared events listed in Section 1.5, Continuous logs:
 
 | Event | When it fires | What it tells us |
 |---|---|---|

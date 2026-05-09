@@ -1,5 +1,7 @@
 # Section 1: The Shared Foundation
 
+> **Try the prototypes:** all three are deployed and accessible at **[learn-pal-demos.vercel.app](https://learn-pal-demos.vercel.app/)**. The three cards on that page open the Intermittent, Continuous, and Proactive versions respectively. The first load of each may take ~30 seconds while the free-tier service warms up; subsequent navigation is instant. The deployed versions match the study build, with the participant-tracking instrumentation disabled (see Section 4.9).
+
 Before describing the three prototypes individually, this section walks through what they have in common. All three are built on the same technical base, with the same data model, the same instrumentation, and the same set of safeguards around the AI's output. Only one route on the server, and the on-screen panels themselves, actually differ between them. Isolating the shared parts here first allows the per-prototype sections to stay focused on what makes each design distinctive.
 
 A reader who reads only this section should walk away with a clear picture of three things: how the apps are structured, how a study session flows from open-the-page to export-the-data, and what guardrails are in place so that the AI does not undermine the comparison.
@@ -9,7 +11,7 @@ A reader who reads only this section should walk away with a clear picture of th
 Every prototype is a small web application. The participant opens it in a browser; behind the scenes, three things are at work.
 
 1. A **frontend** written in React. This is the visible interface, including the video player, the chat sidebar, and the panels and overlays that vary by paradigm.
-2. A **backend** written in Node.js (using Express). This handles five kinds of request: chat messages, quiz generation, transcript-chunk analysis, behaviour event logging, and data export.
+2. A **backend** written in Node.js (using Express). This handles a handful of request types: session creation, chat messages, quiz generation, snap captures, behaviour event logging, and data export. Two of the three prototypes also have an *analyse* route that runs the AI on transcript chunks in the background — but that one is what differs, and is covered in those sections.
 3. A **local SQLite database file** that stores everything for the session.
 
 These three pieces talk to one or more **AI providers** over the internet, or to a local model running on the same machine where one is available. Whichever provider is selected, the prompts and the response handling are identical. Only the message format differs slightly between vendors.
@@ -68,7 +70,7 @@ The participant does not think about any of this infrastructure. From their pers
 5. **They reach the end**, either by playing through, or because the session is complete. The researcher can hit a *Reset* button to clear the screen for the next participant; the previous data stays safe in the database.
 6. **The researcher exports the data.** A single button downloads a multi-sheet Excel file containing every session's events, messages, and quizzes for analysis.
 
-Several small details in this flow (in particular the careful separation of "ID entered" from "session created", and what *Reset* should and should not do) were tightened only after the first pilots exposed bugs in the data. The full story is in §4.3.
+Several small details in this flow (in particular the careful separation of "ID entered" from "session created", and what *Reset* should and should not do) were tightened only after the first pilots exposed bugs in the data. The full story is in Section 4.3.
 
 ## 1.4 What the database actually stores
 
@@ -150,7 +152,7 @@ When the researcher hits *Export*, they receive a single `.xlsx` file with five 
 
 The *Comparable* sheet is the one that does the heavy lifting for analysis. It groups raw events into ICAP buckets: Active behaviour (pausing, seeking, transcript-reading), Constructive behaviour (asking questions, answering quizzes), and Interactive behaviour (back-and-forth dialogue with the AI). It also computes an "AI acceptance rate": of all the AI suggestions the participant saw, what fraction did they actually engage with?
 
-The exact bucketing is paradigm-specific. What counts as a "suggestion shown" looks different in a paradigm where the AI never speaks unprompted, compared to one where it interrupts on a schedule. The comparison section (§3) explains how these differences map to one another.
+The exact bucketing is paradigm-specific. What counts as a "suggestion shown" looks different in a paradigm where the AI never speaks unprompted, compared to one where it interrupts on a schedule. The comparison section (Section 3) explains how these differences map to one another.
 
 ## 1.6 Keeping the AI honest
 
