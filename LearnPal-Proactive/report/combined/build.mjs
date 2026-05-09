@@ -348,3 +348,17 @@ writeFileSync(resolve(here, 'learnpal-prototype-development.html'), html)
 
 console.log('Wrote learnpal-prototype-development.md and learnpal-prototype-development.html')
 console.log('Open learnpal-prototype-development.html in any browser to view with rendered diagrams.')
+
+// --- Also emit a Vercel-deployable copy alongside the LearnPal-Demos repo
+// (when present), with rewritten asset paths so it works as a static page
+// next to the existing index.html on the public landing site.
+import { existsSync } from 'node:fs'
+const vercelDir = resolve(here, '../../../LearnPal-Demos')
+if (existsSync(vercelDir)) {
+  const vercelHtml = html
+    .replaceAll('../../src/assets/Report-ss/', 'screenshots/')
+    .replaceAll('../../src/assets/brand-icon.svg', 'brand-icon.svg')
+    .replaceAll('../../src/assets/LearnPal-Favicon.svg', 'favicon.svg')
+  writeFileSync(resolve(vercelDir, 'prototype-development.html'), vercelHtml)
+  console.log(`Also wrote ${vercelDir}/prototype-development.html`)
+}
