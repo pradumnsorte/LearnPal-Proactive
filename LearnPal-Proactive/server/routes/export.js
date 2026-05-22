@@ -169,6 +169,7 @@ router.get('/quizzes', (req, res) => {
            q.selected_index, q.is_correct, q.difficulty, q.provider,
            q.time_to_answer_seconds, q.created_at
     FROM quiz_attempts q JOIN sessions s ON s.id = q.session_id
+    WHERE q.correct_index != -1
     ORDER BY q.session_id ASC, q.created_at ASC
   `).all()
   const headers = ['participant_id', 'paradigm', 'question', 'correct_index',
@@ -219,6 +220,7 @@ router.get('/all', (req, res) => {
            q.selected_index, q.is_correct, q.difficulty, q.provider,
            q.time_to_answer_seconds, q.created_at
     FROM quiz_attempts q JOIN sessions s ON s.id = q.session_id
+    WHERE q.correct_index != -1
     ORDER BY q.session_id ASC, q.created_at ASC
   `).all()
 
