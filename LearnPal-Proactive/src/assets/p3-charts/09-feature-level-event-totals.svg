@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 316" role="img" aria-label="Feature-level event totals">
+  <style>
+  .grid-line { stroke: #d8d5cb; stroke-width: 1; fill: none; }
+  .axis-label, .small-label, .legend-text, .bar-label, .bar-value, .point-label {
+    font-family: Inter, Arial, sans-serif;
+    font-size: 12px;
+    fill: #6e7480;
+    font-variant-numeric: tabular-nums;
+  }
+  .axis-title {
+    font-family: Inter, Arial, sans-serif;
+    font-size: 13px;
+    fill: #343943;
+    font-weight: 720;
+  }
+  .slope-line { stroke-width: 2; opacity: 0.58; fill: none; }
+  .trend-line { stroke: #6f747d; stroke-width: 2; stroke-dasharray: 6 6; opacity: 0.72; fill: none; }
+  .dot, .scatter-dot { stroke: #ffffff; stroke-width: 1.6; opacity: 0.88; }
+  .compact-label { font-size: 10px; }
+  .key-label { font-weight: 760; fill: #232831; }
+  .bar-track { fill: #eeece2; }
+  .bar-value { fill: #343943; font-weight: 720; }
+</style>
+    <g>
+          <text x="198" y="39" class="bar-label" text-anchor="end">I: chat messages</text>
+          <rect x="210" y="24" width="552" height="18" class="bar-track" rx="4"/>
+          <rect x="210" y="24" width="58.65" height="18" fill="#b89214" rx="4"/>
+          <text x="276.65" y="38" class="bar-value">17</text>
+        </g><g>
+          <text x="198" y="69" class="bar-label" text-anchor="end">I: quiz attempts</text>
+          <rect x="210" y="54" width="552" height="18" class="bar-track" rx="4"/>
+          <rect x="210" y="54" width="117.3" height="18" fill="#b89214" rx="4"/>
+          <text x="335.3" y="68" class="bar-value">34</text>
+        </g><g>
+          <text x="198" y="99" class="bar-label" text-anchor="end">I: completed snaps</text>
+          <rect x="210" y="84" width="552" height="18" class="bar-track" rx="4"/>
+          <rect x="210" y="84" width="31.05" height="18" fill="#b89214" rx="4"/>
+          <text x="249.05" y="98" class="bar-value">9</text>
+        </g><g>
+          <text x="198" y="129" class="bar-label" text-anchor="end">C: feed questions unlocked</text>
+          <rect x="210" y="114" width="552" height="18" class="bar-track" rx="4"/>
+          <rect x="210" y="114" width="227.7" height="18" fill="#2764d8" rx="4"/>
+          <text x="445.7" y="128" class="bar-value">66</text>
+        </g><g>
+          <text x="198" y="159" class="bar-label" text-anchor="end">C: feed questions answered</text>
+          <rect x="210" y="144" width="552" height="18" class="bar-track" rx="4"/>
+          <rect x="210" y="144" width="165.6" height="18" fill="#2764d8" rx="4"/>
+          <text x="383.6" y="158" class="bar-value">48</text>
+        </g><g>
+          <text x="198" y="189" class="bar-label" text-anchor="end">C: glossary clicks</text>
+          <rect x="210" y="174" width="552" height="18" class="bar-track" rx="4"/>
+          <rect x="210" y="174" width="65.55" height="18" fill="#2764d8" rx="4"/>
+          <text x="283.55" y="188" class="bar-value">19</text>
+        </g><g>
+          <text x="198" y="219" class="bar-label" text-anchor="end">P: keyword shown</text>
+          <rect x="210" y="204" width="552" height="18" class="bar-track" rx="4"/>
+          <rect x="210" y="204" width="531.3000000000001" height="18" fill="#d83a5d" rx="4"/>
+          <text x="749.3000000000001" y="218" class="bar-value">154</text>
+        </g><g>
+          <text x="198" y="249" class="bar-label" text-anchor="end">P: keyword ignored/dismissed</text>
+          <rect x="210" y="234" width="552" height="18" class="bar-track" rx="4"/>
+          <rect x="210" y="234" width="458.85" height="18" fill="#d83a5d" rx="4"/>
+          <text x="676.85" y="248" class="bar-value">133</text>
+        </g><g>
+          <text x="198" y="279" class="bar-label" text-anchor="end">P: quiz triggers</text>
+          <rect x="210" y="264" width="552" height="18" class="bar-track" rx="4"/>
+          <rect x="210" y="264" width="258.75" height="18" fill="#d83a5d" rx="4"/>
+          <text x="476.75" y="278" class="bar-value">75</text>
+        </g>
+  </svg>

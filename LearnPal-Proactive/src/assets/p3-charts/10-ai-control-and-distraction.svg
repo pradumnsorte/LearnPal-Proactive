@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 510" role="img" aria-label="AI control and distraction">
+  <style>
+  .grid-line { stroke: #d8d5cb; stroke-width: 1; fill: none; }
+  .axis-label, .small-label, .legend-text, .bar-label, .bar-value, .point-label {
+    font-family: Inter, Arial, sans-serif;
+    font-size: 12px;
+    fill: #6e7480;
+    font-variant-numeric: tabular-nums;
+  }
+  .axis-title {
+    font-family: Inter, Arial, sans-serif;
+    font-size: 13px;
+    fill: #343943;
+    font-weight: 720;
+  }
+  .slope-line { stroke-width: 2; opacity: 0.58; fill: none; }
+  .trend-line { stroke: #6f747d; stroke-width: 2; stroke-dasharray: 6 6; opacity: 0.72; fill: none; }
+  .dot, .scatter-dot { stroke: #ffffff; stroke-width: 1.6; opacity: 0.88; }
+  .compact-label { font-size: 10px; }
+  .key-label { font-weight: 760; fill: #232831; }
+  .bar-track { fill: #eeece2; }
+  .bar-value { fill: #343943; font-weight: 720; }
+</style>
+    <line x1="88" y1="54" x2="88" y2="420" class="grid-line"/><text x="88" y="444" class="axis-label" text-anchor="middle">1</text><line x1="278.5" y1="54" x2="278.5" y2="420" class="grid-line"/><text x="278.5" y="444" class="axis-label" text-anchor="middle">2</text><line x1="469" y1="54" x2="469" y2="420" class="grid-line"/><text x="469" y="444" class="axis-label" text-anchor="middle">3</text><line x1="659.5" y1="54" x2="659.5" y2="420" class="grid-line"/><text x="659.5" y="444" class="axis-label" text-anchor="middle">4</text><line x1="850" y1="54" x2="850" y2="420" class="grid-line"/><text x="850" y="444" class="axis-label" text-anchor="middle">5</text>
+    <line x1="88" y1="420" x2="850" y2="420" class="grid-line"/><text x="70" y="424" class="axis-label" text-anchor="end">1</text><line x1="88" y1="328.5" x2="850" y2="328.5" class="grid-line"/><text x="70" y="332.5" class="axis-label" text-anchor="end">2</text><line x1="88" y1="237" x2="850" y2="237" class="grid-line"/><text x="70" y="241" class="axis-label" text-anchor="end">3</text><line x1="88" y1="145.5" x2="850" y2="145.5" class="grid-line"/><text x="70" y="149.5" class="axis-label" text-anchor="end">4</text><line x1="88" y1="54" x2="850" y2="54" class="grid-line"/><text x="70" y="58" class="axis-label" text-anchor="end">5</text>
+    <text x="469" y="484" class="axis-title" text-anchor="middle">Felt in control</text>
+    <text x="24" y="237" class="axis-title" text-anchor="middle" transform="rotate(-90 24 237)">AI distraction</text>
+    
+    <g>
+          <circle cx="850" cy="237" r="10.2" fill="#2764d8" class="scatter-dot" opacity="0.92"/>
+          <text x="831.8" y="228" class="point-label key-label compact-label" text-anchor="end">C01</text>
+          <title>C01: Felt in control 5.00, AI distraction 3.00</title>
+        </g><g>
+          <circle cx="659.5" cy="145.5" r="10.2" fill="#2764d8" class="scatter-dot" opacity="0.92"/>
+          <text x="641.3" y="136.5" class="point-label key-label compact-label" text-anchor="end">C02</text>
+          <title>C02: Felt in control 4.00, AI distraction 4.00</title>
+        </g><g>
+          <circle cx="275.25" cy="145.5" r="5.5" fill="#2764d8" class="scatter-dot" opacity="0.92"/><circle cx="281.75" cy="145.5" r="5.5" fill="#d83a5d" class="scatter-dot" opacity="0.92"/>
+          <text x="296.7" y="136.5" class="point-label key-label compact-label" text-anchor="start">C03, P07</text>
+          <title>C03: Felt in control 2.00, AI distraction 4.00; P07: Felt in control 2.00, AI distraction 4.00</title>
+        </g><g>
+          <circle cx="840.25" cy="420" r="5.5" fill="#2764d8" class="scatter-dot" opacity="0.92"/><circle cx="846.75" cy="420" r="5.5" fill="#b89214" class="scatter-dot" opacity="0.92"/><circle cx="853.25" cy="420" r="5.5" fill="#b89214" class="scatter-dot" opacity="0.92"/><circle cx="859.75" cy="420" r="5.5" fill="#b89214" class="scatter-dot" opacity="0.92"/>
+          <text x="831.8" y="409" class="point-label key-label compact-label" text-anchor="end">C04, I01, I05, I07</text>
+          <title>C04: Felt in control 5.00, AI distraction 1.00; I01: Felt in control 5.00, AI distraction 1.00; I05: Felt in control 5.00, AI distraction 1.00; I07: Felt in control 5.00, AI distraction 1.00</title>
+        </g><g>
+          <circle cx="465.75" cy="145.5" r="5.5" fill="#2764d8" class="scatter-dot" opacity="0.92"/><circle cx="472.25" cy="145.5" r="5.5" fill="#d83a5d" class="scatter-dot" opacity="0.92"/>
+          <text x="487.2" y="136.5" class="point-label key-label compact-label" text-anchor="start">C05, P02</text>
+          <title>C05: Felt in control 3.00, AI distraction 4.00; P02: Felt in control 3.00, AI distraction 4.00</title>
+        </g><g>
+          <circle cx="659.5" cy="328.5" r="6" fill="#2764d8" class="scatter-dot" opacity="0.92"/>
+          <text x="645.5" y="319.5" class="point-label key-label compact-label" text-anchor="end">C06</text>
+          <title>C06: Felt in control 4.00, AI distraction 2.00</title>
+        </g><g>
+          <circle cx="653" cy="237" r="5.5" fill="#2764d8" class="scatter-dot" opacity="0.92"/><circle cx="659.5" cy="237" r="5.5" fill="#d83a5d" class="scatter-dot" opacity="0.92"/><circle cx="666" cy="237" r="5.5" fill="#d83a5d" class="scatter-dot" opacity="0.92"/>
+          <text x="633.5" y="228" class="point-label key-label compact-label" text-anchor="end">C07, P01, P04</text>
+          <title>C07: Felt in control 4.00, AI distraction 3.00; P01: Felt in control 4.00, AI distraction 3.00; P04: Felt in control 4.00, AI distraction 3.00</title>
+        </g><g>
+          <circle cx="653" cy="420" r="5.5" fill="#b89214" class="scatter-dot" opacity="0.92"/><circle cx="659.5" cy="420" r="5.5" fill="#d83a5d" class="scatter-dot" opacity="0.92"/><circle cx="666" cy="420" r="5.5" fill="#d83a5d" class="scatter-dot" opacity="0.92"/>
+          <text x="637.1" y="409" class="point-label key-label compact-label" text-anchor="end">I02, P05, P06</text>
+          <title>I02: Felt in control 4.00, AI distraction 1.00; P05: Felt in control 4.00, AI distraction 1.00; P06: Felt in control 4.00, AI distraction 1.00</title>
+        </g><g>
+          <circle cx="846.75" cy="328.5" r="5.5" fill="#b89214" class="scatter-dot" opacity="0.92"/><circle cx="853.25" cy="328.5" r="5.5" fill="#b89214" class="scatter-dot" opacity="0.92"/>
+          <text x="831.8" y="319.5" class="point-label key-label compact-label" text-anchor="end">I03, I04</text>
+          <title>I03: Felt in control 5.00, AI distraction 2.00; I04: Felt in control 5.00, AI distraction 2.00</title>
+        </g><g>
+          <circle cx="469" cy="420" r="16.5" fill="#b89214" class="scatter-dot" opacity="0.92"/>
+          <text x="493.5" y="409" class="point-label key-label compact-label" text-anchor="start">I06</text>
+          <title>I06: Felt in control 3.00, AI distraction 1.00</title>
+        </g><g>
+          <circle cx="88" cy="145.5" r="10.2" fill="#d83a5d" class="scatter-dot" opacity="0.92"/>
+          <text x="106.2" y="136.5" class="point-label key-label compact-label" text-anchor="start">P03</text>
+          <title>P03: Felt in control 1.00, AI distraction 4.00</title>
+        </g>
+  </svg>

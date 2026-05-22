@@ -1,0 +1,93 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 510" role="img" aria-label="Baseline score and raw gain">
+  <style>
+  .grid-line { stroke: #d8d5cb; stroke-width: 1; fill: none; }
+  .axis-label, .small-label, .legend-text, .bar-label, .bar-value, .point-label {
+    font-family: Inter, Arial, sans-serif;
+    font-size: 12px;
+    fill: #6e7480;
+    font-variant-numeric: tabular-nums;
+  }
+  .axis-title {
+    font-family: Inter, Arial, sans-serif;
+    font-size: 13px;
+    fill: #343943;
+    font-weight: 720;
+  }
+  .slope-line { stroke-width: 2; opacity: 0.58; fill: none; }
+  .trend-line { stroke: #6f747d; stroke-width: 2; stroke-dasharray: 6 6; opacity: 0.72; fill: none; }
+  .dot, .scatter-dot { stroke: #ffffff; stroke-width: 1.6; opacity: 0.88; }
+  .compact-label { font-size: 10px; }
+  .key-label { font-weight: 760; fill: #232831; }
+  .bar-track { fill: #eeece2; }
+  .bar-value { fill: #343943; font-weight: 720; }
+</style>
+    <line x1="88" y1="54" x2="88" y2="420" class="grid-line"/><text x="88" y="444" class="axis-label" text-anchor="middle">0</text><line x1="126.1" y1="54" x2="126.1" y2="420" class="grid-line"/><text x="126.1" y="444" class="axis-label" text-anchor="middle">1</text><line x1="164.2" y1="54" x2="164.2" y2="420" class="grid-line"/><text x="164.2" y="444" class="axis-label" text-anchor="middle">2</text><line x1="202.3" y1="54" x2="202.3" y2="420" class="grid-line"/><text x="202.3" y="444" class="axis-label" text-anchor="middle">3</text><line x1="240.4" y1="54" x2="240.4" y2="420" class="grid-line"/><text x="240.4" y="444" class="axis-label" text-anchor="middle">4</text><line x1="278.5" y1="54" x2="278.5" y2="420" class="grid-line"/><text x="278.5" y="444" class="axis-label" text-anchor="middle">5</text><line x1="316.6" y1="54" x2="316.6" y2="420" class="grid-line"/><text x="316.6" y="444" class="axis-label" text-anchor="middle">6</text><line x1="354.7" y1="54" x2="354.7" y2="420" class="grid-line"/><text x="354.7" y="444" class="axis-label" text-anchor="middle">7</text><line x1="392.8" y1="54" x2="392.8" y2="420" class="grid-line"/><text x="392.8" y="444" class="axis-label" text-anchor="middle">8</text><line x1="430.90000000000003" y1="54" x2="430.90000000000003" y2="420" class="grid-line"/><text x="430.90000000000003" y="444" class="axis-label" text-anchor="middle">9</text><line x1="469" y1="54" x2="469" y2="420" class="grid-line"/><text x="469" y="444" class="axis-label" text-anchor="middle">10</text><line x1="507.1" y1="54" x2="507.1" y2="420" class="grid-line"/><text x="507.1" y="444" class="axis-label" text-anchor="middle">11</text><line x1="545.2" y1="54" x2="545.2" y2="420" class="grid-line"/><text x="545.2" y="444" class="axis-label" text-anchor="middle">12</text><line x1="583.3" y1="54" x2="583.3" y2="420" class="grid-line"/><text x="583.3" y="444" class="axis-label" text-anchor="middle">13</text><line x1="621.4" y1="54" x2="621.4" y2="420" class="grid-line"/><text x="621.4" y="444" class="axis-label" text-anchor="middle">14</text><line x1="659.5" y1="54" x2="659.5" y2="420" class="grid-line"/><text x="659.5" y="444" class="axis-label" text-anchor="middle">15</text><line x1="697.6" y1="54" x2="697.6" y2="420" class="grid-line"/><text x="697.6" y="444" class="axis-label" text-anchor="middle">16</text><line x1="735.6999999999999" y1="54" x2="735.6999999999999" y2="420" class="grid-line"/><text x="735.6999999999999" y="444" class="axis-label" text-anchor="middle">17</text><line x1="773.8000000000001" y1="54" x2="773.8000000000001" y2="420" class="grid-line"/><text x="773.8000000000001" y="444" class="axis-label" text-anchor="middle">18</text><line x1="811.9" y1="54" x2="811.9" y2="420" class="grid-line"/><text x="811.9" y="444" class="axis-label" text-anchor="middle">19</text><line x1="850" y1="54" x2="850" y2="420" class="grid-line"/><text x="850" y="444" class="axis-label" text-anchor="middle">20</text>
+    <line x1="88" y1="420" x2="850" y2="420" class="grid-line"/><text x="70" y="424" class="axis-label" text-anchor="end">-4</text><line x1="88" y1="397.125" x2="850" y2="397.125" class="grid-line"/><text x="70" y="401.125" class="axis-label" text-anchor="end">-3</text><line x1="88" y1="374.25" x2="850" y2="374.25" class="grid-line"/><text x="70" y="378.25" class="axis-label" text-anchor="end">-2</text><line x1="88" y1="351.375" x2="850" y2="351.375" class="grid-line"/><text x="70" y="355.375" class="axis-label" text-anchor="end">-1</text><line x1="88" y1="328.5" x2="850" y2="328.5" class="grid-line"/><text x="70" y="332.5" class="axis-label" text-anchor="end">0</text><line x1="88" y1="305.625" x2="850" y2="305.625" class="grid-line"/><text x="70" y="309.625" class="axis-label" text-anchor="end">1</text><line x1="88" y1="282.75" x2="850" y2="282.75" class="grid-line"/><text x="70" y="286.75" class="axis-label" text-anchor="end">2</text><line x1="88" y1="259.875" x2="850" y2="259.875" class="grid-line"/><text x="70" y="263.875" class="axis-label" text-anchor="end">3</text><line x1="88" y1="237" x2="850" y2="237" class="grid-line"/><text x="70" y="241" class="axis-label" text-anchor="end">4</text><line x1="88" y1="214.125" x2="850" y2="214.125" class="grid-line"/><text x="70" y="218.125" class="axis-label" text-anchor="end">5</text><line x1="88" y1="191.25" x2="850" y2="191.25" class="grid-line"/><text x="70" y="195.25" class="axis-label" text-anchor="end">6</text><line x1="88" y1="168.375" x2="850" y2="168.375" class="grid-line"/><text x="70" y="172.375" class="axis-label" text-anchor="end">7</text><line x1="88" y1="145.5" x2="850" y2="145.5" class="grid-line"/><text x="70" y="149.5" class="axis-label" text-anchor="end">8</text><line x1="88" y1="122.625" x2="850" y2="122.625" class="grid-line"/><text x="70" y="126.625" class="axis-label" text-anchor="end">9</text><line x1="88" y1="99.75" x2="850" y2="99.75" class="grid-line"/><text x="70" y="103.75" class="axis-label" text-anchor="end">10</text><line x1="88" y1="76.875" x2="850" y2="76.875" class="grid-line"/><text x="70" y="80.875" class="axis-label" text-anchor="end">11</text><line x1="88" y1="54" x2="850" y2="54" class="grid-line"/><text x="70" y="58" class="axis-label" text-anchor="end">12</text>
+    <text x="469" y="484" class="axis-title" text-anchor="middle">Pre-test score</text>
+    <text x="24" y="237" class="axis-title" text-anchor="middle" transform="rotate(-90 24 237)">Raw gain</text>
+    <g>
+            <line x1="88" y1="122.67462039045552" x2="697.6" y2="324.72885032537965" class="trend-line"/>
+            <title>Linear trend: Raw gain = -0.55 * Pre-test score + 9.00</title>
+          </g>
+    <g>
+          <circle cx="389.55" cy="237" r="5.5" fill="#2764d8" class="scatter-dot" opacity="0.92"/><circle cx="396.05" cy="237" r="5.5" fill="#b89214" class="scatter-dot" opacity="0.92"/>
+          <text x="408.8" y="228" class="point-label key-label compact-label" text-anchor="start">C01, I03</text>
+          <title>C01: Pre-test score 8.00, Raw gain 4.00; I03: Pre-test score 8.00, Raw gain 4.00</title>
+        </g><g>
+          <circle cx="545.2" cy="237" r="8" fill="#2764d8" class="scatter-dot" opacity="0.92"/>
+          <text x="529.2" y="228" class="point-label key-label compact-label" text-anchor="end">C02</text>
+          <title>C02: Pre-test score 12.00, Raw gain 4.00</title>
+        </g><g>
+          <circle cx="469" cy="237" r="8" fill="#2764d8" class="scatter-dot" opacity="0.92"/>
+          <text x="485" y="228" class="point-label key-label compact-label" text-anchor="start">C03</text>
+          <title>C03: Pre-test score 10.00, Raw gain 4.00</title>
+        </g><g>
+          <circle cx="697.6" cy="237" r="8" fill="#2764d8" class="scatter-dot" opacity="0.92"/>
+          <text x="681.6" y="228" class="point-label key-label compact-label" text-anchor="end">C04</text>
+          <title>C04: Pre-test score 16.00, Raw gain 4.00</title>
+        </g><g>
+          <circle cx="233.9" cy="237" r="5.5" fill="#2764d8" class="scatter-dot" opacity="0.92"/><circle cx="240.4" cy="237" r="5.5" fill="#d83a5d" class="scatter-dot" opacity="0.92"/><circle cx="246.9" cy="237" r="5.5" fill="#d83a5d" class="scatter-dot" opacity="0.92"/>
+          <text x="256.4" y="228" class="point-label key-label compact-label" text-anchor="start">C05, P03, P05</text>
+          <title>C05: Pre-test score 4.00, Raw gain 4.00; P03: Pre-test score 4.00, Raw gain 4.00; P05: Pre-test score 4.00, Raw gain 4.00</title>
+        </g><g>
+          <circle cx="392.8" cy="374.25" r="8" fill="#2764d8" class="scatter-dot" opacity="0.92"/>
+          <text x="408.8" y="365.25" class="point-label key-label compact-label" text-anchor="start">C06</text>
+          <title>C06: Pre-test score 8.00, Raw gain -2.00</title>
+        </g><g>
+          <circle cx="389.55" cy="54" r="5.5" fill="#2764d8" class="scatter-dot" opacity="0.92"/><circle cx="396.05" cy="54" r="5.5" fill="#d83a5d" class="scatter-dot" opacity="0.92"/>
+          <text x="408.8" y="72" class="point-label key-label compact-label" text-anchor="start">C07, P02</text>
+          <title>C07: Pre-test score 8.00, Raw gain 12.00; P02: Pre-test score 8.00, Raw gain 12.00</title>
+        </g><g>
+          <circle cx="164.2" cy="191.25" r="8" fill="#b89214" class="scatter-dot" opacity="0.92"/>
+          <text x="180.2" y="182.25" class="point-label key-label compact-label" text-anchor="start">I01</text>
+          <title>I01: Pre-test score 2.00, Raw gain 6.00</title>
+        </g><g>
+          <circle cx="389.55" cy="145.5" r="5.5" fill="#b89214" class="scatter-dot" opacity="0.92"/><circle cx="396.05" cy="145.5" r="5.5" fill="#d83a5d" class="scatter-dot" opacity="0.92"/>
+          <text x="408.8" y="136.5" class="point-label key-label compact-label" text-anchor="start">I02, P01</text>
+          <title>I02: Pre-test score 8.00, Raw gain 8.00; P01: Pre-test score 8.00, Raw gain 8.00</title>
+        </g><g>
+          <circle cx="697.6" cy="420" r="8" fill="#b89214" class="scatter-dot" opacity="0.92"/>
+          <text x="681.6" y="409" class="point-label key-label compact-label" text-anchor="end">I04</text>
+          <title>I04: Pre-test score 16.00, Raw gain -4.00</title>
+        </g><g>
+          <circle cx="541.95" cy="328.5" r="5.5" fill="#b89214" class="scatter-dot" opacity="0.92"/><circle cx="548.45" cy="328.5" r="5.5" fill="#b89214" class="scatter-dot" opacity="0.92"/>
+          <text x="529.2" y="319.5" class="point-label key-label compact-label" text-anchor="end">I05, I07</text>
+          <title>I05: Pre-test score 12.00, Raw gain 0.00; I07: Pre-test score 12.00, Raw gain 0.00</title>
+        </g><g>
+          <circle cx="88" cy="99.75" r="8" fill="#b89214" class="scatter-dot" opacity="0.92"/>
+          <text x="104" y="90.75" class="point-label key-label compact-label" text-anchor="start">I06</text>
+          <title>I06: Pre-test score 0.00, Raw gain 10.00</title>
+        </g><g>
+          <circle cx="545.2" cy="374.25" r="8" fill="#d83a5d" class="scatter-dot" opacity="0.92"/>
+          <text x="529.2" y="365.25" class="point-label key-label compact-label" text-anchor="end">P04</text>
+          <title>P04: Pre-test score 12.00, Raw gain -2.00</title>
+        </g><g>
+          <circle cx="316.6" cy="99.75" r="8" fill="#d83a5d" class="scatter-dot" opacity="0.92"/>
+          <text x="332.6" y="90.75" class="point-label key-label compact-label" text-anchor="start">P06</text>
+          <title>P06: Pre-test score 6.00, Raw gain 10.00</title>
+        </g><g>
+          <circle cx="316.6" cy="237" r="8" fill="#d83a5d" class="scatter-dot" opacity="0.92"/>
+          <text x="332.6" y="228" class="point-label key-label compact-label" text-anchor="start">P07</text>
+          <title>P07: Pre-test score 6.00, Raw gain 4.00</title>
+        </g>
+  </svg>

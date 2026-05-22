@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 330" role="img" aria-label="Learning metrics by condition">
+  <style>
+  .grid-line { stroke: #d8d5cb; stroke-width: 1; fill: none; }
+  .axis-label, .small-label, .legend-text, .bar-label, .bar-value, .point-label {
+    font-family: Inter, Arial, sans-serif;
+    font-size: 12px;
+    fill: #6e7480;
+    font-variant-numeric: tabular-nums;
+  }
+  .axis-title {
+    font-family: Inter, Arial, sans-serif;
+    font-size: 13px;
+    fill: #343943;
+    font-weight: 720;
+  }
+  .slope-line { stroke-width: 2; opacity: 0.58; fill: none; }
+  .trend-line { stroke: #6f747d; stroke-width: 2; stroke-dasharray: 6 6; opacity: 0.72; fill: none; }
+  .dot, .scatter-dot { stroke: #ffffff; stroke-width: 1.6; opacity: 0.88; }
+  .compact-label { font-size: 10px; }
+  .key-label { font-weight: 760; fill: #232831; }
+  .bar-track { fill: #eeece2; }
+  .bar-value { fill: #343943; font-weight: 720; }
+</style>
+    <line x1="64" y1="272" x2="810" y2="272" class="grid-line"/><line x1="64" y1="217.5" x2="810" y2="217.5" class="grid-line"/><line x1="64" y1="163" x2="810" y2="163" class="grid-line"/><line x1="64" y1="108.5" x2="810" y2="108.5" class="grid-line"/><line x1="64" y1="54" x2="810" y2="54" class="grid-line"/>
+    <text x="164.25" y="297" class="axis-label" text-anchor="middle">Pre</text><text x="348.75" y="297" class="axis-label" text-anchor="middle">Post</text><text x="533.25" y="297" class="axis-label" text-anchor="middle">Gain</text><text x="717.75" y="297" class="axis-label" text-anchor="middle">Norm gain</text>
+    <g>
+            <rect x="128.25" y="181.68571428571428" width="18" height="90.31428571428572" fill="#b89214" rx="4"/>
+            <text x="137.25" y="174.68571428571428" class="bar-value" text-anchor="middle">8.29</text>
+            <title>Intermittent Pre: 8.29</title>
+          </g><g>
+            <rect x="152.25" y="169.22857142857143" width="18" height="102.77142857142857" fill="#2764d8" rx="4"/>
+            <text x="161.25" y="162.22857142857143" class="bar-value" text-anchor="middle">9.43</text>
+            <title>Continuous Pre: 9.43</title>
+          </g><g>
+            <rect x="176.25" y="197.25714285714287" width="18" height="74.74285714285715" fill="#d83a5d" rx="4"/>
+            <text x="185.25" y="190.25714285714287" class="bar-value" text-anchor="middle">6.86</text>
+            <title>Proactive Pre: 6.86</title>
+          </g><g>
+            <rect x="312.75" y="144.31428571428575" width="18" height="127.68571428571427" fill="#b89214" rx="4"/>
+            <text x="321.75" y="137.31428571428575" class="bar-value" text-anchor="middle">11.71</text>
+            <title>Intermittent Post: 11.71</title>
+          </g><g>
+            <rect x="336.75" y="122.5142857142857" width="18" height="149.4857142857143" fill="#2764d8" rx="4"/>
+            <text x="345.75" y="115.5142857142857" class="bar-value" text-anchor="middle">13.71</text>
+            <title>Continuous Post: 13.71</title>
+          </g><g>
+            <rect x="360.75" y="134.97142857142856" width="18" height="137.02857142857144" fill="#d83a5d" rx="4"/>
+            <text x="369.75" y="127.97142857142856" class="bar-value" text-anchor="middle">12.57</text>
+            <title>Proactive Post: 12.57</title>
+          </g><g>
+            <rect x="497.25" y="147.42857142857144" width="18" height="124.57142857142857" fill="#b89214" rx="4"/>
+            <text x="506.25" y="140.42857142857144" class="bar-value" text-anchor="middle">3.43</text>
+            <title>Intermittent Gain: 3.43</title>
+          </g><g>
+            <rect x="521.25" y="116.28571428571428" width="18" height="155.71428571428572" fill="#2764d8" rx="4"/>
+            <text x="530.25" y="109.28571428571428" class="bar-value" text-anchor="middle">4.29</text>
+            <title>Continuous Gain: 4.29</title>
+          </g><g>
+            <rect x="545.25" y="64.38095238095238" width="18" height="207.61904761904762" fill="#d83a5d" rx="4"/>
+            <text x="554.25" y="57.38095238095238" class="bar-value" text-anchor="middle">5.71</text>
+            <title>Proactive Gain: 5.71</title>
+          </g><g>
+            <rect x="681.75" y="220.0952380952381" width="18" height="51.904761904761905" fill="#b89214" rx="4"/>
+            <text x="690.75" y="213.0952380952381" class="bar-value" text-anchor="middle">0.12</text>
+            <title>Intermittent Norm gain: 0.12</title>
+          </g><g>
+            <rect x="705.75" y="65.4190476190476" width="18" height="206.5809523809524" fill="#2764d8" rx="4"/>
+            <text x="714.75" y="58.4190476190476" class="bar-value" text-anchor="middle">0.47</text>
+            <title>Continuous Norm gain: 0.47</title>
+          </g><g>
+            <rect x="729.75" y="90.33333333333334" width="18" height="181.66666666666666" fill="#d83a5d" rx="4"/>
+            <text x="738.75" y="83.33333333333334" class="bar-value" text-anchor="middle">0.42</text>
+            <title>Proactive Norm gain: 0.42</title>
+          </g>
+    <circle cx="72" cy="308" r="6" fill="#b89214"/><text x="84" y="312" class="legend-text">Intermittent</text><circle cx="232" cy="308" r="6" fill="#2764d8"/><text x="244" y="312" class="legend-text">Continuous</text><circle cx="392" cy="308" r="6" fill="#d83a5d"/><text x="404" y="312" class="legend-text">Proactive</text>
+  </svg>

@@ -1,0 +1,1500 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="UTF-8">
+<title>P3 Study — LearnPal Analysis</title>
+<link rel="icon" href="../../src/assets/LearnPal-Favicon.svg" type="image/svg+xml">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --fg: #1c1c1e;
+    --muted: #6a6a70;
+    --soft: #8a8a90;
+    --bg: #fafaf6;
+    --panel: #ffffff;
+    --border: #ebebe4;
+    --line: #f1f1ec;
+    --accent: #c8a420;
+    --i: #c8a420;
+    --c: #3a86ff;
+    --p: #e6446b;
+    --i-soft: #fbf3d4;
+    --c-soft: #e7f0ff;
+    --p-soft: #fbe1e8;
+    --code-bg: #f5f4ee;
+    --shadow: 0 1px 2px rgba(28, 28, 30, 0.04), 0 1px 3px rgba(28, 28, 30, 0.06);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--fg); }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.65;
+    font-size: 16px;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  main { max-width: 1040px; margin: 0 auto; padding: 64px 40px 140px; }
+
+  .chapter-header {
+    display: flex; align-items: center; gap: 18px;
+    padding-bottom: 22px;
+    margin-bottom: 36px;
+    border-bottom: 2px solid var(--accent);
+  }
+  .chapter-header img.brand { width: 44px; height: 44px; flex-shrink: 0; }
+  .chapter-header .titles { line-height: 1.2; }
+  .chapter-header .titles .h1 {
+    font-size: 1.85rem; font-weight: 700; letter-spacing: -0.018em;
+  }
+  .chapter-header .titles .sub {
+    font-size: 0.95rem; color: var(--muted); margin-top: 5px; font-style: italic;
+  }
+
+  h1, h2, h3, h4 {
+    line-height: 1.25;
+    font-weight: 600;
+    letter-spacing: -0.012em;
+  }
+  h2 {
+    font-size: 1.5rem;
+    margin: 3em 0 0.7em;
+    padding-bottom: 0.35em;
+    border-bottom: 1px solid var(--border);
+  }
+  h3 { font-size: 1.08rem; margin: 1.6em 0 0.5em; color: #2a2a2c; }
+  h4 { font-size: 0.95rem; margin: 1.2em 0 0.4em; color: #3a3a3c; }
+  p { margin: 0.75em 0; color: #2c2c2e; }
+  p.lede { font-size: 1.02rem; color: #3a3a3c; margin-top: 0.6em; }
+  a { color: #8a6d10; }
+  ul, ol { padding-left: 1.4em; }
+  li { margin: 0.3em 0; }
+
+  table {
+    width: 100%; border-collapse: collapse;
+    margin: 1em 0; font-size: 0.92em;
+  }
+  th, td { padding: 9px 12px; border-bottom: 1px solid var(--line); text-align: left; }
+  th { font-weight: 600; color: var(--muted); font-size: 0.82em;
+       text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 1px solid var(--border); }
+  .num { text-align: right; font-variant-numeric: tabular-nums; }
+
+  .grid { display: grid; gap: 20px; }
+  .grid-3 { grid-template-columns: repeat(3, 1fr); }
+  .grid-2 { grid-template-columns: repeat(2, 1fr); }
+  @media (max-width: 760px) {
+    .grid-3, .grid-2 { grid-template-columns: 1fr; }
+  }
+
+  /* ──────────────── Scoreboard ──────────────── */
+  .scoreboard {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 14px; margin: 24px 0 32px;
+  }
+  @media (max-width: 760px) { .scoreboard { grid-template-columns: 1fr; } }
+  .score-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 22px 24px 20px;
+    box-shadow: var(--shadow);
+    position: relative; overflow: hidden;
+    transition: transform 0.12s ease, box-shadow 0.12s ease;
+  }
+  .score-card:hover { transform: translateY(-1px); box-shadow: 0 2px 6px rgba(28,28,30,0.07), 0 1px 3px rgba(28,28,30,0.05); }
+  .score-card::before {
+    content: ''; position: absolute; top: 0; left: 0;
+    width: 100%; height: 3px;
+  }
+  .score-card.I::before { background: var(--i); }
+  .score-card.C::before { background: var(--c); }
+  .score-card.P::before { background: var(--p); }
+  .score-card .eyebrow {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 0.72rem; font-weight: 600;
+    color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em;
+    margin-bottom: 10px;
+  }
+  .score-card .eyebrow .dot {
+    width: 7px; height: 7px; border-radius: 50%;
+  }
+  .score-card.I .eyebrow .dot { background: var(--i); }
+  .score-card.C .eyebrow .dot { background: var(--c); }
+  .score-card.P .eyebrow .dot { background: var(--p); }
+  .score-card .big {
+    font-size: 2.4rem; font-weight: 700; line-height: 1.05;
+    margin: 4px 0 6px; font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+  }
+  .score-card .label {
+    font-size: 0.88rem; color: var(--muted); font-weight: 500;
+  }
+  .score-card .sub {
+    font-size: 0.84rem; color: #3a3a3c;
+    margin-top: 14px; padding-top: 12px;
+    border-top: 1px solid var(--line);
+    line-height: 1.55;
+  }
+  .score-card .sub strong { color: var(--fg); }
+
+  /* ──────────────── Chart panels ──────────────── */
+  .chart-box {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 22px 24px 18px;
+    margin: 22px 0;
+    box-shadow: var(--shadow);
+  }
+  .chart-box h3 { margin-top: 0.1em; margin-bottom: 0.7em; }
+  .chart-box .caption {
+    font-size: 0.85rem; color: var(--muted);
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px solid var(--line);
+    line-height: 1.55;
+  }
+  .chart-canvas { position: relative; height: 340px; }
+  .chart-canvas.tall { height: 460px; }
+  .chart-canvas.short { height: 240px; }
+
+  /* ──────────────── Slopegraph ──────────────── */
+  .slope-svg { width: 100%; height: 480px; display: block; }
+  .slope-svg .slope-line { fill: none; stroke-width: 1.6; opacity: 0.42; transition: opacity 0.15s, stroke-width 0.15s; }
+  .slope-svg g.slope:hover .slope-line { opacity: 1; stroke-width: 3; }
+  .slope-svg .slope-dot { stroke: #fff; stroke-width: 1.5; }
+  .slope-svg .slope-label { font-size: 10.5px; font-weight: 500; }
+  .slope-svg .tick { stroke: var(--line); stroke-width: 1; }
+  .slope-svg .tick-baseline { stroke: var(--border); stroke-width: 1.2; }
+  .slope-svg .axis-num { font-size: 10.5px; fill: var(--soft); font-variant-numeric: tabular-nums; }
+  .slope-svg .axis-title { font-size: 12px; font-weight: 600; fill: var(--muted); letter-spacing: 0.04em; text-transform: uppercase; }
+
+  /* ──────────────── Heatmap ──────────────── */
+  .heatmap-wrap { overflow-x: auto; margin-top: 8px; }
+  .heatmap {
+    border-collapse: separate;
+    border-spacing: 2px;
+    margin: 0; font-size: 0.86em;
+    width: 100%;
+  }
+  .heatmap th, .heatmap td { border: none; }
+  .heatmap thead th {
+    text-align: center;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase; letter-spacing: 0.04em;
+    padding: 6px 8px;
+    background: transparent;
+    border: none;
+    line-height: 1.25;
+    white-space: normal;
+  }
+  .heatmap thead th:first-child { width: 200px; }
+  .heatmap tbody th {
+    text-align: right;
+    font-weight: 500;
+    font-size: 0.85rem;
+    color: var(--fg);
+    text-transform: none; letter-spacing: 0;
+    padding: 0 14px 0 0;
+    background: transparent;
+    border: none;
+    border-right: 1px solid var(--line);
+    width: 200px;
+  }
+  .heatmap td.cell {
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+    font-size: 0.85em;
+    font-weight: 500;
+    border-radius: 4px;
+    padding: 9px 10px;
+    min-width: 64px;
+  }
+  .heatmap td.cell.strong { box-shadow: inset 0 0 0 2px rgba(0,0,0,0.6); }
+
+  /* ──────────────── Profile cards ──────────────── */
+  .profile-cards {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 18px; margin: 28px 0;
+  }
+  @media (max-width: 900px) { .profile-cards { grid-template-columns: 1fr; } }
+  .profile-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: var(--shadow);
+    display: flex; flex-direction: column;
+  }
+  .profile-card .head {
+    padding: 18px 22px 16px;
+    color: white;
+    position: relative;
+  }
+  .profile-card.I .head { background: var(--i); }
+  .profile-card.C .head { background: var(--c); }
+  .profile-card.P .head { background: var(--p); }
+  .profile-card .head h3 {
+    color: white; margin: 0;
+    font-size: 1.18rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+  .profile-card .head .role {
+    font-size: 0.82rem; opacity: 0.88;
+    margin-top: 3px;
+    line-height: 1.4;
+  }
+  .profile-card .body { padding: 16px 22px 18px; flex: 1; display: flex; flex-direction: column; }
+  .profile-card .stat {
+    display: flex; justify-content: space-between; align-items: baseline;
+    padding: 7px 0;
+    font-size: 0.9em;
+    border-bottom: 1px solid var(--line);
+  }
+  .profile-card .stat:last-of-type { border-bottom: none; }
+  .profile-card .stat .k { color: var(--muted); }
+  .profile-card .stat .v { font-weight: 600; font-variant-numeric: tabular-nums; color: var(--fg); }
+  .profile-card .takeaway {
+    margin-top: 14px; padding-top: 14px;
+    border-top: 1px dashed var(--border);
+    font-size: 0.88rem;
+    color: var(--muted);
+    line-height: 1.55;
+    flex: 1;
+  }
+
+  /* ──────────────── Cohort grid ──────────────── */
+  .cohort-rows { display: flex; flex-direction: column; gap: 14px; margin: 18px 0 8px; }
+  .cohort-row {
+    display: grid;
+    grid-template-columns: 130px 1fr;
+    align-items: center;
+    gap: 16px;
+  }
+  .cohort-row .row-label {
+    display: flex; flex-direction: column;
+    gap: 2px;
+  }
+  .cohort-row .row-label .name {
+    font-weight: 600; font-size: 0.95rem;
+  }
+  .cohort-row .row-label .sub {
+    font-size: 0.78rem; color: var(--muted);
+  }
+  .cohort-row .dots {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 8px;
+    align-items: center;
+    justify-items: center;
+  }
+  .cohort .dot {
+    aspect-ratio: 1;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.7rem;
+    color: white; font-weight: 600;
+    border: 2px solid white;
+    box-shadow: 0 0 0 1px var(--border);
+    cursor: default;
+    position: relative;
+    transition: transform 0.12s;
+  }
+  .cohort .dot:hover { transform: scale(1.08); z-index: 5; }
+  .cohort .dot.negative {
+    box-shadow: 0 0 0 2px #d04a4a;
+  }
+  .cohort .dot::after {
+    content: attr(data-tip);
+    position: absolute; bottom: calc(100% + 6px); left: 50%;
+    transform: translateX(-50%);
+    background: #1c1c1e; color: white;
+    padding: 8px 10px;
+    border-radius: 6px;
+    font-size: 0.72rem; font-weight: 500;
+    white-space: pre; opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s;
+    z-index: 10; line-height: 1.5;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  }
+  .cohort .dot:hover::after { opacity: 1; }
+
+  /* ──────────────── Legend ──────────────── */
+  .legend {
+    display: flex; flex-wrap: wrap; gap: 18px;
+    align-items: center;
+    font-size: 0.85rem; color: var(--muted);
+    margin: 10px 0 18px;
+  }
+  .legend .sw {
+    display: inline-block; width: 10px; height: 10px;
+    border-radius: 50%;
+    margin-right: 6px; vertical-align: -1px;
+  }
+  .legend .meta { margin-left: auto; font-size: 0.8rem; color: var(--soft); }
+
+  /* ──────────────── Key quote ──────────────── */
+  .key-quote {
+    font-size: 1.04rem;
+    line-height: 1.55;
+    color: var(--fg);
+    font-weight: 400;
+    padding: 22px 26px;
+    margin: 28px 0;
+    border-left: 3px solid var(--accent);
+    background: var(--i-soft);
+    border-radius: 0 8px 8px 0;
+  }
+  .key-quote em { font-style: italic; color: #5a4500; }
+
+  /* ──────────────── Inline reading guide (per chart) ──────────────── */
+  details.read-guide {
+    margin-top: 14px;
+    border-top: 1px solid var(--line);
+    padding-top: 12px;
+  }
+  details.read-guide summary {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--muted);
+    cursor: pointer;
+    list-style: none;
+    user-select: none;
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 2px 0;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  details.read-guide summary::-webkit-details-marker { display: none; }
+  details.read-guide summary::before {
+    content: '+';
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    background: var(--code-bg);
+    color: var(--muted);
+    font-weight: 600; font-size: 0.85rem;
+    line-height: 1;
+  }
+  details.read-guide[open] summary::before { content: '−'; background: var(--accent); color: white; }
+  details.read-guide summary:hover { color: var(--fg); }
+  details.read-guide .body {
+    margin-top: 10px;
+    padding: 12px 16px;
+    background: #fbfbf6;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    font-size: 0.9rem;
+    line-height: 1.6;
+    color: #2c2c2e;
+  }
+  details.read-guide .body > div + div { margin-top: 10px; }
+  details.read-guide .body .row {
+    display: grid;
+    grid-template-columns: 92px 1fr;
+    gap: 10px;
+    align-items: baseline;
+  }
+  details.read-guide .body .row .label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding-top: 1px;
+  }
+  details.read-guide .body .row .text {
+    color: #2c2c2e;
+  }
+  details.read-guide .body .row .text strong { color: var(--fg); }
+  details.read-guide .body ul { margin: 0.3em 0 0; padding-left: 1.2em; }
+  details.read-guide .body li { margin: 0.1em 0; }
+  details.read-guide .body .hint {
+    margin-top: 10px;
+    padding: 8px 12px;
+    background: #fff8e1;
+    border-left: 3px solid var(--accent);
+    border-radius: 0 4px 4px 0;
+    font-size: 0.85rem;
+    color: #5a4500;
+  }
+  @media (max-width: 600px) {
+    details.read-guide .body .row { grid-template-columns: 1fr; gap: 4px; }
+  }
+
+  /* ──────────────── Orientation strip ──────────────── */
+  .orientation {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px 22px;
+    margin: 24px 0 28px;
+    box-shadow: var(--shadow);
+    display: flex; flex-wrap: wrap; gap: 18px 28px;
+    align-items: center;
+    font-size: 0.9rem;
+    color: var(--muted);
+  }
+  .orientation strong { color: var(--fg); margin-right: 6px; }
+  .orientation .group { display: flex; align-items: center; gap: 6px; }
+  .orientation .swatch { display: inline-block; width: 11px; height: 11px; border-radius: 50%; }
+
+  /* ──────────────── Footer ──────────────── */
+  .footer {
+    margin-top: 80px; padding-top: 24px;
+    border-top: 1px solid var(--border);
+    color: var(--soft);
+    font-size: 0.82rem;
+  }
+  .footer code { font-size: 0.85em; color: var(--muted);
+    background: var(--code-bg); padding: 1px 5px; border-radius: 3px; }
+
+  /* ──────────────── Misc ──────────────── */
+  code {
+    background: var(--code-bg);
+    padding: 0.12em 0.4em;
+    border-radius: 3px;
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.88em;
+  }
+  .section-anchor { scroll-margin-top: 40px; }
+</style>
+</head>
+<body>
+<main>
+
+<header class="chapter-header">
+  <img class="brand" src="../../src/assets/LearnPal-Logo.svg" alt="LearnPal" onerror="this.style.display='none'">
+  <div class="titles">
+    <div class="h1">Phase 3 — Evaluation Study Analysis</div>
+    <div class="sub">21 participants · 3 AI paradigms · learning, engagement & behaviour</div>
+  </div>
+</header>
+
+<!-- ───────────────────────────────── TL;DR ─────────────────────────────── -->
+<section>
+  <h2 id="tldr" style="margin-top: 1em;">The headline finding</h2>
+  <p class="lede">The three paradigms shaped learning and engagement <em>differently</em>, not hierarchically. There is no single winner. The data tells a trade-off story between <strong>learner agency</strong>, <strong>AI initiative</strong>, and <strong>cognitive cost</strong>.</p>
+
+  <div class="scoreboard">
+    <div class="score-card I">
+      <div class="eyebrow"><span class="dot"></span>Intermittent · silent until asked</div>
+      <div class="big" id="hl-i-gain">—</div>
+      <div class="label">Mean learning gain (raw, out of 20)</div>
+      <div class="sub">Strongest <strong>experience</strong>. Highest UES, highest perceived control, lowest distraction.</div>
+    </div>
+    <div class="score-card C">
+      <div class="eyebrow"><span class="dot"></span>Continuous · always present</div>
+      <div class="big" id="hl-c-gain">—</div>
+      <div class="label">Mean learning gain (raw, out of 20)</div>
+      <div class="sub">Strongest <strong>final score</strong>. Post-test mean 13.71/20, balanced engagement profile.</div>
+    </div>
+    <div class="score-card P">
+      <div class="eyebrow"><span class="dot"></span>Proactive · speaks first</div>
+      <div class="big" id="hl-p-gain">—</div>
+      <div class="label">Mean learning gain (raw, out of 20)</div>
+      <div class="sub">Largest <strong>raw gain</strong> from the lowest baseline. Highest volume of AI activity.</div>
+    </div>
+  </div>
+
+  <div class="key-quote">
+    Intermittent felt the best. Continuous scored the highest. Proactive gained the most. Each paradigm answers a different question — that <em>is</em> the finding.
+  </div>
+</section>
+
+<!-- ────────────────────────── ORIENTATION ────────────────────────── -->
+<div class="orientation">
+  <span><strong>Colour code:</strong></span>
+  <span class="group"><span class="swatch" style="background: var(--i)"></span>Intermittent</span>
+  <span class="group"><span class="swatch" style="background: var(--c)"></span>Continuous</span>
+  <span class="group"><span class="swatch" style="background: var(--p)"></span>Proactive</span>
+  <span style="margin-left: auto; font-size: 0.85rem;">Hover any chart element for the underlying numbers. Each chart has a <strong>How to read this</strong> toggle below it.</span>
+</div>
+
+<!-- ───────────────────────────────── COHORT ─────────────────────────────── -->
+<section class="section-anchor">
+  <h2 id="cohort">The 21 participants</h2>
+  <p>Seven participants per condition, broadly balanced on age band, education level, and prior neural-network familiarity. Each dot below is one participant — size encodes raw learning gain. Hover for per-participant details.</p>
+
+  <div class="cohort">
+    <div class="cohort-rows" id="cohort"></div>
+  </div>
+  <div class="legend" style="margin-top: 12px;">
+    <span>Dot size ∝ raw learning gain</span>
+    <span><span class="sw" style="background: #fff; box-shadow: 0 0 0 2px #d04a4a"></span>Negative gain</span>
+  </div>
+
+  <details class="read-guide">
+    <summary>How to read this</summary>
+    <div class="body">
+      <div class="row"><span class="label">Shows</span><span class="text">All 21 participants laid out as labelled dots, one row per condition (I01–I07, C01–C07, P01–P07).</span></div>
+      <div class="row"><span class="label">Encodings</span><span class="text"><strong>Colour</strong> → condition. <strong>Dot size</strong> → raw learning gain (bigger = larger gain). Negative gains use the smallest size with a red ring. <strong>Hover</strong> any dot for that participant's pre, post, gain, UES, and AI-control values.</span></div>
+      <div class="row"><span class="label">Look for</span><span class="text">Within a row, do dots cluster (consistent response) or vary widely (heterogeneous)? Outliers (red rings, very small or very large dots) are candidates for follow-up in the qualitative interviews.</span></div>
+    </div>
+  </details>
+</section>
+
+<!-- ───────────────────────────────── LEARNING ─────────────────────────────── -->
+<section class="section-anchor">
+  <h2 id="learning">Did they learn?</h2>
+  <p>The pre-test and post-test (Form 3 and Form 4) used parallel sets of multiple-choice questions on neural-network concepts, each scored out of 20. The figure below traces every participant's movement from pre to post. Steeper lines = bigger gains.</p>
+
+  <div class="chart-box">
+    <h3>Pre → Post slopegraph</h3>
+    <div id="slopegraph"></div>
+    <p class="caption">Every participant's pre-test score (left) and post-test score (right), connected by a line and coloured by condition. Thick coloured lines show the per-condition median trajectory.</p>
+    <details class="read-guide">
+      <summary>How to read this</summary>
+      <div class="body">
+        <div class="row"><span class="label">Shows</span><span class="text">Each participant's movement from pre-test (left axis) to post-test (right axis), each scored out of 20.</span></div>
+        <div class="row"><span class="label">Encodings</span><span class="text">Each <strong>thin line</strong> is one participant; <strong>steeper upward</strong> = larger gain, flat = no change, downward = score dropped. The <strong>three thick coloured lines</strong> connect each condition's median pre-score to its median post-score (values listed in the legend at the bottom). <strong>Hover</strong> a line to highlight one participant.</span></div>
+        <div class="row"><span class="label">Look for</span><span class="text">Where do the thick median lines start and end? Proactive starts lowest but converges with Continuous by the post-test — visual evidence of the "room-to-improve" story below.</span></div>
+      </div>
+    </details>
+  </div>
+
+  <div class="grid grid-2">
+    <div class="chart-box">
+      <h3>Raw gain by condition</h3>
+      <div class="chart-canvas short"><canvas id="gainBars"></canvas></div>
+      <p class="caption">Bar = group mean. Dots = individual participants.</p>
+      <details class="read-guide">
+        <summary>How to read this</summary>
+        <div class="body">
+          <div class="row"><span class="label">Shows</span><span class="text">Mean raw gain (post − pre, out of 20) per condition with each individual participant overlaid.</span></div>
+          <div class="row"><span class="label">Encodings</span><span class="text">Bar height = group mean. Dots = each participant's value. Tight clustering = consistent effect; wide scatter = heterogeneous response.</span></div>
+          <div class="row"><span class="label">Look for</span><span class="text">Compare the <em>shape</em> of the dot scatter, not just the bar. A bar with one outlier looks identical to a bar of seven similar values; the dots tell you which is which.</span></div>
+          <div class="hint">⚠ Raw gain is sensitive to ceiling effects. Pair with the normalised-gain chart on the right.</div>
+        </div>
+      </details>
+    </div>
+    <div class="chart-box">
+      <h3>Normalised gain by condition</h3>
+      <div class="chart-canvas short"><canvas id="normGainBars"></canvas></div>
+      <p class="caption">(post − pre) / (20 − pre). Corrects for ceiling room.</p>
+      <details class="read-guide">
+        <summary>How to read this</summary>
+        <div class="body">
+          <div class="row"><span class="label">Shows</span><span class="text">Same data as raw gain, but rescaled by how much room each participant had to grow.</span></div>
+          <div class="row"><span class="label">Encodings</span><span class="text">Range −1 to +1. <strong>0.5</strong> = participant closed half the gap between their pre-score and 20. <strong>1.0</strong> = scored full marks. <strong>0</strong> = no change.</span></div>
+          <div class="row"><span class="label">Look for</span><span class="text">Whether the ranking of conditions shifts vs the raw-gain chart. If a low-baseline group still leads on normalised gain, the effect is real — not just regression to the ceiling.</span></div>
+        </div>
+      </details>
+    </div>
+  </div>
+
+  <div class="chart-box">
+    <h3>The "room to improve" effect — baseline vs gain</h3>
+    <div class="chart-canvas"><canvas id="baselineScatter"></canvas></div>
+    <p class="caption">Spearman ρ = -0.52. Participants who started lower tended to gain more.</p>
+    <details class="read-guide">
+      <summary>How to read this</summary>
+      <div class="body">
+        <div class="row"><span class="label">Shows</span><span class="text">Each participant's pre-test score (x) plotted against their gain (y), with a dashed regression line through all 21 points.</span></div>
+        <div class="row"><span class="label">Encodings</span><span class="text">A <strong>downward-sloping</strong> line means lower-baseline participants gained more — the room-to-improve effect. The <em>distance</em> of each dot from the line tells you how much that participant out- or under-performed their baseline-predicted gain.</span></div>
+        <div class="row"><span class="label">Look for</span><span class="text">Dots well above the line = over-performers. Dots well below = under-performers (worth coding qualitatively for what went wrong). The Spearman ρ in the caption quantifies the trend strength.</span></div>
+      </div>
+    </details>
+  </div>
+</section>
+
+<!-- ───────────────────────────────── ENGAGEMENT ─────────────────────────────── -->
+<section class="section-anchor">
+  <h2 id="engagement">How did they feel about it?</h2>
+  <p>The User Engagement Scale (UES-SF) and a 6-item custom AI-support scale (both 5-point Likert) captured the subjective experience. The three negatively-worded UES usability items are reverse-coded.</p>
+
+  <div class="grid grid-2">
+    <div class="chart-box">
+      <h3>UES-SF profile by condition</h3>
+      <div class="chart-canvas"><canvas id="uesRadar"></canvas></div>
+      <p class="caption">Intermittent dominates Focused Attention and Perceived Usability; Reward is roughly equal across all three.</p>
+      <details class="read-guide">
+        <summary>How to read this</summary>
+        <div class="body">
+          <div class="row"><span class="label">Shows</span><span class="text">Four UES-SF subscales (Focused Attention, Perceived Usability, Aesthetic Appeal, Reward) averaged over each condition's 7 participants. Scale 1 (centre) → 5 (outer ring).</span></div>
+          <div class="row"><span class="label">Encodings</span><span class="text">Each axis = one subscale. Larger enclosed area = better experience overall. The <em>shape</em> matters as much as the size — balanced shape = consistent quality across dimensions; lopsided = strong on some axes and weak on others.</span></div>
+          <div class="row"><span class="label">Look for</span><span class="text">Which condition's polygon encloses the largest area? Where are the largest gaps between conditions? Perceived Usability is the most-discriminating axis here — but note the low Cronbach α (0.39) caveat in the analysis.</span></div>
+        </div>
+      </details>
+    </div>
+    <div class="chart-box">
+      <h3>AI-support items by condition</h3>
+      <div class="chart-canvas"><canvas id="aiRadar"></canvas></div>
+      <p class="caption">All six axes oriented so that further from centre = better. The biggest gap is on perceived <em>control</em>.</p>
+      <details class="read-guide">
+        <summary>How to read this</summary>
+        <div class="body">
+          <div class="row"><span class="label">Shows</span><span class="text">Six AI-specific Likert items per condition: Helped, Relevant, Useful timing, Felt in control, Not distracting, Not overloading.</span></div>
+          <div class="row"><span class="label">Encodings</span><span class="text">All axes oriented so <strong>further from centre = better</strong>. The two "Not …" items are <em>reverse-coded</em>: a high value on "Not distracting" means participants reported low distraction. (Hover any reverse-coded axis to see the note.)</span></div>
+          <div class="row"><span class="label">Look for</span><span class="text">The biggest visual gap between conditions is on <strong>Felt in control</strong> — Intermittent dominates this axis. That single difference is the clearest "agency vs initiative" trade-off in the data.</span></div>
+        </div>
+      </details>
+    </div>
+  </div>
+
+  <div class="chart-box">
+    <h3>The key trade-off — distraction vs overall engagement</h3>
+    <div class="chart-canvas"><canvas id="tradeoffScatter"></canvas></div>
+    <p class="caption">Each dot is one participant. Spearman ρ between AI distraction and UES overall = <strong>−0.68</strong> (p = 0.001 unadjusted).</p>
+    <details class="read-guide">
+      <summary>How to read this</summary>
+      <div class="body">
+        <div class="row"><span class="label">Shows</span><span class="text">Each participant placed by self-rated AI distraction (x, 1 = none, 5 = a lot) against overall UES (y, 1–5).</span></div>
+        <div class="row"><span class="label">Encodings</span><span class="text">A <strong>downward-sloping cloud</strong> from upper-left to lower-right means: the more distracting AI feels, the lower the participant's overall engagement.</span></div>
+        <div class="row"><span class="label">Look for</span><span class="text">Where do the colours cluster? Yellow (Intermittent) clusters in the upper-left (low distraction, high engagement) — that's the entire trade-off finding rendered visually. A blue or pink dot in the upper-left = a participant who broke the pattern; worth interview-coding.</span></div>
+      </div>
+    </details>
+  </div>
+</section>
+
+<!-- ───────────────────────────────── BEHAVIOUR ─────────────────────────────── -->
+<section class="section-anchor">
+  <h2 id="behaviour">What did they actually do?</h2>
+  <p>The instrumentation captured 1,388 events across the 21 sessions. Each prototype produces its own behavioural signature — the events that don't even exist in the other paradigms.</p>
+
+  <div class="chart-box">
+    <h3>Behavioural fingerprint per prototype</h3>
+    <div class="chart-canvas tall"><canvas id="signatureBars"></canvas></div>
+    <p class="caption">Top event types per prototype, summed across all 7 participants per condition.</p>
+    <details class="read-guide">
+      <summary>How to read this</summary>
+      <div class="body">
+        <div class="row"><span class="label">Shows</span><span class="text">The 7 most-frequent event types in each prototype's session logs. Common low-level events (<code>video_play</code>/<code>video_pause</code>, tab focus, etc.) are filtered out so prototype-distinctive events stand out.</span></div>
+        <div class="row"><span class="label">Encodings</span><span class="text">Bar length = total event count. <strong>Bar colour</strong> tells you which prototype that event belongs to. Bars are listed top-to-bottom in three colour-grouped blocks.</span></div>
+        <div class="row"><span class="label">Look for</span><span class="text">Each colour group reveals a different "personality":
+          <ul>
+            <li><strong style="color: var(--i)">Intermittent</strong> — deliberate self-initiated actions (snap_started/completed, quiz_started).</li>
+            <li><strong style="color: var(--c)">Continuous</strong> — exploratory navigation (feed_question_unlocked, glossary_term_clicked, video_seek).</li>
+            <li><strong style="color: var(--p)">Proactive</strong> — high system-pushed volume (keyword_shown, quiz_triggered) often dominated by ignored/dismissed.</li>
+          </ul>
+        </span></div>
+      </div>
+    </details>
+  </div>
+
+  <div class="grid grid-2">
+    <div class="chart-box">
+      <h3>Time to first AI interaction</h3>
+      <div class="chart-canvas short"><canvas id="firstInteractionBars"></canvas></div>
+      <p class="caption">Lower = AI engaged sooner.</p>
+      <details class="read-guide">
+        <summary>How to read this</summary>
+        <div class="body">
+          <div class="row"><span class="label">Shows</span><span class="text">Mean seconds from session start until the participant's first logged AI interaction.</span></div>
+          <div class="row"><span class="label">Encodings</span><span class="text">Horizontal bars; shorter = engaged faster. Hover for the exact mean.</span></div>
+          <div class="hint">⚠ <strong>Cross-paradigm caveat.</strong> In Intermittent and Continuous, "first interaction" requires a learner action. In Proactive, an auto-shown keyword <em>also</em> registers — so Proactive's lower mean partly reflects a definitional difference, not just engagement speed.</div>
+        </div>
+      </details>
+    </div>
+    <div class="chart-box">
+      <h3>Chat usage by source</h3>
+      <div class="chart-canvas short"><canvas id="chatSourceBars"></canvas></div>
+      <p class="caption">Free chat vs feature-attached questions.</p>
+      <details class="read-guide">
+        <summary>How to read this</summary>
+        <div class="body">
+          <div class="row"><span class="label">Shows</span><span class="text">Total user chat messages per condition, broken down by source (where the message originated).</span></div>
+          <div class="row"><span class="label">Encodings</span><span class="text">Bar height = total user messages. Stack segments label each source: free chat, snap_ask, quiz_explain, highlight_detail, keyword_detail, visual_detail, suggested prompt.</span></div>
+          <div class="row"><span class="label">Look for</span><span class="text">The proportion of feature-attached vs free-chat messages tells you whether participants used the AI for in-the-moment clarification or broader exploration. Intermittent's <span style="color: var(--i); font-weight:600">snap_ask</span> share is its signature.</span></div>
+        </div>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- ───────────────────────────────── CORRELATIONS ─────────────────────────────── -->
+<section class="section-anchor">
+  <h2 id="correlations">What's connected to what?</h2>
+  <p>The heatmap below shows Spearman correlations between every behavioural / questionnaire metric (rows) and every key outcome (columns), across all 21 participants. Deeper blue = positive correlation; deeper red = negative. Cells where |ρ| ≥ 0.4 are bordered.</p>
+
+  <div class="chart-box">
+    <h3>Correlation heatmap — metrics × outcomes</h3>
+    <div id="heatmap"></div>
+    <p class="caption">A consistent pattern: <strong>experience</strong> (UES, AI control) correlates strongly with itself; <strong>learning</strong> outcomes correlate mainly with <em>baseline</em> knowledge.</p>
+    <details class="read-guide">
+      <summary>How to read this</summary>
+      <div class="body">
+        <div class="row"><span class="label">Shows</span><span class="text">Spearman correlation (ρ) between every metric (rows: 16 behavioural / questionnaire variables) and every key outcome (columns: 6 outcomes). Computed across all 21 participants.</span></div>
+        <div class="row"><span class="label">Encodings</span><span class="text">
+          <ul>
+            <li><strong>Blue</strong> = positive correlation (variables move together). <strong>Red/pink</strong> = negative.</li>
+            <li><strong>Saturation</strong> = strength: very pale ≈ 0; fully saturated ≈ ±1.</li>
+            <li>Cells with <strong>|ρ| ≥ 0.4</strong> get an inset border to draw the eye. Hover any cell for the exact value.</li>
+          </ul>
+        </span></div>
+        <div class="row"><span class="label">Look for</span><span class="text">Read down a column to see what predicts that outcome. The right two columns (AI control, AI distraction) light up — experience variables connect to other experience variables. The first three columns (gain, normGain, post) are mostly pale — meaning <em>logged behaviour does not strongly predict learning</em> in this sample, which is itself an important finding.</span></div>
+        <div class="hint">⚠ At n = 21, even moderate ρ values are not statistically secure after correction. Treat strong-coloured cells as <em>hypotheses</em>, not conclusions.</div>
+      </div>
+    </details>
+  </div>
+
+  <div class="chart-box">
+    <h3>The control–distraction triangle</h3>
+    <div class="chart-canvas"><canvas id="controlDistract"></canvas></div>
+    <p class="caption">Participants who felt less in control of AI also felt more distracted.</p>
+    <details class="read-guide">
+      <summary>How to read this</summary>
+      <div class="body">
+        <div class="row"><span class="label">Shows</span><span class="text">Felt-in-control rating (x, 1–5) against AI distraction rating (y, 1–5), one dot per participant.</span></div>
+        <div class="row"><span class="label">Encodings</span><span class="text">The lower-right quadrant (high control, low distraction) is the <em>"good" region</em>. The upper-left (low control, high distraction) is where the experience felt overwhelming.</span></div>
+        <div class="row"><span class="label">Look for</span><span class="text">Conditional clustering: does Intermittent live in the lower-right? Does Proactive sit further left? The visual cluster pattern is the design trade-off rendered in one chart.</span></div>
+      </div>
+    </details>
+  </div>
+</section>
+
+<!-- ───────────────────────────────── PROFILES ─────────────────────────────── -->
+<section class="section-anchor">
+  <h2 id="profiles">Three prototypes, three stories</h2>
+  <p>The triangulated view: each prototype has a coherent character that emerges across the behavioural logs and the subjective questionnaires.</p>
+
+  <div class="profile-cards" id="profileCards"></div>
+
+  <details class="read-guide">
+    <summary>How to read these cards</summary>
+    <div class="body">
+      <div class="row"><span class="label">Shows</span><span class="text">Side-by-side reference cards per prototype with the key numbers and a one-paragraph character description.</span></div>
+      <div class="row"><span class="label">Encodings</span><span class="text">Read <strong>horizontally</strong> across the three cards on any single row to compare conditions on that metric. The takeaway paragraph at the bottom anchors the numbers in the design narrative.</span></div>
+      <div class="row"><span class="label">Look for</span><span class="text">Pick the row that matters for your specific question:
+        <ul>
+          <li>For <strong>experience</strong> → UES + AI control + AI distraction rows.</li>
+          <li>For <strong>learning</strong> → pre/post + raw gain + normalised gain rows.</li>
+          <li>For <strong>behaviour</strong> → chat messages + feature engagements rows.</li>
+        </ul>
+      </span></div>
+    </div>
+  </details>
+</section>
+
+<!-- ───────────────────────────────── TAKEAWAYS ─────────────────────────────── -->
+<section class="section-anchor">
+  <h2 id="takeaways">Six interpretations the data supports</h2>
+
+  <ol>
+    <li><strong>The manipulation worked behaviourally before it worked statistically on learning.</strong> The prototypes produced visibly different interaction patterns and subjective experiences; the learning test is underpowered to separate conditions cleanly (n = 7 / group).</li>
+    <li><strong>AI initiative creates opportunity and cost at the same time.</strong> Continuous and Proactive increase AI-mediated activity, but the same volume that drives exposure also reduces perceived control.</li>
+    <li><strong>Interaction quality matters more than interaction quantity.</strong> Feature volume has only a weak correlation with learning gain (ρ ≈ 0.23). Action <em>rates</em> (e.g. proportion of feed questions actually answered) carry more signal than raw counts.</li>
+    <li><strong>Final score and learning gain answer different questions.</strong> Continuous has the strongest absolute post-test mean; Proactive has the largest movement from a lower baseline. These should not be collapsed into one "best" claim.</li>
+    <li><strong>Learner agency is a measurable outcome, not just a design principle.</strong> Intermittent's advantage in perceived control and low distraction is statistically detectable (Kruskal-Wallis p ≈ 0.04 on AI control), even at this sample size.</li>
+    <li><strong>The logs undercount passive cognitive engagement.</strong> Proactive keyword prompts may have been read and mentally processed even when dismissed. This is where the interview data, when added, will matter most.</li>
+  </ol>
+
+  <div class="key-quote">
+    The three LearnPal paradigms shaped learning and engagement differently. Intermittent produced the most controlled and least distracting experience; Continuous produced the strongest descriptive final performance and a balanced engagement profile; Proactive produced the highest volume of AI-mediated activity and the largest raw learning gains from a lower baseline. The results suggest a design <em>trade-off between learner agency and AI initiative</em> rather than a single universally superior paradigm.
+  </div>
+</section>
+
+<!-- ───────────────────────────────── DATA QUALITY ─────────────────────────────── -->
+<section class="section-anchor">
+  <h2 id="quality">Data quality & caveats</h2>
+  <ul>
+    <li><strong>Sample size.</strong> n = 7 per condition. Effect sizes and CIs are more honest than p-values here.</li>
+    <li><strong>I02 is a 41-second session.</strong> They completed all forms but barely used the prototype. Treated as data point, not as a representative case.</li>
+    <li><strong>C06 has a 4,645-second session</strong> with zero quiz attempts — likely a partially-attended session (tab left open).</li>
+    <li><strong>Proactive's <code>active_video_seconds</code> is zero by design</strong> — the Proactive prototype doesn't instrument the <code>video_play</code>/<code>video_pause</code> pair the same way Intermittent and Continuous do.</li>
+    <li><strong>The exported <code>ai_acceptance_rate_pct</code> column exceeds 100% in Intermittent and Continuous</strong> and was not used; per-event counts are used directly instead.</li>
+    <li><strong>The Proactive Quizzes detail sheet excludes 47 backfilled-sentinel rows</strong> (a known data-recovery from before the quiz-submit route was added). The Comparable totals correctly count those quiz attempts via the event log.</li>
+    <li><strong>The interview component (Step 8) is not yet in the dataset.</strong> It is the most important addition for understanding the Proactive keyword-stream behaviour.</li>
+  </ul>
+</section>
+
+<div class="footer">
+  Generated from <code>P3_Study Data.xlsx</code> and the three prototype exports.<br>
+  Build script: <code>report/combined/build-p3-analysis.mjs</code>. Re-run after re-exporting data to refresh this page.
+</div>
+
+</main>
+
+<script>
+const DATA = {"rows":[{"pid":"C01","condition":"Continuous","age":"23–27","education":"Postgraduate student","field":"Design / HCI / UX","aiUse":"Daily","videoFreq":"A few times a week","familiarity":1,"preFilter":1,"pre":8,"post":12,"gain":4,"normGain":0.3333333333333333,"fa":2.3333333333333335,"pu":3,"ae":2.3333333333333335,"rw":3.6666666666666665,"uesOverall":2.8333333333333335,"ai":{"helped":4,"relevant":4,"timing":1,"control":5,"distracting":3,"overloading":4},"sessionDuration":3485,"activeVideo":1398,"firstInteraction":270,"chatMessages":3,"quizAttempts":7,"quizCorrect":7,"quizAccuracy":100,"videoCompletion":0,"featureEngagement":10,"icapActive":40,"icapConstructive":10,"aiShown":10,"aiAccepted":13,"snapsTaken":null},{"pid":"C02","condition":"Continuous","age":"18–22","education":"Undergraduate student","field":"Design / HCI / UX","aiUse":"A few times a week","videoFreq":"A few times a month","familiarity":1.4,"preFilter":2,"pre":12,"post":16,"gain":4,"normGain":0.5,"fa":2.6666666666666665,"pu":3.3333333333333335,"ae":2.3333333333333335,"rw":3.6666666666666665,"uesOverall":3,"ai":{"helped":5,"relevant":4,"timing":5,"control":4,"distracting":4,"overloading":3},"sessionDuration":3086,"activeVideo":1171,"firstInteraction":62,"chatMessages":3,"quizAttempts":9,"quizCorrect":6,"quizAccuracy":66.7,"videoCompletion":0,"featureEngagement":9,"icapActive":52,"icapConstructive":14,"aiShown":9,"aiAccepted":11,"snapsTaken":null},{"pid":"C03","condition":"Continuous","age":"23–27","education":"Postgraduate student","field":"Robotics","aiUse":"Daily","videoFreq":"Daily","familiarity":2.6,"preFilter":5,"pre":10,"post":14,"gain":4,"normGain":0.4,"fa":3.3333333333333335,"pu":3.6666666666666665,"ae":3.6666666666666665,"rw":3.6666666666666665,"uesOverall":3.583333333333333,"ai":{"helped":2,"relevant":4,"timing":4,"control":2,"distracting":4,"overloading":5},"sessionDuration":1418,"activeVideo":167,"firstInteraction":158,"chatMessages":1,"quizAttempts":3,"quizCorrect":3,"quizAccuracy":100,"videoCompletion":0,"featureEngagement":8,"icapActive":81,"icapConstructive":4,"aiShown":8,"aiAccepted":3,"snapsTaken":null},{"pid":"C04","condition":"Continuous","age":"23–27","education":"Postgraduate student","field":"Design / HCI / UX","aiUse":"A few times a week","videoFreq":"Rarely","familiarity":1.6,"preFilter":4,"pre":16,"post":20,"gain":4,"normGain":1,"fa":4,"pu":4.666666666666667,"ae":5,"rw":4.666666666666667,"uesOverall":4.583333333333334,"ai":{"helped":5,"relevant":5,"timing":4,"control":5,"distracting":1,"overloading":2},"sessionDuration":2158,"activeVideo":964,"firstInteraction":470,"chatMessages":11,"quizAttempts":9,"quizCorrect":6,"quizAccuracy":66.7,"videoCompletion":0,"featureEngagement":13,"icapActive":32,"icapConstructive":29,"aiShown":13,"aiAccepted":26,"snapsTaken":null},{"pid":"C05","condition":"Continuous","age":"28–34","education":"PhD / research scholar","field":"Management / Business","aiUse":"Daily","videoFreq":"Rarely","familiarity":1.2,"preFilter":1,"pre":4,"post":8,"gain":4,"normGain":0.25,"fa":3,"pu":4,"ae":3,"rw":3.3333333333333335,"uesOverall":3.3333333333333335,"ai":{"helped":4,"relevant":4,"timing":4,"control":3,"distracting":4,"overloading":3},"sessionDuration":1095,"activeVideo":764,"firstInteraction":22,"chatMessages":2,"quizAttempts":10,"quizCorrect":4,"quizAccuracy":40,"videoCompletion":0,"featureEngagement":11,"icapActive":7,"icapConstructive":14,"aiShown":11,"aiAccepted":14,"snapsTaken":null},{"pid":"C06","condition":"Continuous","age":"23–27","education":"Postgraduate student","field":"Engineering / Technology","aiUse":"Daily","videoFreq":"A few times a week","familiarity":1.4,"preFilter":2,"pre":8,"post":6,"gain":-2,"normGain":-0.16666666666666666,"fa":4,"pu":4,"ae":3.3333333333333335,"rw":4.666666666666667,"uesOverall":4,"ai":{"helped":4,"relevant":4,"timing":5,"control":4,"distracting":2,"overloading":1},"sessionDuration":4645,"activeVideo":1134,"firstInteraction":993,"chatMessages":1,"quizAttempts":0,"quizCorrect":0,"quizAccuracy":0,"videoCompletion":0,"featureEngagement":11,"icapActive":1,"icapConstructive":2,"aiShown":10,"aiAccepted":0,"snapsTaken":null},{"pid":"C07","condition":"Continuous","age":"23–27","education":"Postgraduate student","field":"Engineering / Technology","aiUse":"Daily","videoFreq":"A few times a month","familiarity":2.6,"preFilter":5,"pre":8,"post":20,"gain":12,"normGain":1,"fa":3.3333333333333335,"pu":4,"ae":3.6666666666666665,"rw":4,"uesOverall":3.75,"ai":{"helped":3,"relevant":4,"timing":4,"control":4,"distracting":3,"overloading":2},"sessionDuration":2252,"activeVideo":1598,"firstInteraction":769,"chatMessages":1,"quizAttempts":10,"quizCorrect":10,"quizAccuracy":100,"videoCompletion":0,"featureEngagement":11,"icapActive":46,"icapConstructive":12,"aiShown":11,"aiAccepted":14,"snapsTaken":null},{"pid":"I01","condition":"Intermittent","age":"23–27","education":"Postgraduate student","field":"Design / HCI / UX","aiUse":"A few times a week","videoFreq":"A few times a month","familiarity":1.4,"preFilter":0,"pre":2,"post":8,"gain":6,"normGain":0.3333333333333333,"fa":4,"pu":4.666666666666667,"ae":3.6666666666666665,"rw":4.666666666666667,"uesOverall":4.25,"ai":{"helped":4,"relevant":5,"timing":5,"control":5,"distracting":1,"overloading":1},"sessionDuration":605,"activeVideo":534,"firstInteraction":37,"chatMessages":2,"quizAttempts":5,"quizCorrect":3,"quizAccuracy":60,"videoCompletion":0,"featureEngagement":3,"icapActive":23,"icapConstructive":9,"aiShown":2,"aiAccepted":6,"snapsTaken":1},{"pid":"I02","condition":"Intermittent","age":"23–27","education":"Postgraduate student","field":"Engineering / Technology","aiUse":"Daily","videoFreq":"Daily","familiarity":1.4,"preFilter":4,"pre":8,"post":16,"gain":8,"normGain":0.6666666666666666,"fa":4,"pu":3.6666666666666665,"ae":5,"rw":4.666666666666667,"uesOverall":4.333333333333333,"ai":{"helped":4,"relevant":5,"timing":5,"control":4,"distracting":1,"overloading":4},"sessionDuration":41,"activeVideo":0,"firstInteraction":32,"chatMessages":1,"quizAttempts":0,"quizCorrect":0,"quizAccuracy":0,"videoCompletion":0,"featureEngagement":1,"icapActive":1,"icapConstructive":2,"aiShown":0,"aiAccepted":1,"snapsTaken":1},{"pid":"I03","condition":"Intermittent","age":"28–34","education":"PhD / research scholar","field":"Engineering / Technology","aiUse":"Daily","videoFreq":"Rarely","familiarity":1.4,"preFilter":4,"pre":8,"post":12,"gain":4,"normGain":0.3333333333333333,"fa":3.3333333333333335,"pu":4.333333333333333,"ae":3,"rw":4.333333333333333,"uesOverall":3.75,"ai":{"helped":5,"relevant":5,"timing":5,"control":5,"distracting":2,"overloading":1},"sessionDuration":1370,"activeVideo":755,"firstInteraction":33,"chatMessages":7,"quizAttempts":6,"quizCorrect":3,"quizAccuracy":50,"videoCompletion":0,"featureEngagement":3,"icapActive":18,"icapConstructive":16,"aiShown":3,"aiAccepted":9,"snapsTaken":3},{"pid":"I04","condition":"Intermittent","age":"23–27","education":"Postgraduate student","field":"Science / Mathematics","aiUse":"Daily","videoFreq":"A few times a week","familiarity":1.6,"preFilter":5,"pre":16,"post":12,"gain":-4,"normGain":-1,"fa":3,"pu":4.333333333333333,"ae":2.6666666666666665,"rw":3.6666666666666665,"uesOverall":3.4166666666666665,"ai":{"helped":2,"relevant":2,"timing":3,"control":5,"distracting":2,"overloading":1},"sessionDuration":1909,"activeVideo":1163,"firstInteraction":1173,"chatMessages":0,"quizAttempts":8,"quizCorrect":8,"quizAccuracy":100,"videoCompletion":0,"featureEngagement":0,"icapActive":7,"icapConstructive":8,"aiShown":1,"aiAccepted":8,"snapsTaken":0},{"pid":"I05","condition":"Intermittent","age":"18–22","education":"Undergraduate student","field":"Engineering / Technology","aiUse":"A few times a week","videoFreq":"A few times a month","familiarity":1.2,"preFilter":4,"pre":12,"post":12,"gain":0,"normGain":0,"fa":3.6666666666666665,"pu":5,"ae":4,"rw":4,"uesOverall":4.166666666666666,"ai":{"helped":4,"relevant":4,"timing":5,"control":5,"distracting":1,"overloading":1},"sessionDuration":1113,"activeVideo":762,"firstInteraction":272,"chatMessages":3,"quizAttempts":4,"quizCorrect":2,"quizAccuracy":50,"videoCompletion":0,"featureEngagement":0,"icapActive":3,"icapConstructive":7,"aiShown":2,"aiAccepted":4,"snapsTaken":0},{"pid":"I06","condition":"Intermittent","age":"23–27","education":"Postgraduate student","field":"Design / HCI / UX","aiUse":"Daily","videoFreq":"A few times a month","familiarity":2.2,"preFilter":0,"pre":0,"post":10,"gain":10,"normGain":0.5,"fa":4,"pu":4.666666666666667,"ae":4.333333333333333,"rw":4.333333333333333,"uesOverall":4.333333333333333,"ai":{"helped":5,"relevant":4,"timing":5,"control":3,"distracting":1,"overloading":3},"sessionDuration":2004,"activeVideo":828,"firstInteraction":107,"chatMessages":1,"quizAttempts":5,"quizCorrect":1,"quizAccuracy":20,"videoCompletion":0,"featureEngagement":1,"icapActive":22,"icapConstructive":7,"aiShown":5,"aiAccepted":6,"snapsTaken":1},{"pid":"I07","condition":"Intermittent","age":"18–22","education":"Undergraduate student","field":"Engineering / Technology","aiUse":"A few times a week","videoFreq":"A few times a week","familiarity":1.6,"preFilter":6,"pre":12,"post":12,"gain":0,"normGain":0,"fa":4,"pu":5,"ae":4,"rw":3.3333333333333335,"uesOverall":4.083333333333333,"ai":{"helped":5,"relevant":4,"timing":5,"control":5,"distracting":1,"overloading":3},"sessionDuration":769,"activeVideo":653,"firstInteraction":447,"chatMessages":3,"quizAttempts":6,"quizCorrect":3,"quizAccuracy":50,"videoCompletion":0,"featureEngagement":3,"icapActive":5,"icapConstructive":12,"aiShown":2,"aiAccepted":9,"snapsTaken":3},{"pid":"P01","condition":"Proactive","age":"23–27","education":"Postgraduate student","field":"Engineering / Technology","aiUse":"A few times a week","videoFreq":"A few times a month","familiarity":1.6,"preFilter":2,"pre":8,"post":16,"gain":8,"normGain":0.6666666666666666,"fa":3.3333333333333335,"pu":2.6666666666666665,"ae":4,"rw":4.333333333333333,"uesOverall":3.583333333333333,"ai":{"helped":5,"relevant":5,"timing":5,"control":4,"distracting":3,"overloading":4},"sessionDuration":1407,"activeVideo":0,"firstInteraction":75,"chatMessages":2,"quizAttempts":11,"quizCorrect":6,"quizAccuracy":54.5,"videoCompletion":0,"featureEngagement":61,"icapActive":1,"icapConstructive":11,"aiShown":38,"aiAccepted":9,"snapsTaken":null},{"pid":"P02","condition":"Proactive","age":"23–27","education":"Postgraduate student","field":"Design / HCI / UX","aiUse":"Daily","videoFreq":"A few times a week","familiarity":1.6,"preFilter":1,"pre":8,"post":20,"gain":12,"normGain":1,"fa":3,"pu":3.3333333333333335,"ae":4,"rw":3.6666666666666665,"uesOverall":3.5,"ai":{"helped":4,"relevant":2,"timing":2,"control":3,"distracting":4,"overloading":4},"sessionDuration":1380,"activeVideo":0,"firstInteraction":378,"chatMessages":1,"quizAttempts":0,"quizCorrect":0,"quizAccuracy":0,"videoCompletion":0,"featureEngagement":64,"icapActive":0,"icapConstructive":1,"aiShown":32,"aiAccepted":0,"snapsTaken":null},{"pid":"P03","condition":"Proactive","age":"23–27","education":"Postgraduate student","field":"Design / HCI / UX","aiUse":"A few times a week","videoFreq":"A few times a month","familiarity":1.4,"preFilter":2,"pre":4,"post":8,"gain":4,"normGain":0.25,"fa":4.666666666666667,"pu":2.6666666666666665,"ae":4.333333333333333,"rw":4.666666666666667,"uesOverall":4.083333333333334,"ai":{"helped":4,"relevant":4,"timing":2,"control":1,"distracting":4,"overloading":3},"sessionDuration":1670,"activeVideo":0,"firstInteraction":253,"chatMessages":4,"quizAttempts":14,"quizCorrect":10,"quizAccuracy":71.4,"videoCompletion":0,"featureEngagement":50,"icapActive":11,"icapConstructive":18,"aiShown":33,"aiAccepted":14,"snapsTaken":null},{"pid":"P04","condition":"Proactive","age":"23–27","education":"Postgraduate student","field":"Design / HCI / UX","aiUse":"A few times a week","videoFreq":"A few times a month","familiarity":2,"preFilter":0,"pre":12,"post":10,"gain":-2,"normGain":-0.25,"fa":3.6666666666666665,"pu":4.333333333333333,"ae":3.6666666666666665,"rw":4.666666666666667,"uesOverall":4.083333333333333,"ai":{"helped":4,"relevant":4,"timing":3,"control":4,"distracting":3,"overloading":2},"sessionDuration":1143,"activeVideo":0,"firstInteraction":199,"chatMessages":0,"quizAttempts":8,"quizCorrect":7,"quizAccuracy":87.5,"videoCompletion":0,"featureEngagement":61,"icapActive":8,"icapConstructive":8,"aiShown":36,"aiAccepted":9,"snapsTaken":null},{"pid":"P05","condition":"Proactive","age":"23–27","education":"Postgraduate student","field":"Design / HCI / UX","aiUse":"Daily","videoFreq":"A few times a week","familiarity":1,"preFilter":0,"pre":4,"post":8,"gain":4,"normGain":0.25,"fa":2.3333333333333335,"pu":4.666666666666667,"ae":4,"rw":3.6666666666666665,"uesOverall":3.6666666666666665,"ai":{"helped":5,"relevant":5,"timing":5,"control":4,"distracting":1,"overloading":1},"sessionDuration":1619,"activeVideo":0,"firstInteraction":268,"chatMessages":1,"quizAttempts":14,"quizCorrect":10,"quizAccuracy":71.4,"videoCompletion":0,"featureEngagement":68,"icapActive":0,"icapConstructive":15,"aiShown":42,"aiAccepted":14,"snapsTaken":null},{"pid":"P06","condition":"Proactive","age":"23–27","education":"Postgraduate student","field":"Design / HCI / UX","aiUse":"Daily","videoFreq":"A few times a month","familiarity":1.6,"preFilter":2,"pre":6,"post":16,"gain":10,"normGain":0.7142857142857143,"fa":2.6666666666666665,"pu":4.666666666666667,"ae":3.3333333333333335,"rw":4,"uesOverall":3.666666666666667,"ai":{"helped":3,"relevant":4,"timing":4,"control":4,"distracting":1,"overloading":1},"sessionDuration":1121,"activeVideo":0,"firstInteraction":72,"chatMessages":2,"quizAttempts":9,"quizCorrect":8,"quizAccuracy":88.9,"videoCompletion":0,"featureEngagement":54,"icapActive":3,"icapConstructive":13,"aiShown":33,"aiAccepted":10,"snapsTaken":null},{"pid":"P07","condition":"Proactive","age":"28–34","education":"Postgraduate student","field":"Engineering / Technology","aiUse":"Daily","videoFreq":"A few times a week","familiarity":1.4,"preFilter":3,"pre":6,"post":10,"gain":4,"normGain":0.2857142857142857,"fa":1.6666666666666667,"pu":4,"ae":3,"rw":3,"uesOverall":2.916666666666667,"ai":{"helped":3,"relevant":3,"timing":4,"control":2,"distracting":4,"overloading":5},"sessionDuration":1008,"activeVideo":0,"firstInteraction":252,"chatMessages":0,"quizAttempts":5,"quizCorrect":4,"quizAccuracy":80,"videoCompletion":0,"featureEngagement":46,"icapActive":0,"icapConstructive":5,"aiShown":28,"aiAccepted":5,"snapsTaken":null}],"groupSummary":{"Intermittent":{"n":7,"pre":8.285714285714286,"post":11.714285714285714,"gain":3.4285714285714284,"normGain":0.11904761904761904,"uesOverall":4.047619047619047,"fa":3.7142857142857144,"pu":4.523809523809524,"ae":3.8095238095238093,"rw":4.142857142857143,"aiHelped":4.142857142857143,"aiRelevant":4.142857142857143,"aiTiming":4.714285714285714,"aiControl":4.571428571428571,"aiDistracting":1.2857142857142858,"aiOverloading":2,"sessionDuration":1115.857142857143,"firstInteraction":300.14285714285717,"chatMessages":2.4285714285714284,"quizAttempts":4.857142857142857,"quizAccuracy":47.142857142857146,"featureEngagement":1.5714285714285714,"icapActive":11.285714285714286,"icapConstructive":8.714285714285714,"familiarity":1.5428571428571427},"Continuous":{"n":7,"pre":9.428571428571429,"post":13.714285714285714,"gain":4.285714285714286,"normGain":0.47380952380952385,"uesOverall":3.5833333333333335,"fa":3.238095238095238,"pu":3.8095238095238098,"ae":3.3333333333333335,"rw":3.9523809523809526,"aiHelped":3.857142857142857,"aiRelevant":4.142857142857143,"aiTiming":3.857142857142857,"aiControl":3.857142857142857,"aiDistracting":3,"aiOverloading":2.857142857142857,"sessionDuration":2591.285714285714,"firstInteraction":392,"chatMessages":3.142857142857143,"quizAttempts":6.857142857142857,"quizAccuracy":67.62857142857142,"featureEngagement":10.428571428571429,"icapActive":37,"icapConstructive":12.142857142857142,"familiarity":1.6857142857142855},"Proactive":{"n":7,"pre":6.857142857142857,"post":12.571428571428571,"gain":5.714285714285714,"normGain":0.41666666666666663,"uesOverall":3.6428571428571432,"fa":3.047619047619048,"pu":3.7619047619047623,"ae":3.761904761904762,"rw":4.000000000000001,"aiHelped":4,"aiRelevant":3.857142857142857,"aiTiming":3.5714285714285716,"aiControl":3.142857142857143,"aiDistracting":2.857142857142857,"aiOverloading":2.857142857142857,"sessionDuration":1335.4285714285713,"firstInteraction":213.85714285714286,"chatMessages":1.4285714285714286,"quizAttempts":8.714285714285714,"quizAccuracy":64.81428571428572,"featureEngagement":57.714285714285715,"icapActive":3.2857142857142856,"icapConstructive":10.142857142857142,"familiarity":1.5142857142857142}},"signatures":{"Intermittent":{"snap_started":10,"snap_completed":9,"first_interaction":7,"chat_message_sent":17,"video_seek":32,"video_play":47,"playback_speed_changed":8,"video_pause":47,"quiz_started":15,"quiz_wrong":14,"quiz_correct":20,"video_ended":2,"tab_blurred":4,"tab_focused":4,"quiz_explained":1,"chat_suggestion_clicked":1,"snap_cancelled":1},"Continuous":{"video_play":99,"video_pause":99,"feed_question_unlocked":66,"video_seek":141,"feed_question_answered":48,"first_interaction":7,"feed_question_jumped":40,"glossary_term_clicked":19,"chat_message_sent":22,"tab_blurred":13,"tab_focused":12,"session_end":7,"playback_speed_changed":6,"explain_answer_clicked":8,"video_ended":4,"highlight_detail_clicked":6,"chat_suggestion_clicked":1},"Proactive":{"keyword_shown":154,"keyword_pinned":3,"playback_speed_changed":12,"chat_message_sent":10,"keyword_detail":1,"first_interaction":7,"keyword_ignored":89,"quiz_triggered":75,"quiz_correct":45,"visual_opened":13,"visual_closed":11,"visual_detail":2,"quiz_skipped":7,"frequency_changed":11,"keyword_dismissed":44,"quiz_wrong":12,"video_seek":23,"keyword_later":17,"highlights_paused":3,"quiz_detail":9,"visual_saved":1,"chat_suggestion_clicked":1,"highlights_resumed":1}},"corrMatrix":[{"outcome":"Raw gain","outcomeKey":"gain","values":[{"metric":"Pre-test score","key":"pre","rho":-0.5189916255691092},{"metric":"Self-rated familiarity","key":"familiarity","rho":0.25586961695940447},{"metric":"Pre-knowledge filter","key":"preFilter","rho":-0.20578255580442578},{"metric":"Time to first interaction","key":"firstInteraction","rho":-0.3468417594440714},{"metric":"Session duration","key":"sessionDuration","rho":-0.07519420956697642},{"metric":"Chat messages sent","key":"chatMessages","rho":0.005565899229419611},{"metric":"Quiz attempts","key":"quizAttempts","rho":0.04256075406472023},{"metric":"In-app quiz accuracy","key":"quizAccuracy","rho":-0.12648641980324943},{"metric":"Feature engagements","key":"featureEngagement","rho":0.22945198255997337},{"metric":"ICAP active events","key":"icapActive","rho":0.017670523365587245},{"metric":"ICAP constructive events","key":"icapConstructive","rho":-0.028158900088491867},{"metric":"Overall UES","key":"uesOverall","rho":0.06036930538758895},{"metric":"Focused attention","key":"fa","rho":-0.0782197054116008},{"metric":"Perceived usability","key":"pu","rho":-0.23219105603026433},{"metric":"Aesthetic appeal","key":"ae","rho":0.293582782809315},{"metric":"Reward","key":"rw","rho":0.08172116302303774}]},{"outcome":"Normalised gain","outcomeKey":"normGain","values":[{"metric":"Pre-test score","key":"pre","rho":-0.12732011739253357},{"metric":"Self-rated familiarity","key":"familiarity","rho":0.33704276852080206},{"metric":"Pre-knowledge filter","key":"preFilter","rho":0.03546781615081201},{"metric":"Time to first interaction","key":"firstInteraction","rho":-0.21142178147668758},{"metric":"Session duration","key":"sessionDuration","rho":0.10701596346350853},{"metric":"Chat messages sent","key":"chatMessages","rho":0.18697900894662128},{"metric":"Quiz attempts","key":"quizAttempts","rho":0.026566088670555914},{"metric":"In-app quiz accuracy","key":"quizAccuracy","rho":-0.04499185047478949},{"metric":"Feature engagements","key":"featureEngagement","rho":0.21152604914734077},{"metric":"ICAP active events","key":"icapActive","rho":0.19345361425387775},{"metric":"ICAP constructive events","key":"icapConstructive","rho":0.06960821483404184},{"metric":"Overall UES","key":"uesOverall","rho":0.06468516121930294},{"metric":"Focused attention","key":"fa","rho":-0.07766931488613128},{"metric":"Perceived usability","key":"pu","rho":-0.2514112879738665},{"metric":"Aesthetic appeal","key":"ae","rho":0.27651937980831315},{"metric":"Reward","key":"rw","rho":0.11422583817016424}]},{"outcome":"Post-test score","outcomeKey":"post","values":[{"metric":"Pre-test score","key":"pre","rho":0.493935155184299},{"metric":"Self-rated familiarity","key":"familiarity","rho":0.45887176785017414},{"metric":"Pre-knowledge filter","key":"preFilter","rho":0.45878016085790885},{"metric":"Time to first interaction","key":"firstInteraction","rho":0.09631813921615855},{"metric":"Session duration","key":"sessionDuration","rho":0.09631813921615855},{"metric":"Chat messages sent","key":"chatMessages","rho":0.14397864926839116},{"metric":"Quiz attempts","key":"quizAttempts","rho":-0.018900268111366997},{"metric":"In-app quiz accuracy","key":"quizAccuracy","rho":0.12981968655001708},{"metric":"Feature engagements","key":"featureEngagement","rho":0.028469530249996277},{"metric":"ICAP active events","key":"icapActive","rho":0.17738000673504667},{"metric":"ICAP constructive events","key":"icapConstructive","rho":-0.005616688313092585},{"metric":"Overall UES","key":"uesOverall","rho":-0.04954287940899326},{"metric":"Focused attention","key":"fa","rho":-0.15167798898973678},{"metric":"Perceived usability","key":"pu","rho":-0.17334766029578502},{"metric":"Aesthetic appeal","key":"ae","rho":0.14929942996573392},{"metric":"Reward","key":"rw","rho":-0.06163563473518603}]},{"outcome":"Overall UES","outcomeKey":"uesOverall","values":[{"metric":"Pre-test score","key":"pre","rho":-0.024640135311424415},{"metric":"Self-rated familiarity","key":"familiarity","rho":0.2153898719527778},{"metric":"Pre-knowledge filter","key":"preFilter","rho":0.037652588350834876},{"metric":"Time to first interaction","key":"firstInteraction","rho":0.011053325340468862},{"metric":"Session duration","key":"sessionDuration","rho":-0.19245790004581076},{"metric":"Chat messages sent","key":"chatMessages","rho":0.2116836066954815},{"metric":"Quiz attempts","key":"quizAttempts","rho":-0.1758183453980882},{"metric":"In-app quiz accuracy","key":"quizAccuracy","rho":-0.3723873028405855},{"metric":"Feature engagements","key":"featureEngagement","rho":-0.26427475121575733},{"metric":"ICAP active events","key":"icapActive","rho":0.07175486668684004},{"metric":"ICAP constructive events","key":"icapConstructive","rho":0.036795833927338185},{"metric":"Overall UES","key":"uesOverall","rho":1},{"metric":"Focused attention","key":"fa","rho":0.8678342011679685},{"metric":"Perceived usability","key":"pu","rho":0.48620556510413043},{"metric":"Aesthetic appeal","key":"ae","rho":0.7607454711954269},{"metric":"Reward","key":"rw","rho":0.7496508546393518}]},{"outcome":"AI control","outcomeKey":"ai.control","values":[{"metric":"Pre-test score","key":"pre","rho":0.47028912112783655},{"metric":"Self-rated familiarity","key":"familiarity","rho":-0.1960893239516656},{"metric":"Pre-knowledge filter","key":"preFilter","rho":0.23047304209641054},{"metric":"Time to first interaction","key":"firstInteraction","rho":0.22241810479540797},{"metric":"Session duration","key":"sessionDuration","rho":-0.009551697751950037},{"metric":"Chat messages sent","key":"chatMessages","rho":0.38363709329891277},{"metric":"Quiz attempts","key":"quizAttempts","rho":-0.031205547693185468},{"metric":"In-app quiz accuracy","key":"quizAccuracy","rho":0.04257775824390034},{"metric":"Feature engagements","key":"featureEngagement","rho":-0.42349555608125067},{"metric":"ICAP active events","key":"icapActive","rho":0.15845946165688995},{"metric":"ICAP constructive events","key":"icapConstructive","rho":0.2210716187551203},{"metric":"Overall UES","key":"uesOverall","rho":0.2107523649368224},{"metric":"Focused attention","key":"fa","rho":0.08988375328563808},{"metric":"Perceived usability","key":"pu","rho":0.4860064484590887},{"metric":"Aesthetic appeal","key":"ae","rho":-0.13575020202162177},{"metric":"Reward","key":"rw","rho":0.14499670517689267}]},{"outcome":"AI distraction","outcomeKey":"ai.distracting","values":[{"metric":"Pre-test score","key":"pre","rho":-0.0017395220258658887},{"metric":"Self-rated familiarity","key":"familiarity","rho":0.04451870575816555},{"metric":"Pre-knowledge filter","key":"preFilter","rho":-0.03209382591809832},{"metric":"Time to first interaction","key":"firstInteraction","rho":-0.072690284486426},{"metric":"Session duration","key":"sessionDuration","rho":0.21059802047469214},{"metric":"Chat messages sent","key":"chatMessages","rho":-0.1451242065685306},{"metric":"Quiz attempts","key":"quizAttempts","rho":0.129069097095805},{"metric":"In-app quiz accuracy","key":"quizAccuracy","rho":0.22189415294776896},{"metric":"Feature engagements","key":"featureEngagement","rho":0.3500980215444186},{"metric":"ICAP active events","key":"icapActive","rho":0.14415098276523686},{"metric":"ICAP constructive events","key":"icapConstructive","rho":-0.06736494444687427},{"metric":"Overall UES","key":"uesOverall","rho":-0.6662876811511962},{"metric":"Focused attention","key":"fa","rho":-0.36214523283658123},{"metric":"Perceived usability","key":"pu","rho":-0.7694031736852875},{"metric":"Aesthetic appeal","key":"ae","rho":-0.4151406484748064},{"metric":"Reward","key":"rw","rho":-0.35710654034235695}]}],"chatBreakdown":{"Intermittent":{"total":17,"bySource":{"snap_ask":9,"chat":7,"quiz_explain":1}},"Continuous":{"total":22,"bySource":{"chat":7,"quiz_explain":8,"highlight_detail":6,"chat_suggestion":1}},"Proactive":{"total":10,"bySource":{"keyword_detail":1,"visual_detail":2,"chat":6,"chat_suggestion":1}}},"condOrder":["Intermittent","Continuous","Proactive"],"condColor":{"Intermittent":"#c8a420","Continuous":"#3a86ff","Proactive":"#e6446b"}};
+
+// ── helpers ──────────────────────────────────────────────────────────────
+const fmt = (v, d=2) => Number.isFinite(v) ? v.toFixed(d) : '—';
+const fmtSigned = (v, d=2) => Number.isFinite(v) ? (v>0?'+':'')+v.toFixed(d) : '—';
+const COND_COLOR = DATA.condColor;
+const COND_ORDER = DATA.condOrder;
+const condShort = c => c[0];
+
+// ── Chart.js global polish (defensive: only set paths we know exist) ────
+try {
+  Chart.defaults.font.family = '-apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", "Helvetica Neue", Arial, sans-serif';
+  Chart.defaults.font.size = 12;
+  Chart.defaults.color = '#3a3a3c';
+  Chart.defaults.borderColor = '#ebebe4';
+  Chart.defaults.plugins.legend.labels.boxWidth = 12;
+  Chart.defaults.plugins.legend.labels.boxHeight = 12;
+  Chart.defaults.plugins.legend.labels.padding = 14;
+  Chart.defaults.plugins.legend.labels.font = { size: 12, weight: 500 };
+  Chart.defaults.plugins.legend.position = 'top';
+  Chart.defaults.plugins.legend.align = 'end';
+  Chart.defaults.plugins.tooltip.backgroundColor = 'rgba(28,28,30,0.92)';
+  Chart.defaults.plugins.tooltip.padding = 10;
+  Chart.defaults.plugins.tooltip.cornerRadius = 6;
+  Chart.defaults.plugins.tooltip.titleFont = { size: 12, weight: 600 };
+  Chart.defaults.plugins.tooltip.bodyFont = { size: 12, weight: 400 };
+  Chart.defaults.plugins.tooltip.boxPadding = 4;
+  // Per-scale-type defaults (these paths exist in v4)
+  if (Chart.defaults.scales) {
+    for (const t of ['linear', 'category', 'radialLinear']) {
+      if (Chart.defaults.scales[t]) {
+        Chart.defaults.scales[t].grid = { ...(Chart.defaults.scales[t].grid || {}), color: '#f1f1ec', tickLength: 0, drawTicks: false };
+        Chart.defaults.scales[t].border = { ...(Chart.defaults.scales[t].border || {}), display: false };
+        Chart.defaults.scales[t].ticks = { ...(Chart.defaults.scales[t].ticks || {}), padding: 8, color: '#6a6a70' };
+      }
+    }
+  }
+  if (Chart.defaults.elements?.bar) {
+    Chart.defaults.elements.bar.borderRadius = 4;
+    Chart.defaults.elements.bar.borderSkipped = false;
+  }
+  if (Chart.defaults.elements?.point) {
+    Chart.defaults.elements.point.hoverBorderWidth = 2;
+  }
+} catch (e) {
+  console.warn('Chart defaults setup partially failed:', e.message);
+}
+
+// ── scoreboard fills ──────────────────────────────────────────────────────
+const gMap = DATA.groupSummary;
+document.getElementById('hl-i-gain').textContent = fmtSigned(gMap.Intermittent.gain, 2);
+document.getElementById('hl-c-gain').textContent = fmtSigned(gMap.Continuous.gain, 2);
+document.getElementById('hl-p-gain').textContent = fmtSigned(gMap.Proactive.gain, 2);
+
+// ── cohort grid (one labeled row per condition) ──────────────────────────
+(function cohortGrid() {
+  const cohortEl = document.getElementById('cohort');
+  const condDescr = {
+    Intermittent: 'I01 – I07',
+    Continuous:   'C01 – C07',
+    Proactive:    'P01 – P07',
+  };
+  for (const c of COND_ORDER) {
+    const row = document.createElement('div');
+    row.className = 'cohort-row';
+    row.innerHTML = `
+      <div class="row-label">
+        <span class="name" style="color: ${COND_COLOR[c]}">${c}</span>
+        <span class="sub">${condDescr[c]}</span>
+      </div>
+      <div class="dots"></div>
+    `;
+    const dots = row.querySelector('.dots');
+    const peers = DATA.rows.filter(r => r.condition === c).sort((a,b)=>a.pid.localeCompare(b.pid));
+    for (const r of peers) {
+      const dot = document.createElement('div');
+      dot.className = 'dot' + (r.gain < 0 ? ' negative' : '');
+      const gain = Number.isFinite(r.gain) ? r.gain : 0;
+      const size = Math.max(30, Math.min(58, 36 + Math.max(0, gain) * 2));
+      dot.style.width = size + 'px';
+      dot.style.height = size + 'px';
+      dot.style.background = COND_COLOR[c];
+      dot.textContent = r.pid;
+      dot.setAttribute('data-tip',
+        r.pid + ' · ' + c +
+        '\nPre  ' + r.pre + '   Post  ' + r.post + '   Gain  ' + fmtSigned(r.gain,0) +
+        '\nUES  ' + fmt(r.uesOverall,2) + '/5   AI control  ' + fmt(r.ai.control,0) + '/5'
+      );
+      dots.appendChild(dot);
+    }
+    cohortEl.appendChild(row);
+  }
+})();
+
+// ── slopegraph (custom SVG) ──────────────────────────────────────────────
+(function slopegraph() {
+  const container = document.getElementById('slopegraph');
+  const W = container.clientWidth || 920, H = 480;
+  const P = { top: 50, right: 70, bottom: 56, left: 60 };
+  const yMin = 0, yMax = 20;
+  const yScale = v => H - P.bottom - (v - yMin) / (yMax - yMin) * (H - P.top - P.bottom);
+  const xPre = P.left + 110, xPost = W - P.right - 80;
+  const NS = 'http://www.w3.org/2000/svg';
+  const el = (tag, attrs={}) => {
+    const e = document.createElementNS(NS, tag);
+    for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
+    return e;
+  };
+
+  const svg = el('svg', { viewBox: '0 0 ' + W + ' ' + H, class: 'slope-svg' });
+
+  // ticks
+  for (let v = 0; v <= 20; v += 5) {
+    const y = yScale(v);
+    svg.appendChild(el('line', {
+      x1: xPre, x2: xPost, y1: y, y2: y,
+      class: v === 0 ? 'tick-baseline' : 'tick',
+      'stroke-dasharray': v === 0 ? '' : '2,4',
+    }));
+    svg.appendChild(el('text', {
+      x: xPre - 12, y: y + 3.5, 'text-anchor': 'end', class: 'axis-num',
+    })).textContent = v;
+    svg.appendChild(el('text', {
+      x: xPost + 12, y: y + 3.5, 'text-anchor': 'start', class: 'axis-num',
+    })).textContent = v;
+  }
+
+  // column headers
+  const head1 = el('text', { x: xPre, y: P.top - 14, 'text-anchor': 'middle', class: 'axis-title' });
+  head1.textContent = 'PRE-TEST';
+  svg.appendChild(head1);
+  const head2 = el('text', { x: xPost, y: P.top - 14, 'text-anchor': 'middle', class: 'axis-title' });
+  head2.textContent = 'POST-TEST';
+  svg.appendChild(head2);
+
+  // group median lines (drawn first, so they sit underneath)
+  const medians = {};
+  for (const c of COND_ORDER) {
+    const g = DATA.rows.filter(r => r.condition === c);
+    const preSorted = g.map(r => r.pre).sort((a,b)=>a-b);
+    const postSorted = g.map(r => r.post).sort((a,b)=>a-b);
+    const mid = Math.floor(preSorted.length / 2);
+    const preM = preSorted.length%2 ? preSorted[mid] : (preSorted[mid-1]+preSorted[mid])/2;
+    const postM = postSorted.length%2 ? postSorted[mid] : (postSorted[mid-1]+postSorted[mid])/2;
+    medians[c] = { pre: preM, post: postM };
+    svg.appendChild(el('line', {
+      x1: xPre, y1: yScale(preM), x2: xPost, y2: yScale(postM),
+      stroke: COND_COLOR[c], 'stroke-width': 3.5, opacity: 0.9,
+      'stroke-linecap': 'round',
+    }));
+  }
+
+  // individual lines + endpoints (group hover)
+  // Group labels by side and de-overlap by pushing apart
+  const labelsLeft  = [];
+  const labelsRight = [];
+  for (const r of DATA.rows) {
+    if (!Number.isFinite(r.pre) || !Number.isFinite(r.post)) continue;
+    const g = el('g', { class: 'slope' });
+    g.appendChild(el('line', {
+      x1: xPre, y1: yScale(r.pre), x2: xPost, y2: yScale(r.post),
+      class: 'slope-line', stroke: COND_COLOR[r.condition],
+    }));
+    g.appendChild(el('circle', {
+      cx: xPre, cy: yScale(r.pre), r: 4.2, class: 'slope-dot', fill: COND_COLOR[r.condition],
+    }));
+    g.appendChild(el('circle', {
+      cx: xPost, cy: yScale(r.post), r: 4.2, class: 'slope-dot', fill: COND_COLOR[r.condition],
+    }));
+    svg.appendChild(g);
+    labelsRight.push({ pid: r.pid, y: yScale(r.post), color: COND_COLOR[r.condition] });
+  }
+
+  // de-overlap right-side labels
+  labelsRight.sort((a,b) => a.y - b.y);
+  const minGap = 13;
+  for (let i = 1; i < labelsRight.length; i++) {
+    if (labelsRight[i].y - labelsRight[i-1].y < minGap) {
+      labelsRight[i].y = labelsRight[i-1].y + minGap;
+    }
+  }
+  for (const l of labelsRight) {
+    svg.appendChild(el('text', {
+      x: xPost + 20, y: l.y + 3.5, fill: l.color, class: 'slope-label',
+    })).textContent = l.pid;
+  }
+
+  // bottom legend
+  const legendY = H - 18;
+  let lx = P.left;
+  for (const c of COND_ORDER) {
+    const g = el('g', { transform: 'translate(' + lx + ',' + legendY + ')' });
+    g.appendChild(el('rect', {
+      width: 18, height: 3, y: -1.5, fill: COND_COLOR[c], rx: 1.5,
+    }));
+    const t = el('text', { x: 24, y: 4, 'font-size': 11.5, fill: '#555', 'font-weight': 500 });
+    t.textContent = c + '  median  ' + medians[c].pre.toFixed(1) + ' → ' + medians[c].post.toFixed(1);
+    g.appendChild(t);
+    svg.appendChild(g);
+    lx += 230;
+  }
+
+  container.appendChild(svg);
+})();
+
+// ── chart.js plugin: jittered points overlay (manual) ────────────────────
+function makeGainBar(canvasId, key, max=null) {
+  const ctx = document.getElementById(canvasId);
+  const means = COND_ORDER.map(c => gMap[c][key]);
+  const pointSets = COND_ORDER.map(c =>
+    DATA.rows.filter(r => r.condition === c).map(r => r[key]).filter(Number.isFinite)
+  );
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: COND_ORDER,
+      datasets: [{
+        label: 'Group mean',
+        data: means,
+        backgroundColor: COND_ORDER.map(c => COND_COLOR[c] + 'd0'),
+        borderWidth: 0,
+        barPercentage: 0.5,
+        categoryPercentage: 0.7,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: {
+          label: (ctx) => 'Mean: ' + (typeof ctx.parsed.y === 'number' ? ctx.parsed.y.toFixed(2) : ctx.parsed.y),
+          afterBody: (ctx) => {
+            const i = ctx[0].dataIndex;
+            return 'Per participant: ' + pointSets[i].map(v => v.toFixed(1)).join(', ');
+          }
+        }}
+      },
+      scales: {
+        y: { beginAtZero: true, max: max ?? undefined,
+             ticks: { precision: 1 } },
+        x: { grid: { display: false } },
+      },
+    },
+    plugins: [{
+      id: 'jitter',
+      afterDatasetDraw: (chart) => {
+        const { ctx, scales } = chart;
+        const xs = scales.x, ys = scales.y;
+        pointSets.forEach((set, i) => {
+          const cx = xs.getPixelForValue(COND_ORDER[i]);
+          set.forEach((v, j) => {
+            // deterministic spread for reproducibility
+            const spread = (j - (set.length - 1) / 2) * 9;
+            const px = cx + spread, py = ys.getPixelForValue(v);
+            ctx.beginPath();
+            ctx.arc(px, py, 4, 0, Math.PI * 2);
+            ctx.fillStyle = COND_COLOR[COND_ORDER[i]];
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 1.6;
+            ctx.fill(); ctx.stroke();
+          });
+        });
+      }
+    }]
+  });
+}
+makeGainBar('gainBars', 'gain');
+makeGainBar('normGainBars', 'normGain', 1);
+
+// ── baseline scatter (pre vs gain) ──────────────────────────────────────
+(function baselineScatter() {
+  const ctx = document.getElementById('baselineScatter');
+  const datasets = COND_ORDER.map(c => ({
+    label: c,
+    data: DATA.rows.filter(r => r.condition === c)
+      .filter(r => Number.isFinite(r.pre) && Number.isFinite(r.gain))
+      .map(r => ({ x: r.pre, y: r.gain, pid: r.pid })),
+    backgroundColor: COND_COLOR[c],
+    borderColor: '#fff',
+    pointRadius: 7, pointHoverRadius: 10,
+    borderWidth: 2,
+  }));
+
+  const xs = DATA.rows.map(r => r.pre).filter(Number.isFinite);
+  const ys = DATA.rows.map(r => r.gain).filter(Number.isFinite);
+  const mx = xs.reduce((a,b)=>a+b,0)/xs.length;
+  const my = ys.reduce((a,b)=>a+b,0)/ys.length;
+  let nu = 0, de = 0;
+  for (let i = 0; i < xs.length; i++) { nu += (xs[i]-mx)*(ys[i]-my); de += (xs[i]-mx)**2; }
+  const slope = nu/de, intercept = my - slope*mx;
+  const xRange = [Math.min(...xs), Math.max(...xs)];
+  datasets.push({
+    label: 'Trend',
+    type: 'line',
+    data: [{x: xRange[0], y: slope*xRange[0]+intercept}, {x: xRange[1], y: slope*xRange[1]+intercept}],
+    borderColor: '#9a9a9f', borderDash: [4,4],
+    pointRadius: 0, fill: false, borderWidth: 1.6,
+  });
+
+  new Chart(ctx, {
+    type: 'scatter',
+    data: { datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'top', align: 'end',
+                  labels: { filter: (item) => item.text !== 'Trend' } },
+        tooltip: { callbacks: {
+          label: (ctx) => ctx.raw.pid ? ctx.raw.pid + '  ·  ' + ctx.dataset.label : '',
+          afterBody: (items) => {
+            const r = items[0].raw;
+            return r.pid ? ['Pre: ' + r.x + ' / 20', 'Gain: ' + (r.y>=0?'+':'') + r.y] : [];
+          }
+        }},
+      },
+      scales: {
+        x: { title: { display: true, text: 'Pre-test score (out of 20)', color: '#6a6a70',
+                     font: { size: 11.5, weight: 500 } }, min: 0, max: 20 },
+        y: { title: { display: true, text: 'Learning gain (post − pre)', color: '#6a6a70',
+                     font: { size: 11.5, weight: 500 } } }
+      }
+    }
+  });
+})();
+
+// ── UES radar ─────────────────────────────────────────────────────────────
+const radarOpts = (suggestedMax = 5) => ({
+  responsive: true, maintainAspectRatio: false,
+  plugins: {
+    legend: { position: 'top', align: 'end' },
+    tooltip: { callbacks: { label: (ctx) => ctx.dataset.label + ': ' + ctx.parsed.r.toFixed(2) } }
+  },
+  scales: {
+    r: {
+      suggestedMin: 1, suggestedMax,
+      ticks: { stepSize: 1, color: '#9a9a9f', font: { size: 10 }, backdropColor: 'transparent', count: 5 },
+      grid: { color: '#ebebe4' },
+      angleLines: { color: '#ebebe4' },
+      pointLabels: { color: '#3a3a3c', font: { size: 11.5, weight: 500 } },
+    }
+  }
+});
+new Chart(document.getElementById('uesRadar'), {
+  type: 'radar',
+  data: {
+    labels: [['Focused', 'attention'], ['Perceived', 'usability'], ['Aesthetic', 'appeal'], ['Reward']],
+    datasets: COND_ORDER.map(c => ({
+      label: c,
+      data: [gMap[c].fa, gMap[c].pu, gMap[c].ae, gMap[c].rw],
+      backgroundColor: COND_COLOR[c] + '20',
+      borderColor: COND_COLOR[c],
+      borderWidth: 2,
+      pointBackgroundColor: COND_COLOR[c],
+      pointBorderColor: '#fff',
+      pointBorderWidth: 1.5,
+      pointRadius: 4,
+    }))
+  },
+  options: radarOpts(5),
+});
+
+// ── AI radar ─────────────────────────────────────────────────────────────
+new Chart(document.getElementById('aiRadar'), {
+  type: 'radar',
+  data: {
+    labels: [['Helped'], ['Relevant'], ['Useful', 'timing'], ['Felt in', 'control'], ['Not', 'distracting'], ['Not', 'overloading']],
+    datasets: COND_ORDER.map(c => ({
+      label: c,
+      data: [
+        gMap[c].aiHelped, gMap[c].aiRelevant, gMap[c].aiTiming,
+        gMap[c].aiControl, 6 - gMap[c].aiDistracting, 6 - gMap[c].aiOverloading
+      ],
+      backgroundColor: COND_COLOR[c] + '20',
+      borderColor: COND_COLOR[c],
+      borderWidth: 2,
+      pointBackgroundColor: COND_COLOR[c],
+      pointBorderColor: '#fff',
+      pointBorderWidth: 1.5,
+      pointRadius: 4,
+    }))
+  },
+  options: {
+    ...radarOpts(5),
+    plugins: {
+      legend: { position: 'top', align: 'end' },
+      tooltip: { callbacks: {
+        label: (ctx) => ctx.dataset.label + ': ' + ctx.parsed.r.toFixed(2),
+        footer: (items) => {
+          const lab = Array.isArray(items[0].label) ? items[0].label.join(' ') : items[0].label;
+          return lab.startsWith('Not') ? '(reverse-coded — higher = better)' : '';
+        }
+      }}
+    }
+  }
+});
+
+// ── trade-off scatter (distraction vs UES) ────────────────────────────────
+const scatterOpts = (xLabel, yLabel, xRange, yRange) => ({
+  responsive: true, maintainAspectRatio: false,
+  plugins: {
+    legend: { position: 'top', align: 'end' },
+    tooltip: { callbacks: {
+      label: (ctx) => ctx.raw.pid + '  ·  ' + ctx.dataset.label,
+      afterBody: (items) => {
+        const r = items[0].raw;
+        return [xLabel + ': ' + r.x, yLabel + ': ' + (typeof r.y === 'number' ? r.y.toFixed(2) : r.y)];
+      }
+    }}
+  },
+  scales: {
+    x: {
+      title: { display: true, text: xLabel, color: '#6a6a70', font: { size: 11.5, weight: 500 } },
+      min: xRange[0], max: xRange[1],
+    },
+    y: {
+      title: { display: true, text: yLabel, color: '#6a6a70', font: { size: 11.5, weight: 500 } },
+      min: yRange[0], max: yRange[1],
+    }
+  }
+});
+new Chart(document.getElementById('tradeoffScatter'), {
+  type: 'scatter',
+  data: {
+    datasets: COND_ORDER.map(c => ({
+      label: c,
+      data: DATA.rows.filter(r => r.condition === c).map(r => ({
+        x: r.ai.distracting, y: r.uesOverall, pid: r.pid
+      })),
+      backgroundColor: COND_COLOR[c],
+      pointRadius: 7, pointHoverRadius: 10,
+      borderColor: '#fff', borderWidth: 2,
+    }))
+  },
+  options: scatterOpts('AI distraction (1 = none, 5 = a lot)', 'Overall UES (1 – 5)', [0.5, 5.5], [1, 5]),
+});
+
+// ── signature bars (event types per prototype) ────────────────────────────
+(function signatureBars() {
+  const TOP_N = 7;
+  // Filter out shared low-level events to keep the signature interpretable
+  const SKIP = new Set(['video_play', 'video_pause', 'tab_blurred', 'tab_focused', 'first_interaction', 'session_end']);
+  const data = COND_ORDER.map(c => {
+    const sorted = Object.entries(DATA.signatures[c])
+      .filter(([k]) => !SKIP.has(k))
+      .sort((a,b)=>b[1]-a[1])
+      .slice(0, TOP_N);
+    return { c, items: sorted };
+  });
+
+  const labels = [];
+  const values = [];
+  const colors = [];
+  // Reverse so the largest bar appears at the top within each block
+  for (const { c, items } of data) {
+    for (const [ev, n] of items) {
+      labels.push(ev.replace(/_/g, ' '));
+      values.push(n);
+      colors.push(COND_COLOR[c] + 'd0');
+    }
+  }
+
+  new Chart(document.getElementById('signatureBars'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Event count',
+        data: values,
+        backgroundColor: colors,
+        borderRadius: 3,
+        borderWidth: 0,
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: (ctx) => 'Count: ' + ctx.parsed.x } }
+      },
+      scales: {
+        x: { beginAtZero: true, title: { display: true, text: 'Total events across 7 sessions',
+              color: '#6a6a70', font: { size: 11.5, weight: 500 } } },
+        y: { grid: { display: false }, ticks: { font: { size: 11 } } },
+      },
+    }
+  });
+})();
+
+// ── first interaction bars ────────────────────────────────────────────────
+new Chart(document.getElementById('firstInteractionBars'), {
+  type: 'bar',
+  data: {
+    labels: COND_ORDER,
+    datasets: [{
+      data: COND_ORDER.map(c => gMap[c].firstInteraction),
+      backgroundColor: COND_ORDER.map(c => COND_COLOR[c] + 'd0'),
+      borderRadius: 4, borderWidth: 0,
+      barPercentage: 0.6, categoryPercentage: 0.7,
+    }]
+  },
+  options: {
+    indexAxis: 'y',
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: { callbacks: { label: (ctx) => 'Mean: ' + ctx.parsed.x.toFixed(0) + ' s' }}
+    },
+    scales: {
+      x: { title: { display: true, text: 'Seconds (lower = engaged sooner)',
+                   color: '#6a6a70', font: { size: 11.5, weight: 500 } } },
+      y: { grid: { display: false } }
+    }
+  }
+});
+
+// ── chat source bars (stacked) ────────────────────────────────────────────
+(function chatSourceBars() {
+  const sources = new Set();
+  for (const c of COND_ORDER) Object.keys(DATA.chatBreakdown[c].bySource).forEach(s => sources.add(s));
+  const sourceList = [...sources];
+  const palette = {
+    chat: '#8a8a90',
+    snap_ask: '#c8a420',
+    quiz_explain: '#5fa05f',
+    chat_suggestion: '#a06ca0',
+    highlight_detail: '#3a86ff',
+    keyword_detail: '#e6446b',
+    visual_detail: '#d97706',
+  };
+  const labelMap = {
+    chat: 'free chat',
+    snap_ask: 'snap question',
+    quiz_explain: 'quiz explain',
+    chat_suggestion: 'suggested prompt',
+    highlight_detail: 'highlight detail',
+    keyword_detail: 'keyword detail',
+    visual_detail: 'visual detail',
+  };
+  new Chart(document.getElementById('chatSourceBars'), {
+    type: 'bar',
+    data: {
+      labels: COND_ORDER,
+      datasets: sourceList.map(src => ({
+        label: labelMap[src] || src,
+        data: COND_ORDER.map(c => DATA.chatBreakdown[c].bySource[src] || 0),
+        backgroundColor: palette[src] || '#999',
+        borderRadius: 3, borderWidth: 0,
+      }))
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'top', align: 'end' } },
+      scales: {
+        y: { stacked: true, beginAtZero: true, title: { display: true, text: 'User chat messages',
+                                                        color: '#6a6a70', font: { size: 11.5, weight: 500 } } },
+        x: { stacked: true, grid: { display: false } }
+      }
+    }
+  });
+})();
+
+// ── heatmap ───────────────────────────────────────────────────────────────
+(function heatmap() {
+  const cont = document.getElementById('heatmap');
+  const wrap = document.createElement('div');
+  wrap.className = 'heatmap-wrap';
+  const tbl = document.createElement('table');
+  tbl.className = 'heatmap';
+  const colorFor = (v) => {
+    if (!Number.isFinite(v)) return '#f5f5f0';
+    const a = Math.min(1, Math.abs(v));
+    if (v > 0) return 'rgba(58,134,255,' + (0.08 + a * 0.78) + ')';
+    return 'rgba(230,68,107,' + (0.08 + a * 0.78) + ')';
+  };
+  const textColor = (v) => Math.abs(v) > 0.55 ? '#fff' : '#1c1c1e';
+
+  const thead = document.createElement('thead');
+  const trh = document.createElement('tr');
+  trh.appendChild(document.createElement('th'));
+  for (const col of DATA.corrMatrix) {
+    const th = document.createElement('th');
+    th.textContent = col.outcome;
+    trh.appendChild(th);
+  }
+  thead.appendChild(trh); tbl.appendChild(thead);
+
+  const tbody = document.createElement('tbody');
+  const metrics = DATA.corrMatrix[0].values.map(v => v.metric);
+  metrics.forEach((m, idx) => {
+    const tr = document.createElement('tr');
+    const th = document.createElement('th');
+    th.textContent = m;
+    tr.appendChild(th);
+    for (const col of DATA.corrMatrix) {
+      const c = col.values[idx];
+      const td = document.createElement('td');
+      td.className = 'cell' + (Number.isFinite(c.rho) && Math.abs(c.rho) >= 0.4 ? ' strong' : '');
+      td.style.background = colorFor(c.rho);
+      td.style.color = textColor(c.rho || 0);
+      td.textContent = Number.isFinite(c.rho)
+        ? (c.rho >= 0 ? '+' : '') + c.rho.toFixed(2)
+        : '—';
+      td.title = m + ' × ' + col.outcome + ' = ' + (Number.isFinite(c.rho) ? c.rho.toFixed(3) : 'n/a');
+      tr.appendChild(td);
+    }
+    tbody.appendChild(tr);
+  });
+  tbl.appendChild(tbody);
+  wrap.appendChild(tbl);
+  cont.appendChild(wrap);
+
+  // colour-scale legend
+  const legend = document.createElement('div');
+  legend.style.cssText = 'display:flex; align-items:center; gap:10px; margin-top:14px; font-size:0.78rem; color: var(--muted);';
+  legend.innerHTML = `
+    <span>Negative ρ</span>
+    <span style="display:inline-block; height: 12px; width: 200px;
+      background: linear-gradient(to right,
+        rgba(230,68,107,0.86) 0%, rgba(230,68,107,0.08) 50%,
+        rgba(58,134,255,0.08) 50%, rgba(58,134,255,0.86) 100%);
+      border-radius: 2px;"></span>
+    <span>Positive ρ</span>
+    <span style="margin-left: auto; font-style: italic;">Bordered cells: |ρ| ≥ 0.4</span>
+  `;
+  cont.appendChild(legend);
+})();
+
+// ── control vs distraction scatter ────────────────────────────────────────
+new Chart(document.getElementById('controlDistract'), {
+  type: 'scatter',
+  data: {
+    datasets: COND_ORDER.map(c => ({
+      label: c,
+      data: DATA.rows.filter(r => r.condition === c).map(r => ({
+        x: r.ai.control, y: r.ai.distracting, pid: r.pid
+      })),
+      backgroundColor: COND_COLOR[c],
+      pointRadius: 7, pointHoverRadius: 10,
+      borderColor: '#fff', borderWidth: 2,
+    }))
+  },
+  options: scatterOpts('Felt in control of AI use (1 – 5)', 'AI distraction (1 – 5)', [0.5, 5.5], [0.5, 5.5]),
+});
+
+// ── profile cards ─────────────────────────────────────────────────────────
+(function profileCards() {
+  const conf = {
+    Intermittent: {
+      role: 'Silent until asked',
+      takeaway: 'Best when the learner already knows when to ask for help. Highest perceived control and lowest distraction — but support can stay invisible if the learner does not initiate.',
+    },
+    Continuous: {
+      role: 'Always present, never interrupting',
+      takeaway: 'Highest descriptive post-test mean. Encourages exploration through feed questions and glossary without forcing engagement. Sessions run longer.',
+    },
+    Proactive: {
+      role: 'Speaks first, surfaces concepts',
+      takeaway: 'Largest raw gain from the lowest baseline. Highest interaction volume comes with the lowest perceived control. Keyword stream may exceed comfortable cadence.',
+    }
+  };
+  const cont = document.getElementById('profileCards');
+  for (const c of COND_ORDER) {
+    const g = gMap[c];
+    const card = document.createElement('div');
+    card.className = 'profile-card ' + c[0];
+    card.innerHTML = `
+      <div class="head">
+        <h3>${c}</h3>
+        <div class="role">${conf[c].role}</div>
+      </div>
+      <div class="body">
+        <div class="stat"><span class="k">Pre → Post</span><span class="v">${g.pre.toFixed(1)} → ${g.post.toFixed(1)}</span></div>
+        <div class="stat"><span class="k">Raw gain</span><span class="v">${fmtSigned(g.gain, 2)}</span></div>
+        <div class="stat"><span class="k">Normalised gain</span><span class="v">${(g.normGain*100).toFixed(0)}%</span></div>
+        <div class="stat"><span class="k">Overall UES</span><span class="v">${g.uesOverall.toFixed(2)} / 5</span></div>
+        <div class="stat"><span class="k">AI control</span><span class="v">${g.aiControl.toFixed(2)} / 5</span></div>
+        <div class="stat"><span class="k">AI distraction</span><span class="v">${g.aiDistracting.toFixed(2)} / 5</span></div>
+        <div class="stat"><span class="k">Chat messages</span><span class="v">${g.chatMessages.toFixed(1)} / session</span></div>
+        <div class="stat"><span class="k">Feature engagements</span><span class="v">${g.featureEngagement.toFixed(0)} / session</span></div>
+        <div class="takeaway">${conf[c].takeaway}</div>
+      </div>
+    `;
+    cont.appendChild(card);
+  }
+})();
+</script>
+</body>
+</html>

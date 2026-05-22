@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 340" role="img" aria-label="Feature activity and exposure by participant">
+  <style>
+  .grid-line { stroke: #d8d5cb; stroke-width: 1; fill: none; }
+  .axis-label, .small-label, .legend-text, .bar-label, .bar-value, .point-label {
+    font-family: Inter, Arial, sans-serif;
+    font-size: 12px;
+    fill: #6e7480;
+    font-variant-numeric: tabular-nums;
+  }
+  .axis-title {
+    font-family: Inter, Arial, sans-serif;
+    font-size: 13px;
+    fill: #343943;
+    font-weight: 720;
+  }
+  .slope-line { stroke-width: 2; opacity: 0.58; fill: none; }
+  .trend-line { stroke: #6f747d; stroke-width: 2; stroke-dasharray: 6 6; opacity: 0.72; fill: none; }
+  .dot, .scatter-dot { stroke: #ffffff; stroke-width: 1.6; opacity: 0.88; }
+  .compact-label { font-size: 10px; }
+  .key-label { font-weight: 760; fill: #232831; }
+  .bar-track { fill: #eeece2; }
+  .bar-value { fill: #343943; font-weight: 720; }
+</style>
+    <line x1="140" y1="36" x2="140" y2="246" class="grid-line"/><text x="140" y="270" class="axis-label" text-anchor="middle">0</text><line x1="250" y1="36" x2="250" y2="246" class="grid-line"/><text x="250" y="270" class="axis-label" text-anchor="middle">10</text><line x1="360" y1="36" x2="360" y2="246" class="grid-line"/><text x="360" y="270" class="axis-label" text-anchor="middle">20</text><line x1="470" y1="36" x2="470" y2="246" class="grid-line"/><text x="470" y="270" class="axis-label" text-anchor="middle">30</text><line x1="580" y1="36" x2="580" y2="246" class="grid-line"/><text x="580" y="270" class="axis-label" text-anchor="middle">40</text><line x1="690" y1="36" x2="690" y2="246" class="grid-line"/><text x="690" y="270" class="axis-label" text-anchor="middle">50</text><line x1="800" y1="36" x2="800" y2="246" class="grid-line"/><text x="800" y="270" class="axis-label" text-anchor="middle">60</text><line x1="910" y1="36" x2="910" y2="246" class="grid-line"/><text x="910" y="270" class="axis-label" text-anchor="middle">70</text>
+    <text x="124" y="59" class="axis-title" text-anchor="end">Intermittent</text><line x1="140" y1="54" x2="910" y2="54" class="grid-line"/><text x="124" y="143" class="axis-title" text-anchor="end">Continuous</text><line x1="140" y1="138" x2="910" y2="138" class="grid-line"/><text x="124" y="227" class="axis-title" text-anchor="end">Proactive</text><line x1="140" y1="222" x2="910" y2="222" class="grid-line"/>
+    <g>
+          <circle cx="140" cy="50.5" r="5.5" fill="#b89214" class="scatter-dot" opacity="0.92"/><circle cx="140" cy="57.5" r="5.5" fill="#b89214" class="scatter-dot" opacity="0.92"/>
+          <text x="150" y="30" class="point-label key-label compact-label" text-anchor="start">I04, I05</text>
+          <title>I04: 0 feature activity events, gain -4; I05: 0 feature activity events, gain 0</title>
+        </g><g>
+          <circle cx="151" cy="50.5" r="5.5" fill="#b89214" class="scatter-dot" opacity="0.92"/><circle cx="151" cy="57.5" r="5.5" fill="#b89214" class="scatter-dot" opacity="0.92"/>
+          <text x="161" y="40" class="point-label key-label compact-label" text-anchor="start">I02, I06</text>
+          <title>I02: 1 feature activity events, gain +8; I06: 1 feature activity events, gain +10</title>
+        </g><g>
+          <circle cx="173" cy="47" r="5.5" fill="#b89214" class="scatter-dot" opacity="0.92"/><circle cx="173" cy="54" r="5.5" fill="#b89214" class="scatter-dot" opacity="0.92"/><circle cx="173" cy="61" r="5.5" fill="#b89214" class="scatter-dot" opacity="0.92"/>
+          <text x="183" y="50" class="point-label key-label compact-label" text-anchor="start">I01, I03, I07</text>
+          <title>I01: 3 feature activity events, gain +6; I03: 3 feature activity events, gain +4; I07: 3 feature activity events, gain 0</title>
+        </g><g>
+          <circle cx="228" cy="138" r="8" fill="#2764d8" class="scatter-dot" opacity="0.92"/>
+          <text x="238" y="114" class="point-label key-label compact-label" text-anchor="start">C03</text>
+          <title>C03: 8 feature activity events, gain +4</title>
+        </g><g>
+          <circle cx="239" cy="138" r="8" fill="#2764d8" class="scatter-dot" opacity="0.92"/>
+          <text x="249" y="124" class="point-label key-label compact-label" text-anchor="start">C02</text>
+          <title>C02: 9 feature activity events, gain +4</title>
+        </g><g>
+          <circle cx="250" cy="138" r="8" fill="#2764d8" class="scatter-dot" opacity="0.92"/>
+          <text x="260" y="134" class="point-label key-label compact-label" text-anchor="start">C01</text>
+          <title>C01: 10 feature activity events, gain +4</title>
+        </g><g>
+          <circle cx="261" cy="131" r="5.5" fill="#2764d8" class="scatter-dot" opacity="0.92"/><circle cx="261" cy="138" r="5.5" fill="#2764d8" class="scatter-dot" opacity="0.92"/><circle cx="261" cy="145" r="5.5" fill="#2764d8" class="scatter-dot" opacity="0.92"/>
+          <text x="271" y="144" class="point-label key-label compact-label" text-anchor="start">C05, C06, C07</text>
+          <title>C05: 11 feature activity events, gain +4; C06: 11 feature activity events, gain -2; C07: 11 feature activity events, gain +12</title>
+        </g><g>
+          <circle cx="283" cy="138" r="8" fill="#2764d8" class="scatter-dot" opacity="0.92"/>
+          <text x="293" y="154" class="point-label key-label compact-label" text-anchor="start">C04</text>
+          <title>C04: 13 feature activity events, gain +4</title>
+        </g><g>
+          <circle cx="646" cy="222" r="8" fill="#d83a5d" class="scatter-dot" opacity="0.92"/>
+          <text x="656" y="198" class="point-label key-label compact-label" text-anchor="start">P07</text>
+          <title>P07: 46 feature activity events, gain +4</title>
+        </g><g>
+          <circle cx="690" cy="222" r="8" fill="#d83a5d" class="scatter-dot" opacity="0.92"/>
+          <text x="700" y="208" class="point-label key-label compact-label" text-anchor="start">P03</text>
+          <title>P03: 50 feature activity events, gain +4</title>
+        </g><g>
+          <circle cx="734" cy="222" r="8" fill="#d83a5d" class="scatter-dot" opacity="0.92"/>
+          <text x="744" y="218" class="point-label key-label compact-label" text-anchor="start">P06</text>
+          <title>P06: 54 feature activity events, gain +10</title>
+        </g><g>
+          <circle cx="811" cy="218.5" r="5.5" fill="#d83a5d" class="scatter-dot" opacity="0.92"/><circle cx="811" cy="225.5" r="5.5" fill="#d83a5d" class="scatter-dot" opacity="0.92"/>
+          <text x="821" y="228" class="point-label key-label compact-label" text-anchor="start">P01, P04</text>
+          <title>P01: 61 feature activity events, gain +8; P04: 61 feature activity events, gain -2</title>
+        </g><g>
+          <circle cx="844" cy="222" r="8" fill="#d83a5d" class="scatter-dot" opacity="0.92"/>
+          <text x="834" y="238" class="point-label key-label compact-label" text-anchor="end">P02</text>
+          <title>P02: 64 feature activity events, gain +12</title>
+        </g><g>
+          <circle cx="888" cy="222" r="8" fill="#d83a5d" class="scatter-dot" opacity="0.92"/>
+          <text x="878" y="248" class="point-label key-label compact-label" text-anchor="end">P05</text>
+          <title>P05: 68 feature activity events, gain +4</title>
+        </g>
+    <text x="525" y="322" class="axis-title" text-anchor="middle">Feature activity / exposure per participant</text>
+  </svg>

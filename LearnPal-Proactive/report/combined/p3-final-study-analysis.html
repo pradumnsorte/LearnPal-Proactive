@@ -1,0 +1,1714 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Study Analysis: Knowledge Gain, Engagement Behaviour and AI Support Trade-offs</title>
+  <link rel="icon" href="../../src/assets/LearnPal-Favicon.svg" type="image/svg+xml">
+  <style>
+    :root {
+      --bg: #f6f6f0;
+      --ink: #17191d;
+      --muted: #656b74;
+      --line: #dddbd0;
+      --panel: #ffffff;
+      --panel-soft: #fbfbf6;
+      --green: #12805c;
+      --red: #d83a5d;
+      --blue: #2764d8;
+      --gold: #b89214;
+      --shadow: 0 1px 2px rgba(20,20,20,0.06);
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.55;
+    }
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      border-bottom: 1px solid var(--line);
+      background: rgba(246,246,240,0.94);
+      backdrop-filter: blur(10px);
+    }
+    .topbar-inner {
+      max-width: 1220px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      padding: 11px 28px;
+      flex-wrap: wrap;
+    }
+    .brand { font-weight: 760; }
+    nav { margin-left: auto; display: flex; gap: 8px; flex-wrap: wrap; font-size: 0.88rem; }
+    nav a { color: var(--muted); text-decoration: none; padding: 6px 8px; border-radius: 6px; }
+    nav a:hover { background: var(--line); color: var(--ink); }
+    header, section, footer {
+      max-width: 1220px;
+      margin: 0 auto;
+      padding: 44px 28px;
+    }
+    header { padding-top: 60px; }
+    .kicker {
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-size: 0.85rem;
+      font-weight: 720;
+    }
+    h1 {
+      max-width: 1040px;
+      margin: 12px 0 16px;
+      font-size: clamp(2.35rem, 5vw, 5.4rem);
+      line-height: 0.98;
+      letter-spacing: 0;
+    }
+    h2 {
+      margin: 0 0 12px;
+      font-size: clamp(1.6rem, 2.5vw, 2.35rem);
+      line-height: 1.1;
+      letter-spacing: 0;
+    }
+    h3 { margin: 0 0 7px; font-size: 1.03rem; line-height: 1.24; letter-spacing: 0; }
+    p { margin: 0; color: #313640; }
+    .lede { max-width: 940px; font-size: 1.12rem; color: #30343b; }
+    .thesis {
+      margin-top: 26px;
+      padding-top: 18px;
+      border-top: 2px solid var(--ink);
+      max-width: 1040px;
+      font-size: clamp(1.24rem, 2vw, 1.7rem);
+      line-height: 1.28;
+      font-weight: 680;
+    }
+    .metric-strip { margin-top: 28px; display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; }
+    .metric {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-top: 3px solid var(--green);
+      border-radius: 8px;
+      padding: 17px;
+      box-shadow: var(--shadow);
+    }
+    .metric strong { display: block; font-size: 1.9rem; line-height: 1; margin-bottom: 8px; font-variant-numeric: tabular-nums; }
+    .metric span { color: var(--muted); font-size: 0.9rem; }
+    .band { border-top: 1px solid var(--line); }
+    .section-head {
+      display: grid;
+      grid-template-columns: minmax(0, 0.9fr) minmax(280px, 0.52fr);
+      gap: 30px;
+      align-items: end;
+      margin-bottom: 24px;
+    }
+    .note { color: var(--muted); font-size: 0.92rem; }
+    .note p { color: var(--muted); }
+    .grid { display: grid; gap: 18px; }
+    .grid.two { grid-template-columns: 1fr 1fr; }
+    .grid.three { grid-template-columns: repeat(3, 1fr); }
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 20px;
+      box-shadow: var(--shadow);
+    }
+    .chart-panel { padding: 24px; }
+    .chart-panel h3 { font-size: 1.12rem; }
+    .chart-pointers {
+      margin: 14px 0 0;
+      padding-left: 20px;
+      color: #39404a;
+      display: grid;
+      gap: 6px;
+    }
+    .chart-pointers li { padding-left: 2px; }
+    .story-chain {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 18px;
+    }
+    .story-step {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 20px;
+      box-shadow: var(--shadow);
+    }
+    .story-step h3 { color: #20242b; }
+    .story-step p { color: var(--muted); font-size: 0.95rem; }
+    .rq-card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-top: 4px solid var(--accent);
+      border-radius: 8px;
+      padding: 20px;
+      box-shadow: var(--shadow);
+    }
+    .rq-card .label { color: var(--muted); font-size: 0.78rem; font-weight: 740; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 8px; }
+    .rq-card ul { padding-left: 18px; margin: 12px 0 0; color: #333842; }
+    .rq-card li { margin: 5px 0; }
+    svg { width: 100%; height: auto; display: block; }
+    .grid-line { stroke: #e3e1d7; stroke-width: 1; }
+    .axis-label, .small-label, .legend-text, .bar-label, .bar-value, .point-label {
+      font-size: 12px;
+      fill: var(--muted);
+      font-variant-numeric: tabular-nums;
+    }
+    .axis-title { font-size: 13px; fill: #343943; font-weight: 720; }
+    .vertical { transform: rotate(-90deg); transform-origin: 20px center; }
+    .slope-line { stroke-width: 2; opacity: 0.58; }
+    .trend-line { stroke: #6f747d; stroke-width: 2; stroke-dasharray: 6 6; opacity: 0.72; }
+    .dot, .scatter-dot { stroke: #fff; stroke-width: 1.6; opacity: 0.88; }
+    .compact-label { font-size: 10px; }
+    .key-label { font-weight: 760; fill: #232831; }
+    .bar-track { fill: #eeece2; }
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; min-width: 820px; border-collapse: collapse; background: var(--panel); }
+    th, td { padding: 10px 12px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; font-size: 0.9rem; }
+    th { color: var(--muted); font-size: 0.76rem; text-transform: uppercase; letter-spacing: 0.06em; }
+    td.num { text-align: right; font-variant-numeric: tabular-nums; }
+    .heatmap-wrap { overflow-x: auto; }
+    .heatmap-table {
+      min-width: 820px;
+      table-layout: fixed;
+      border-collapse: separate;
+      border-spacing: 4px;
+      background: transparent;
+    }
+    .heatmap-table caption {
+      text-align: left;
+      font-weight: 760;
+      margin-bottom: 8px;
+      color: #343943;
+    }
+    .heatmap-table th, .heatmap-table td {
+      border: 0;
+      border-radius: 6px;
+      padding: 8px 9px;
+      text-align: center;
+      vertical-align: middle;
+      font-variant-numeric: tabular-nums;
+    }
+    .heatmap-table tbody th {
+      width: 210px;
+      text-align: left;
+      background: #f4f2e9;
+      color: #343943;
+      text-transform: none;
+      letter-spacing: 0;
+      font-size: 0.82rem;
+    }
+    .heatmap-table td.strong { box-shadow: inset 0 0 0 2px rgba(21, 24, 28, 0.58); }
+    .heatmap-table.compact { min-width: 760px; }
+    .heatmap-table.compact th, .heatmap-table.compact td { padding: 7px 8px; font-size: 0.78rem; }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      border-radius: 999px;
+      padding: 4px 8px;
+      background: var(--bg);
+      color: #16181c;
+      white-space: nowrap;
+    }
+    .pill::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--c); }
+    .stats-callout {
+      border-left: 4px solid var(--blue);
+      background: #f4f7ff;
+      padding: 16px 18px;
+      border-radius: 8px;
+      color: #263245;
+    }
+    .corr {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 17px;
+      box-shadow: var(--shadow);
+    }
+    .rho { font-size: 1.9rem; line-height: 1; font-weight: 780; font-variant-numeric: tabular-nums; margin-bottom: 10px; }
+    .rho.neg { color: var(--red); }
+    .rho.pos { color: var(--blue); }
+    .corr p, .feature-card p, .finding p { font-size: 0.92rem; color: var(--muted); }
+    .feature-card {
+      border: 1px solid var(--line);
+      border-top: 4px solid var(--accent);
+      background: linear-gradient(180deg, var(--soft), #fff 120px);
+      border-radius: 8px;
+      padding: 19px;
+      box-shadow: var(--shadow);
+    }
+    .feature-card .tag {
+      display: inline-flex;
+      border-radius: 999px;
+      background: #fff;
+      color: var(--muted);
+      padding: 4px 8px;
+      font-size: 0.75rem;
+      font-weight: 760;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 12px;
+    }
+    .feature-stat {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      border-top: 1px solid var(--line);
+      padding-top: 10px;
+      margin-top: 10px;
+      font-size: 0.9rem;
+    }
+    .feature-stat span { color: var(--muted); }
+    .feature-stat strong { font-variant-numeric: tabular-nums; }
+    .bucket-card {
+      border: 1px solid var(--line);
+      border-top: 4px solid var(--accent);
+      border-radius: 8px;
+      padding: 16px;
+      background: linear-gradient(180deg, var(--soft), #fff 108px);
+    }
+    .bucket-card h4 { margin-bottom: 4px; }
+    .bucket-card .bucket-total {
+      color: var(--muted);
+      font-size: 0.86rem;
+      margin-bottom: 10px;
+      font-variant-numeric: tabular-nums;
+    }
+    .finding-group { padding: 4px 0 18px; }
+    .finding-group + .finding-group {
+      border-top: 1px solid var(--line);
+      padding-top: 20px;
+    }
+    .finding-group-title { color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; font-size: 0.84rem; }
+    .finding {
+      display: grid;
+      grid-template-columns: 48px 1fr;
+      gap: 14px;
+      padding: 16px 0;
+      border-bottom: 1px solid var(--line);
+    }
+    .finding:last-child { border-bottom: 0; }
+    .finding-num {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: var(--ink);
+      color: #fff;
+      display: grid;
+      place-items: center;
+      font-weight: 780;
+    }
+    .matrix td { font-variant-numeric: tabular-nums; }
+    footer { color: var(--muted); font-size: 0.9rem; padding-bottom: 70px; }
+    code { background: #eceae0; border-radius: 4px; padding: 1px 4px; }
+    @media (max-width: 900px) {
+      .grid.two, .grid.three, .section-head, .metric-strip, .story-chain { grid-template-columns: 1fr; }
+      nav { margin-left: 0; }
+      header, section, footer { padding-left: 18px; padding-right: 18px; }
+      h1 { font-size: 2.35rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">LearnPal P3 Final Analysis</div>
+      <nav aria-label="Page sections">
+        <a href="#story">Story</a>
+        <a href="#rqs">RQs</a>
+        <a href="#data">Data map</a>
+        <a href="#rq1">RQ1</a>
+        <a href="#rq2">RQ2</a>
+        <a href="#feature-buckets">Buckets</a>
+        <a href="#relationships">Maps</a>
+        <a href="#rq3">RQ3</a>
+        <a href="#participants">Participants</a>
+        <a href="#interviews">Interviews</a>
+        <a href="#findings">Findings</a>
+      </nav>
+    </div>
+  </div>
+
+  <header>
+    <div class="kicker">Study Analysis: Knowledge Gain, Engagement Behaviour and AI Support Trade-offs</div>
+    <h1>Three AI paradigms, three different trade-offs.</h1>
+    <p class="lede">This page turns the P3 data into a coherent findings story: knowledge gain, engagement behaviour, and the trade-off between AI initiative and learner control.</p>
+    <div class="thesis">A key result is an engagement paradox: Intermittent support produced the fewest explicit AI uptake actions, yet had the highest subjective engagement score. The data therefore does not support a simple "more AI is better" conclusion. AI initiative appears useful when it creates structured, controllable learning checkpoints, and problematic when it becomes frequent, poorly timed, visually dense, or hard to suppress.</div>
+    <p class="note" style="margin-top:14px; max-width:980px;">In this analysis, explicit AI uptake refers to logged participant actions that indicate intentional engagement with AI support, such as answering a question, opening an explanation, clicking a glossary item, using chat, saving a prompt, or opening details. It excludes passive exposure, such as a keyword being shown but ignored.</p>
+    <div class="metric-strip">
+      <div class="metric"><strong>21</strong><span>participants, balanced across I/C/P</span></div>
+      <div class="metric" style="border-top-color:var(--green)"><strong>+4.48</strong><span>mean pre-post gain overall</span></div>
+      <div class="metric" style="border-top-color:var(--blue)"><strong>13.71</strong><span>highest mean post-test score, Continuous</span></div>
+      <div class="metric" style="border-top-color:var(--blue)"><strong>20.57 vs 14.43</strong><span>explicit AI uptake, Continuous vs Proactive</span></div>
+      <div class="metric" style="border-top-color:var(--red)"><strong>4.57</strong><span>highest perceived control, Intermittent</span></div>
+    </div>
+  </header>
+
+  <section id="story" class="band">
+    <div class="section-head">
+      <div>
+        <h2>How the analysis is stitched together</h2>
+        <p>The page follows one argument instead of treating each dataset as a separate result. Each chart either establishes learning, separates exposure from genuine uptake, or explains the initiative-control trade-off.</p>
+      </div>
+      <p class="note">Read the page as a sequence: first confirm whether learning changed, then inspect how each prototype shaped behaviour, then use ratings, relationship maps, and interviews to explain why more AI activity did not translate proportionally into better experience or learning.</p>
+    </div>
+    <div class="story-chain"><article class="story-step">
+        <h3>1. Establish the learning baseline</h3>
+        <p>RQ1 asks whether learning changed from pre-test to post-test, then checks whether raw gains are partly explained by different starting points.</p>
+      </article><article class="story-step">
+        <h3>2. Separate exposure from uptake</h3>
+        <p>RQ2 separates what the system showed from what learners positively acted on, so ignored popups and raw feature volume are not treated as engagement.</p>
+      </article><article class="story-step">
+        <h3>3. Explain the design trade-off</h3>
+        <p>RQ3 combines ratings, logs, heatmaps, and interview-note themes to explain why control, timing, and visual density shaped the experience.</p>
+      </article></div>
+  </section>
+
+  <section id="rqs" class="band">
+    <div class="section-head">
+      <div>
+        <h2>Focused research questions</h2>
+        <p>The study should not have a different RQ for every dataset. The data sources are evidence layers supporting three project-level questions.</p>
+      </div>
+      <p class="note">These RQs follow the report framing: knowledge gain, learner engagement, and the design trade-off between AI initiative and learner control.</p>
+    </div>
+    <div class="grid three">
+      <article class="rq-card" style="--accent:var(--green)">
+        <div class="label">RQ1</div>
+        <h3>How do different Human-AI interaction paradigms for in-video learning support influence learners' knowledge gain?</h3>
+        <ul><li>Pre-test to post-test change</li><li>Raw and normalised gain</li><li>Prior knowledge as context</li></ul>
+      </article>
+      <article class="rq-card" style="--accent:var(--blue)">
+        <div class="label">RQ2</div>
+        <h3>How do these paradigms shape learner engagement during video-based learning?</h3>
+        <ul><li>UES and explicit positive AI uptake</li><li>Visual/frame, quiz/question, and concept/chat support families</li><li>Exposure and passive-use caveats</li></ul>
+      </article>
+      <article class="rq-card" style="--accent:var(--red)">
+        <div class="label">RQ3</div>
+        <h3>What trade-off emerges between AI initiative and learner control?</h3>
+        <ul><li>Control, distraction, overload</li><li>Prompt exposure and uptake</li><li>Interview triangulation</li></ul>
+      </article>
+    </div>
+  </section>
+
+  <section id="data" class="band">
+    <div class="section-head">
+      <div>
+        <h2>Data map and safeguards</h2>
+        <p>The analysis merges forms and logs by participant ID. IDs starting with I, C, and P are mapped only to Intermittent, Continuous, and Proactive respectively.</p>
+      </div>
+      <p class="note">Known caveats remain visible: Proactive active-video seconds/pauses are unreliable, video-completion fields are present but blank in the current comparable exports, Proactive quiz sheet rows are incomplete, transcript clicks are zero, exported acceptance rate is not used as a decisive metric, and feature-specific counts are not treated as universal measures.</p>
+    </div>
+    <div class="panel table-wrap"><table>
+    <thead><tr><th>Research question</th><th>Data source</th><th>Measures</th><th>Output</th></tr></thead>
+    <tbody><tr><td>RQ1 Knowledge gain</td><td>Form_2, Form_3, Form_4</td><td>pre-knowledge, pre-test, post-test, raw gain, normalised gain</td><td>Did learning happen, and did gain differ by paradigm?</td></tr><tr><td>RQ2 Engagement</td><td>Form_5, comparable logs, condition-specific logs</td><td>UES, explicit positive AI uptake, support-family uptake, feature activity/exposure</td><td>How did each paradigm change learner activity and uptake?</td></tr><tr><td>RQ3 Initiative-control trade-off</td><td>Form_5, logs, interview notes</td><td>control, distraction, overload, timing, relevance, ignored/dismissed prompts, interview-note themes</td><td>When did AI initiative help, and when did it disrupt?</td></tr></tbody>
+  </table></div>
+    <div class="panel table-wrap" style="margin-top:18px;"><table>
+  <thead>
+    <tr><th>Condition</th><th>IDs</th><th>Pre-knowledge</th><th>Pre</th><th>Post</th><th>Gain</th><th>Norm. gain</th><th>UES</th><th>Control</th><th>Distract</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+        <th><span class="pill" style="--c:#b89214; --bg:#fff5cf">Intermittent</span></th>
+        <td>I01, I02, I03, I04, I05, I06, I07</td>
+        <td class="num">3.29</td>
+        <td class="num">8.29</td>
+        <td class="num">11.71</td>
+        <td class="num">+3.43</td>
+        <td class="num">0.12</td>
+        <td class="num">4.05</td>
+        <td class="num">4.57</td>
+        <td class="num">1.29</td>
+      </tr><tr>
+        <th><span class="pill" style="--c:#2764d8; --bg:#eaf1ff">Continuous</span></th>
+        <td>C01, C02, C03, C04, C05, C06, C07</td>
+        <td class="num">2.86</td>
+        <td class="num">9.43</td>
+        <td class="num">13.71</td>
+        <td class="num">+4.29</td>
+        <td class="num">0.47</td>
+        <td class="num">3.58</td>
+        <td class="num">3.86</td>
+        <td class="num">3.00</td>
+      </tr><tr>
+        <th><span class="pill" style="--c:#d83a5d; --bg:#ffe7ed">Proactive</span></th>
+        <td>P01, P02, P03, P04, P05, P06, P07</td>
+        <td class="num">1.43</td>
+        <td class="num">6.86</td>
+        <td class="num">12.57</td>
+        <td class="num">+5.71</td>
+        <td class="num">0.42</td>
+        <td class="num">3.64</td>
+        <td class="num">3.14</td>
+        <td class="num">2.86</td>
+      </tr>
+  </tbody>
+</table></div>
+  </section>
+
+  <section id="rq1" class="band">
+    <div class="section-head">
+      <div>
+        <h2>RQ1: Knowledge gain</h2>
+        <p>The strongest statistically supported statement is that participants improved overall from pre-test to post-test, rather than that one condition outperformed the others.</p>
+      </div>
+      <div class="note">
+        <p>16/21 improved, 2/21 had no gain, and 3/21 had negative gain. Overall Wilcoxon p = 0.0002. Gain by condition: permutation Kruskal-Wallis p = 0.7021. Baseline score vs raw gain: Spearman rho = -0.52.</p>
+        <p style="margin-top:10px;">Pre-knowledge differed descriptively across groups: Proactive started lowest (1.43/10), Continuous was 2.86/10, and Intermittent was highest (3.29/10). This is why Proactive's larger raw gain should be read partly as a room-to-improve pattern.</p>
+      </div>
+    </div>
+    <div class="panel chart-panel">
+        <h3>Participant pre-test to post-test movement</h3>
+        <svg viewBox="0 0 980 500" role="img" aria-label="Pre-test to post-test slope chart">
+    <line x1="146" y1="420" x2="838" y2="420" class="grid-line"/><text x="136" y="424" class="axis-label" text-anchor="end">0</text><line x1="146" y1="326" x2="838" y2="326" class="grid-line"/><text x="136" y="330" class="axis-label" text-anchor="end">5</text><line x1="146" y1="232" x2="838" y2="232" class="grid-line"/><text x="136" y="236" class="axis-label" text-anchor="end">10</text><line x1="146" y1="138" x2="838" y2="138" class="grid-line"/><text x="136" y="142" class="axis-label" text-anchor="end">15</text><line x1="146" y1="44" x2="838" y2="44" class="grid-line"/><text x="136" y="48" class="axis-label" text-anchor="end">20</text>
+    <text x="170" y="24" class="axis-title" text-anchor="middle">Pre-test</text>
+    <text x="810" y="24" class="axis-title" text-anchor="middle">Post-test</text>
+    <text x="92" y="232" class="axis-title" text-anchor="middle" transform="rotate(-90 92 232)">Score out of 20</text>
+    <g class="participant-line">
+          <line x1="170" y1="269.6" x2="810" y2="194.4" stroke="#2764d8" class="slope-line"/>
+          <circle cx="170" cy="269.6" r="5" fill="#2764d8" class="dot"/>
+          <circle cx="794" cy="194.4" r="4.5" fill="#2764d8" class="dot" opacity="0.92"/>
+          <title>C01: 8 to 12, gain +4</title>
+        </g><g class="participant-line">
+          <line x1="170" y1="194.4" x2="810" y2="119.19999999999999" stroke="#2764d8" class="slope-line"/>
+          <circle cx="170" cy="194.4" r="5" fill="#2764d8" class="dot"/>
+          <circle cx="798" cy="119.19999999999999" r="4.5" fill="#2764d8" class="dot" opacity="0.92"/>
+          <title>C02: 12 to 16, gain +4</title>
+        </g><g class="participant-line">
+          <line x1="170" y1="232" x2="810" y2="156.8" stroke="#2764d8" class="slope-line"/>
+          <circle cx="170" cy="232" r="5" fill="#2764d8" class="dot"/>
+          <circle cx="810" cy="156.8" r="4.5" fill="#2764d8" class="dot" opacity="0.92"/>
+          <title>C03: 10 to 14, gain +4</title>
+        </g><g class="participant-line">
+          <line x1="170" y1="119.19999999999999" x2="810" y2="44" stroke="#2764d8" class="slope-line"/>
+          <circle cx="170" cy="119.19999999999999" r="5" fill="#2764d8" class="dot"/>
+          <circle cx="802" cy="44" r="4.5" fill="#2764d8" class="dot" opacity="0.92"/>
+          <title>C04: 16 to 20, gain +4</title>
+        </g><g class="participant-line">
+          <line x1="170" y1="344.8" x2="810" y2="269.6" stroke="#2764d8" class="slope-line"/>
+          <circle cx="170" cy="344.8" r="5" fill="#2764d8" class="dot"/>
+          <circle cx="798" cy="269.6" r="4.5" fill="#2764d8" class="dot" opacity="0.92"/>
+          <title>C05: 4 to 8, gain +4</title>
+        </g><g class="participant-line">
+          <line x1="170" y1="269.6" x2="810" y2="307.2" stroke="#2764d8" class="slope-line"/>
+          <circle cx="170" cy="269.6" r="5" fill="#2764d8" class="dot"/>
+          <circle cx="810" cy="307.2" r="4.5" fill="#2764d8" class="dot" opacity="0.92"/>
+          <title>C06: 8 to 6, gain -2</title>
+        </g><g class="participant-line">
+          <line x1="170" y1="269.6" x2="810" y2="44" stroke="#2764d8" class="slope-line"/>
+          <circle cx="170" cy="269.6" r="5" fill="#2764d8" class="dot"/>
+          <circle cx="810" cy="44" r="4.5" fill="#2764d8" class="dot" opacity="0.92"/>
+          <title>C07: 8 to 20, gain +12</title>
+        </g><g class="participant-line">
+          <line x1="170" y1="382.4" x2="810" y2="269.6" stroke="#b89214" class="slope-line"/>
+          <circle cx="170" cy="382.4" r="5" fill="#b89214" class="dot"/>
+          <circle cx="806" cy="269.6" r="4.5" fill="#b89214" class="dot" opacity="0.92"/>
+          <title>I01: 2 to 8, gain +6</title>
+        </g><g class="participant-line">
+          <line x1="170" y1="269.6" x2="810" y2="119.19999999999999" stroke="#b89214" class="slope-line"/>
+          <circle cx="170" cy="269.6" r="5" fill="#b89214" class="dot"/>
+          <circle cx="806" cy="119.19999999999999" r="4.5" fill="#b89214" class="dot" opacity="0.92"/>
+          <title>I02: 8 to 16, gain +8</title>
+        </g><g class="participant-line">
+          <line x1="170" y1="269.6" x2="810" y2="194.4" stroke="#b89214" class="slope-line"/>
+          <circle cx="170" cy="269.6" r="5" fill="#b89214" class="dot"/>
+          <circle cx="802" cy="194.4" r="4.5" fill="#b89214" class="dot" opacity="0.92"/>
+          <title>I03: 8 to 12, gain +4</title>
+        </g><g class="participant-line">
+          <line x1="170" y1="119.19999999999999" x2="810" y2="194.4" stroke="#b89214" class="slope-line"/>
+          <circle cx="170" cy="119.19999999999999" r="5" fill="#b89214" class="dot"/>
+          <circle cx="810" cy="194.4" r="4.5" fill="#b89214" class="dot" opacity="0.92"/>
+          <title>I04: 16 to 12, gain -4</title>
+        </g><g class="participant-line">
+          <line x1="170" y1="194.4" x2="810" y2="194.4" stroke="#b89214" class="slope-line"/>
+          <circle cx="170" cy="194.4" r="5" fill="#b89214" class="dot"/>
+          <circle cx="818" cy="194.4" r="4.5" fill="#b89214" class="dot" opacity="0.92"/>
+          <title>I05: 12 to 12, gain 0</title>
+        </g><g class="participant-line">
+          <line x1="170" y1="420" x2="810" y2="232" stroke="#b89214" class="slope-line"/>
+          <circle cx="170" cy="420" r="5" fill="#b89214" class="dot"/>
+          <circle cx="802" cy="232" r="4.5" fill="#b89214" class="dot" opacity="0.92"/>
+          <title>I06: 0 to 10, gain +10</title>
+        </g><g class="participant-line">
+          <line x1="170" y1="194.4" x2="810" y2="194.4" stroke="#b89214" class="slope-line"/>
+          <circle cx="170" cy="194.4" r="5" fill="#b89214" class="dot"/>
+          <circle cx="826" cy="194.4" r="4.5" fill="#b89214" class="dot" opacity="0.92"/>
+          <title>I07: 12 to 12, gain 0</title>
+        </g><g class="participant-line">
+          <line x1="170" y1="269.6" x2="810" y2="119.19999999999999" stroke="#d83a5d" class="slope-line"/>
+          <circle cx="170" cy="269.6" r="5" fill="#d83a5d" class="dot"/>
+          <circle cx="814" cy="119.19999999999999" r="4.5" fill="#d83a5d" class="dot" opacity="0.92"/>
+          <title>P01: 8 to 16, gain +8</title>
+        </g><g class="participant-line">
+          <line x1="170" y1="269.6" x2="810" y2="44" stroke="#d83a5d" class="slope-line"/>
+          <circle cx="170" cy="269.6" r="5" fill="#d83a5d" class="dot"/>
+          <circle cx="818" cy="44" r="4.5" fill="#d83a5d" class="dot" opacity="0.92"/>
+          <title>P02: 8 to 20, gain +12</title>
+        </g><g class="participant-line">
+          <line x1="170" y1="344.8" x2="810" y2="269.6" stroke="#d83a5d" class="slope-line"/>
+          <circle cx="170" cy="344.8" r="5" fill="#d83a5d" class="dot"/>
+          <circle cx="814" cy="269.6" r="4.5" fill="#d83a5d" class="dot" opacity="0.92"/>
+          <title>P03: 4 to 8, gain +4</title>
+        </g><g class="participant-line">
+          <line x1="170" y1="194.4" x2="810" y2="232" stroke="#d83a5d" class="slope-line"/>
+          <circle cx="170" cy="194.4" r="5" fill="#d83a5d" class="dot"/>
+          <circle cx="810" cy="232" r="4.5" fill="#d83a5d" class="dot" opacity="0.92"/>
+          <title>P04: 12 to 10, gain -2</title>
+        </g><g class="participant-line">
+          <line x1="170" y1="344.8" x2="810" y2="269.6" stroke="#d83a5d" class="slope-line"/>
+          <circle cx="170" cy="344.8" r="5" fill="#d83a5d" class="dot"/>
+          <circle cx="822" cy="269.6" r="4.5" fill="#d83a5d" class="dot" opacity="0.92"/>
+          <title>P05: 4 to 8, gain +4</title>
+        </g><g class="participant-line">
+          <line x1="170" y1="307.2" x2="810" y2="119.19999999999999" stroke="#d83a5d" class="slope-line"/>
+          <circle cx="170" cy="307.2" r="5" fill="#d83a5d" class="dot"/>
+          <circle cx="822" cy="119.19999999999999" r="4.5" fill="#d83a5d" class="dot" opacity="0.92"/>
+          <title>P06: 6 to 16, gain +10</title>
+        </g><g class="participant-line">
+          <line x1="170" y1="307.2" x2="810" y2="232" stroke="#d83a5d" class="slope-line"/>
+          <circle cx="170" cy="307.2" r="5" fill="#d83a5d" class="dot"/>
+          <circle cx="818" cy="232" r="4.5" fill="#d83a5d" class="dot" opacity="0.92"/>
+          <title>P07: 6 to 10, gain +4</title>
+        </g>
+    <text x="852" y="47" class="small-label key-label compact-label">C04, C07, P02</text><title>Post-test 20: C04 +4; C07 +12; P02 +12</title><text x="852" y="122.19999999999999" class="small-label key-label compact-label">C02, I02, P01, P06</text><title>Post-test 16: C02 +4; I02 +8; P01 +8; P06 +10</title><text x="852" y="159.8" class="small-label key-label compact-label">C03</text><title>Post-test 14: C03 +4</title><text x="852" y="197.4" class="small-label key-label compact-label">C01, I03, I04, I05, I07</text><title>Post-test 12: C01 +4; I03 +4; I04 -4; I05 0; I07 0</title><text x="852" y="235" class="small-label key-label compact-label">I06, P04, P07</text><title>Post-test 10: I06 +10; P04 -2; P07 +4</title><text x="852" y="272.6" class="small-label key-label compact-label">C05, I01, P03, P05</text><title>Post-test 8: C05 +4; I01 +6; P03 +4; P05 +4</title><text x="852" y="310.2" class="small-label key-label compact-label">C06</text><title>Post-test 6: C06 -2</title>
+  </svg>
+        <ul class="chart-pointers">
+  <li>Each line is one participant moving from pre-test to post-test. Upward lines indicate learning gain; downward lines show negative gain.</li><li>Participant IDs are grouped by shared post-test score with comma-separated labels, and overlapping post-test endpoints use small multi-colour markers.</li><li>This chart supports the cautious claim: most participants improved, but the study does not show improvement for every participant.</li>
+</ul>
+    </div>
+    <div class="panel chart-panel" style="margin-top:18px;">
+        <h3>Learning outcome summary</h3>
+        <svg viewBox="0 0 860 330" role="img" aria-label="Learning metrics by condition">
+    <line x1="64" y1="272" x2="810" y2="272" class="grid-line"/><line x1="64" y1="217.5" x2="810" y2="217.5" class="grid-line"/><line x1="64" y1="163" x2="810" y2="163" class="grid-line"/><line x1="64" y1="108.5" x2="810" y2="108.5" class="grid-line"/><line x1="64" y1="54" x2="810" y2="54" class="grid-line"/>
+    <text x="164.25" y="297" class="axis-label" text-anchor="middle">Pre</text><text x="348.75" y="297" class="axis-label" text-anchor="middle">Post</text><text x="533.25" y="297" class="axis-label" text-anchor="middle">Gain</text><text x="717.75" y="297" class="axis-label" text-anchor="middle">Norm gain</text>
+    <g>
+            <rect x="128.25" y="181.68571428571428" width="18" height="90.31428571428572" fill="#b89214" rx="4"/>
+            <text x="137.25" y="174.68571428571428" class="bar-value" text-anchor="middle">8.29</text>
+            <title>Intermittent Pre: 8.29</title>
+          </g><g>
+            <rect x="152.25" y="169.22857142857143" width="18" height="102.77142857142857" fill="#2764d8" rx="4"/>
+            <text x="161.25" y="162.22857142857143" class="bar-value" text-anchor="middle">9.43</text>
+            <title>Continuous Pre: 9.43</title>
+          </g><g>
+            <rect x="176.25" y="197.25714285714287" width="18" height="74.74285714285715" fill="#d83a5d" rx="4"/>
+            <text x="185.25" y="190.25714285714287" class="bar-value" text-anchor="middle">6.86</text>
+            <title>Proactive Pre: 6.86</title>
+          </g><g>
+            <rect x="312.75" y="144.31428571428575" width="18" height="127.68571428571427" fill="#b89214" rx="4"/>
+            <text x="321.75" y="137.31428571428575" class="bar-value" text-anchor="middle">11.71</text>
+            <title>Intermittent Post: 11.71</title>
+          </g><g>
+            <rect x="336.75" y="122.5142857142857" width="18" height="149.4857142857143" fill="#2764d8" rx="4"/>
+            <text x="345.75" y="115.5142857142857" class="bar-value" text-anchor="middle">13.71</text>
+            <title>Continuous Post: 13.71</title>
+          </g><g>
+            <rect x="360.75" y="134.97142857142856" width="18" height="137.02857142857144" fill="#d83a5d" rx="4"/>
+            <text x="369.75" y="127.97142857142856" class="bar-value" text-anchor="middle">12.57</text>
+            <title>Proactive Post: 12.57</title>
+          </g><g>
+            <rect x="497.25" y="147.42857142857144" width="18" height="124.57142857142857" fill="#b89214" rx="4"/>
+            <text x="506.25" y="140.42857142857144" class="bar-value" text-anchor="middle">3.43</text>
+            <title>Intermittent Gain: 3.43</title>
+          </g><g>
+            <rect x="521.25" y="116.28571428571428" width="18" height="155.71428571428572" fill="#2764d8" rx="4"/>
+            <text x="530.25" y="109.28571428571428" class="bar-value" text-anchor="middle">4.29</text>
+            <title>Continuous Gain: 4.29</title>
+          </g><g>
+            <rect x="545.25" y="64.38095238095238" width="18" height="207.61904761904762" fill="#d83a5d" rx="4"/>
+            <text x="554.25" y="57.38095238095238" class="bar-value" text-anchor="middle">5.71</text>
+            <title>Proactive Gain: 5.71</title>
+          </g><g>
+            <rect x="681.75" y="220.0952380952381" width="18" height="51.904761904761905" fill="#b89214" rx="4"/>
+            <text x="690.75" y="213.0952380952381" class="bar-value" text-anchor="middle">0.12</text>
+            <title>Intermittent Norm gain: 0.12</title>
+          </g><g>
+            <rect x="705.75" y="65.4190476190476" width="18" height="206.5809523809524" fill="#2764d8" rx="4"/>
+            <text x="714.75" y="58.4190476190476" class="bar-value" text-anchor="middle">0.47</text>
+            <title>Continuous Norm gain: 0.47</title>
+          </g><g>
+            <rect x="729.75" y="90.33333333333334" width="18" height="181.66666666666666" fill="#d83a5d" rx="4"/>
+            <text x="738.75" y="83.33333333333334" class="bar-value" text-anchor="middle">0.42</text>
+            <title>Proactive Norm gain: 0.42</title>
+          </g>
+    <circle cx="72" cy="308" r="6" fill="#b89214"/><text x="84" y="312" class="legend-text">Intermittent</text><circle cx="232" cy="308" r="6" fill="#2764d8"/><text x="244" y="312" class="legend-text">Continuous</text><circle cx="392" cy="308" r="6" fill="#d83a5d"/><text x="404" y="312" class="legend-text">Proactive</text>
+  </svg>
+        <p class="note">The columns use different scales: pre/post are out of 20, gain is raw points, and normalised gain is a proportion. Use the value labels, not only bar height, when comparing across columns.</p>
+        <ul class="chart-pointers">
+  <li>Proactive has the largest raw gain, but it also begins with the lowest pre-knowledge and low pre-test baseline.</li><li>Normalised gain is included because it partially corrects for room to improve.</li><li>The result is descriptive: the chart motivates interpretation, while the Kruskal-Wallis check below prevents overclaiming the superiority of any one condition.</li>
+</ul>
+    </div>
+    <div class="panel chart-panel" style="margin-top:18px;">
+        <h3>Room-to-improve check</h3>
+        <svg viewBox="0 0 940 510" role="img" aria-label="Baseline score and raw gain">
+    <line x1="88" y1="54" x2="88" y2="420" class="grid-line"/><text x="88" y="444" class="axis-label" text-anchor="middle">0</text><line x1="126.1" y1="54" x2="126.1" y2="420" class="grid-line"/><text x="126.1" y="444" class="axis-label" text-anchor="middle">1</text><line x1="164.2" y1="54" x2="164.2" y2="420" class="grid-line"/><text x="164.2" y="444" class="axis-label" text-anchor="middle">2</text><line x1="202.3" y1="54" x2="202.3" y2="420" class="grid-line"/><text x="202.3" y="444" class="axis-label" text-anchor="middle">3</text><line x1="240.4" y1="54" x2="240.4" y2="420" class="grid-line"/><text x="240.4" y="444" class="axis-label" text-anchor="middle">4</text><line x1="278.5" y1="54" x2="278.5" y2="420" class="grid-line"/><text x="278.5" y="444" class="axis-label" text-anchor="middle">5</text><line x1="316.6" y1="54" x2="316.6" y2="420" class="grid-line"/><text x="316.6" y="444" class="axis-label" text-anchor="middle">6</text><line x1="354.7" y1="54" x2="354.7" y2="420" class="grid-line"/><text x="354.7" y="444" class="axis-label" text-anchor="middle">7</text><line x1="392.8" y1="54" x2="392.8" y2="420" class="grid-line"/><text x="392.8" y="444" class="axis-label" text-anchor="middle">8</text><line x1="430.90000000000003" y1="54" x2="430.90000000000003" y2="420" class="grid-line"/><text x="430.90000000000003" y="444" class="axis-label" text-anchor="middle">9</text><line x1="469" y1="54" x2="469" y2="420" class="grid-line"/><text x="469" y="444" class="axis-label" text-anchor="middle">10</text><line x1="507.1" y1="54" x2="507.1" y2="420" class="grid-line"/><text x="507.1" y="444" class="axis-label" text-anchor="middle">11</text><line x1="545.2" y1="54" x2="545.2" y2="420" class="grid-line"/><text x="545.2" y="444" class="axis-label" text-anchor="middle">12</text><line x1="583.3" y1="54" x2="583.3" y2="420" class="grid-line"/><text x="583.3" y="444" class="axis-label" text-anchor="middle">13</text><line x1="621.4" y1="54" x2="621.4" y2="420" class="grid-line"/><text x="621.4" y="444" class="axis-label" text-anchor="middle">14</text><line x1="659.5" y1="54" x2="659.5" y2="420" class="grid-line"/><text x="659.5" y="444" class="axis-label" text-anchor="middle">15</text><line x1="697.6" y1="54" x2="697.6" y2="420" class="grid-line"/><text x="697.6" y="444" class="axis-label" text-anchor="middle">16</text><line x1="735.6999999999999" y1="54" x2="735.6999999999999" y2="420" class="grid-line"/><text x="735.6999999999999" y="444" class="axis-label" text-anchor="middle">17</text><line x1="773.8000000000001" y1="54" x2="773.8000000000001" y2="420" class="grid-line"/><text x="773.8000000000001" y="444" class="axis-label" text-anchor="middle">18</text><line x1="811.9" y1="54" x2="811.9" y2="420" class="grid-line"/><text x="811.9" y="444" class="axis-label" text-anchor="middle">19</text><line x1="850" y1="54" x2="850" y2="420" class="grid-line"/><text x="850" y="444" class="axis-label" text-anchor="middle">20</text>
+    <line x1="88" y1="420" x2="850" y2="420" class="grid-line"/><text x="70" y="424" class="axis-label" text-anchor="end">-4</text><line x1="88" y1="397.125" x2="850" y2="397.125" class="grid-line"/><text x="70" y="401.125" class="axis-label" text-anchor="end">-3</text><line x1="88" y1="374.25" x2="850" y2="374.25" class="grid-line"/><text x="70" y="378.25" class="axis-label" text-anchor="end">-2</text><line x1="88" y1="351.375" x2="850" y2="351.375" class="grid-line"/><text x="70" y="355.375" class="axis-label" text-anchor="end">-1</text><line x1="88" y1="328.5" x2="850" y2="328.5" class="grid-line"/><text x="70" y="332.5" class="axis-label" text-anchor="end">0</text><line x1="88" y1="305.625" x2="850" y2="305.625" class="grid-line"/><text x="70" y="309.625" class="axis-label" text-anchor="end">1</text><line x1="88" y1="282.75" x2="850" y2="282.75" class="grid-line"/><text x="70" y="286.75" class="axis-label" text-anchor="end">2</text><line x1="88" y1="259.875" x2="850" y2="259.875" class="grid-line"/><text x="70" y="263.875" class="axis-label" text-anchor="end">3</text><line x1="88" y1="237" x2="850" y2="237" class="grid-line"/><text x="70" y="241" class="axis-label" text-anchor="end">4</text><line x1="88" y1="214.125" x2="850" y2="214.125" class="grid-line"/><text x="70" y="218.125" class="axis-label" text-anchor="end">5</text><line x1="88" y1="191.25" x2="850" y2="191.25" class="grid-line"/><text x="70" y="195.25" class="axis-label" text-anchor="end">6</text><line x1="88" y1="168.375" x2="850" y2="168.375" class="grid-line"/><text x="70" y="172.375" class="axis-label" text-anchor="end">7</text><line x1="88" y1="145.5" x2="850" y2="145.5" class="grid-line"/><text x="70" y="149.5" class="axis-label" text-anchor="end">8</text><line x1="88" y1="122.625" x2="850" y2="122.625" class="grid-line"/><text x="70" y="126.625" class="axis-label" text-anchor="end">9</text><line x1="88" y1="99.75" x2="850" y2="99.75" class="grid-line"/><text x="70" y="103.75" class="axis-label" text-anchor="end">10</text><line x1="88" y1="76.875" x2="850" y2="76.875" class="grid-line"/><text x="70" y="80.875" class="axis-label" text-anchor="end">11</text><line x1="88" y1="54" x2="850" y2="54" class="grid-line"/><text x="70" y="58" class="axis-label" text-anchor="end">12</text>
+    <text x="469" y="484" class="axis-title" text-anchor="middle">Pre-test score</text>
+    <text x="24" y="237" class="axis-title" text-anchor="middle" transform="rotate(-90 24 237)">Raw gain</text>
+    <g>
+            <line x1="88" y1="122.67462039045552" x2="697.6" y2="324.72885032537965" class="trend-line"/>
+            <title>Linear trend: Raw gain = -0.55 * Pre-test score + 9.00</title>
+          </g>
+    <g>
+          <circle cx="389.55" cy="237" r="5.5" fill="#2764d8" class="scatter-dot" opacity="0.92"/><circle cx="396.05" cy="237" r="5.5" fill="#b89214" class="scatter-dot" opacity="0.92"/>
+          <text x="408.8" y="228" class="point-label key-label compact-label" text-anchor="start">C01, I03</text>
+          <title>C01: Pre-test score 8.00, Raw gain 4.00; I03: Pre-test score 8.00, Raw gain 4.00</title>
+        </g><g>
+          <circle cx="545.2" cy="237" r="8" fill="#2764d8" class="scatter-dot" opacity="0.92"/>
+          <text x="529.2" y="228" class="point-label key-label compact-label" text-anchor="end">C02</text>
+          <title>C02: Pre-test score 12.00, Raw gain 4.00</title>
+        </g><g>
+          <circle cx="469" cy="237" r="8" fill="#2764d8" class="scatter-dot" opacity="0.92"/>
+          <text x="485" y="228" class="point-label key-label compact-label" text-anchor="start">C03</text>
+          <title>C03: Pre-test score 10.00, Raw gain 4.00</title>
+        </g><g>
+          <circle cx="697.6" cy="237" r="8" fill="#2764d8" class="scatter-dot" opacity="0.92"/>
+          <text x="681.6" y="228" class="point-label key-label compact-label" text-anchor="end">C04</text>
+          <title>C04: Pre-test score 16.00, Raw gain 4.00</title>
+        </g><g>
+          <circle cx="233.9" cy="237" r="5.5" fill="#2764d8" class="scatter-dot" opacity="0.92"/><circle cx="240.4" cy="237" r="5.5" fill="#d83a5d" class="scatter-dot" opacity="0.92"/><circle cx="246.9" cy="237" r="5.5" fill="#d83a5d" class="scatter-dot" opacity="0.92"/>
+          <text x="256.4" y="228" class="point-label key-label compact-label" text-anchor="start">C05, P03, P05</text>
+          <title>C05: Pre-test score 4.00, Raw gain 4.00; P03: Pre-test score 4.00, Raw gain 4.00; P05: Pre-test score 4.00, Raw gain 4.00</title>
+        </g><g>
+          <circle cx="392.8" cy="374.25" r="8" fill="#2764d8" class="scatter-dot" opacity="0.92"/>
+          <text x="408.8" y="365.25" class="point-label key-label compact-label" text-anchor="start">C06</text>
+          <title>C06: Pre-test score 8.00, Raw gain -2.00</title>
+        </g><g>
+          <circle cx="389.55" cy="54" r="5.5" fill="#2764d8" class="scatter-dot" opacity="0.92"/><circle cx="396.05" cy="54" r="5.5" fill="#d83a5d" class="scatter-dot" opacity="0.92"/>
+          <text x="408.8" y="72" class="point-label key-label compact-label" text-anchor="start">C07, P02</text>
+          <title>C07: Pre-test score 8.00, Raw gain 12.00; P02: Pre-test score 8.00, Raw gain 12.00</title>
+        </g><g>
+          <circle cx="164.2" cy="191.25" r="8" fill="#b89214" class="scatter-dot" opacity="0.92"/>
+          <text x="180.2" y="182.25" class="point-label key-label compact-label" text-anchor="start">I01</text>
+          <title>I01: Pre-test score 2.00, Raw gain 6.00</title>
+        </g><g>
+          <circle cx="389.55" cy="145.5" r="5.5" fill="#b89214" class="scatter-dot" opacity="0.92"/><circle cx="396.05" cy="145.5" r="5.5" fill="#d83a5d" class="scatter-dot" opacity="0.92"/>
+          <text x="408.8" y="136.5" class="point-label key-label compact-label" text-anchor="start">I02, P01</text>
+          <title>I02: Pre-test score 8.00, Raw gain 8.00; P01: Pre-test score 8.00, Raw gain 8.00</title>
+        </g><g>
+          <circle cx="697.6" cy="420" r="8" fill="#b89214" class="scatter-dot" opacity="0.92"/>
+          <text x="681.6" y="409" class="point-label key-label compact-label" text-anchor="end">I04</text>
+          <title>I04: Pre-test score 16.00, Raw gain -4.00</title>
+        </g><g>
+          <circle cx="541.95" cy="328.5" r="5.5" fill="#b89214" class="scatter-dot" opacity="0.92"/><circle cx="548.45" cy="328.5" r="5.5" fill="#b89214" class="scatter-dot" opacity="0.92"/>
+          <text x="529.2" y="319.5" class="point-label key-label compact-label" text-anchor="end">I05, I07</text>
+          <title>I05: Pre-test score 12.00, Raw gain 0.00; I07: Pre-test score 12.00, Raw gain 0.00</title>
+        </g><g>
+          <circle cx="88" cy="99.75" r="8" fill="#b89214" class="scatter-dot" opacity="0.92"/>
+          <text x="104" y="90.75" class="point-label key-label compact-label" text-anchor="start">I06</text>
+          <title>I06: Pre-test score 0.00, Raw gain 10.00</title>
+        </g><g>
+          <circle cx="545.2" cy="374.25" r="8" fill="#d83a5d" class="scatter-dot" opacity="0.92"/>
+          <text x="529.2" y="365.25" class="point-label key-label compact-label" text-anchor="end">P04</text>
+          <title>P04: Pre-test score 12.00, Raw gain -2.00</title>
+        </g><g>
+          <circle cx="316.6" cy="99.75" r="8" fill="#d83a5d" class="scatter-dot" opacity="0.92"/>
+          <text x="332.6" y="90.75" class="point-label key-label compact-label" text-anchor="start">P06</text>
+          <title>P06: Pre-test score 6.00, Raw gain 10.00</title>
+        </g><g>
+          <circle cx="316.6" cy="237" r="8" fill="#d83a5d" class="scatter-dot" opacity="0.92"/>
+          <text x="332.6" y="228" class="point-label key-label compact-label" text-anchor="start">P07</text>
+          <title>P07: Pre-test score 6.00, Raw gain 4.00</title>
+        </g>
+  </svg>
+        <ul class="chart-pointers">
+  <li>The negative correlation (rho = -0.52) means participants with lower starting scores tended to gain more.</li><li>The dashed downward line is the same linear trend used in the Claude analysis, fitted through all 21 participant points.</li><li>Repeated coordinates are grouped with comma-separated participant IDs and multi-colour markers so overlap is visible without connector lines.</li>
+</ul>
+    </div>
+    <div class="panel table-wrap" style="margin-top:18px;">
+        <h3>Per-prototype learning hypotheses</h3>
+        <table>
+  <thead>
+    <tr><th>Prototype</th><th>Null hypothesis (H0)</th><th>Alternative hypothesis (H1)</th><th>Evidence</th><th>Decision at alpha = 0.05</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+        <th><span class="pill" style="--c:#b89214; --bg:#fff5cf">Intermittent</span></th>
+        <td>Intermittent does not produce a statistically significant pre-test to post-test learning improvement.</td>
+        <td>Intermittent produces a statistically significant pre-test to post-test learning improvement.</td>
+        <td>Mean gain +3.43; median gain +4.00; Wilcoxon exact p = 0.1875.</td>
+        <td><strong>Fail to reject H0</strong><br><span class="note">Descriptive improvement is still visible, but the test is not significant in this small sample.</span></td>
+      </tr><tr>
+        <th><span class="pill" style="--c:#2764d8; --bg:#eaf1ff">Continuous</span></th>
+        <td>Continuous does not produce a statistically significant pre-test to post-test learning improvement.</td>
+        <td>Continuous produces a statistically significant pre-test to post-test learning improvement.</td>
+        <td>Mean gain +4.29; median gain +4.00; Wilcoxon exact p = 0.0313.</td>
+        <td><strong>Reject H0</strong></td>
+      </tr><tr>
+        <th><span class="pill" style="--c:#d83a5d; --bg:#ffe7ed">Proactive</span></th>
+        <td>Proactive does not produce a statistically significant pre-test to post-test learning improvement.</td>
+        <td>Proactive produces a statistically significant pre-test to post-test learning improvement.</td>
+        <td>Mean gain +5.71; median gain +4.00; Wilcoxon exact p = 0.0313.</td>
+        <td><strong>Reject H0</strong></td>
+      </tr>
+  </tbody>
+</table>
+        <p class="note">For non-significant results, the decision is written as "fail to reject H0" rather than "accept H0." This means the test did not provide enough evidence against the null; it does not prove that there was no learning effect.</p>
+    </div>
+    <div class="panel table-wrap" style="margin-top:18px;">
+        <h3>Statistical checks</h3>
+        <table>
+  <thead><tr><th>Question</th><th>Test/check</th><th>Result</th><th>Why this test</th></tr></thead>
+  <tbody>
+    <tr><td>Did participants improve?</td><td>Wilcoxon signed-rank</td><td>p = 0.0002, r = 0.89</td><td>Paired pre/post scores, small sample, bounded score scale.</td></tr>
+    <tr><td>Does gain differ by condition?</td><td>Permutation Kruskal-Wallis</td><td>p = 0.7021, epsilon^2 = 0.00</td><td>Three independent groups, small N, non-normal counts/scores likely.</td></tr>
+    <tr><td>Does normalised gain differ?</td><td>Permutation Kruskal-Wallis</td><td>p = 0.5581</td><td>Controls partly for different room to improve.</td></tr>
+    <tr><td>Does control differ?</td><td>Permutation Kruskal-Wallis</td><td>p = 0.0425, epsilon^2 = 0.23</td><td>Likert-type ratings across three groups.</td></tr>
+    <tr><td>Does distraction differ?</td><td>Permutation Kruskal-Wallis</td><td>p = 0.0221, epsilon^2 = 0.30</td><td>Likert-type ratings across three groups.</td></tr>
+    <tr><td>Did explicit AI uptake differ?</td><td>Permutation Kruskal-Wallis</td><td>p = 0.0920, epsilon^2 = 0.15</td><td>Counts only learner actions that indicate positive uptake.</td></tr>
+    <tr><td>Did feature activity/exposure differ?</td><td>Permutation Kruskal-Wallis</td><td>p &lt; 0.0001, epsilon^2 = 0.89</td><td>Exposure/activity counts are skewed but confirm the manipulation.</td></tr>
+  </tbody>
+</table>
+        <h3>Cross-condition hypothesis decisions</h3>
+        <table>
+    <thead>
+      <tr><th>Comparison</th><th>Null hypothesis (H0)</th><th>Alternative hypothesis (H1)</th><th>Evidence</th><th>Decision at alpha = 0.05</th><th>Reading</th></tr>
+    </thead>
+    <tbody><tr>
+          <th>Learning difference between prototypes</th>
+          <td>The three prototypes produce the same learning outcomes.</td>
+          <td>At least one prototype produces different learning outcomes.</td>
+          <td>Raw gain p = 0.7021; normalised gain p = 0.5581.</td>
+          <td><strong>Fail to reject H0</strong></td>
+          <td>No prototype can be claimed as statistically superior for learning from this sample.</td>
+        </tr><tr>
+          <th>Perceived control difference</th>
+          <td>The three prototypes produce the same perceived control.</td>
+          <td>At least one prototype changes perceived control.</td>
+          <td>AI control p = 0.0425; Intermittent mean control = 4.57/5.</td>
+          <td><strong>Reject H0</strong></td>
+          <td>Control differed by condition, with Intermittent highest.</td>
+        </tr><tr>
+          <th>Distraction difference</th>
+          <td>The three prototypes produce the same distraction level.</td>
+          <td>At least one prototype changes distraction.</td>
+          <td>AI distraction p = 0.0221; Intermittent mean distraction = 1.29/5.</td>
+          <td><strong>Reject H0</strong></td>
+          <td>Distraction differed by condition, with Intermittent lowest.</td>
+        </tr><tr>
+          <th>Interaction-pattern difference</th>
+          <td>The three prototypes produce the same feature activity/exposure.</td>
+          <td>At least one prototype produces a different interaction pattern.</td>
+          <td>Feature activity p &lt; 0.0001; epsilon^2 = 0.89.</td>
+          <td><strong>Reject H0</strong></td>
+          <td>The prototype manipulation clearly changed behaviour, even though learning differences were not significant.</td>
+        </tr></tbody>
+  </table>
+        <h3>Effect-size framing</h3>
+        <table>
+    <thead><tr><th>Metric</th><th>Continuous vs Intermittent</th><th>Proactive vs Intermittent</th><th>Proactive vs Continuous</th></tr></thead>
+    <tbody><tr>
+          <td>Raw gain</td>
+          <td class="num">+0.04</td><td class="num">+0.24</td><td class="num">+0.20</td>
+        </tr><tr>
+          <td>Normalised gain</td>
+          <td class="num">+0.33</td><td class="num">+0.24</td><td class="num">-0.14</td>
+        </tr><tr>
+          <td>Overall UES</td>
+          <td class="num">-0.53</td><td class="num">-0.63</td><td class="num">+0.12</td>
+        </tr><tr>
+          <td>AI control</td>
+          <td class="num">-0.43</td><td class="num">-0.73</td><td class="num">-0.35</td>
+        </tr><tr>
+          <td>AI distraction</td>
+          <td class="num">+0.78</td><td class="num">+0.63</td><td class="num">-0.04</td>
+        </tr><tr>
+          <td>Positive AI uptake</td>
+          <td class="num">+0.51</td><td class="num">+0.61</td><td class="num">-0.39</td>
+        </tr><tr>
+          <td>Feature activity/export metric</td>
+          <td class="num">+1.00</td><td class="num">+1.00</td><td class="num">+1.00</td>
+        </tr></tbody>
+  </table>
+        <p class="note">With n = 7 per condition, these pairwise Cliff's delta values carry more interpretive weight than p-values. Positive values mean the first named condition tends to be higher than the second.</p>
+    </div>
+  </section>
+
+  <section id="rq2" class="band">
+    <div class="section-head">
+      <div>
+        <h2>RQ2: Engagement behaviour</h2>
+        <p>The clearest behavioural result is that the prototypes changed how people interacted. For AI-engagement comparison, the page uses explicit positive uptake, not raw exposure counts.</p>
+      </div>
+      <p class="note">Positive AI uptake per participant was Intermittent 8.9, Continuous 20.6, and Proactive 14.4. The exported feature-activity metric still proves that the prototypes behaved differently, but it is not treated as positive engagement by itself.</p>
+    </div>
+    <div class="panel chart-panel">
+        <h3>Feature activity / exposure separation</h3>
+        <svg viewBox="0 0 980 340" role="img" aria-label="Feature activity and exposure by participant">
+    <line x1="140" y1="36" x2="140" y2="246" class="grid-line"/><text x="140" y="270" class="axis-label" text-anchor="middle">0</text><line x1="250" y1="36" x2="250" y2="246" class="grid-line"/><text x="250" y="270" class="axis-label" text-anchor="middle">10</text><line x1="360" y1="36" x2="360" y2="246" class="grid-line"/><text x="360" y="270" class="axis-label" text-anchor="middle">20</text><line x1="470" y1="36" x2="470" y2="246" class="grid-line"/><text x="470" y="270" class="axis-label" text-anchor="middle">30</text><line x1="580" y1="36" x2="580" y2="246" class="grid-line"/><text x="580" y="270" class="axis-label" text-anchor="middle">40</text><line x1="690" y1="36" x2="690" y2="246" class="grid-line"/><text x="690" y="270" class="axis-label" text-anchor="middle">50</text><line x1="800" y1="36" x2="800" y2="246" class="grid-line"/><text x="800" y="270" class="axis-label" text-anchor="middle">60</text><line x1="910" y1="36" x2="910" y2="246" class="grid-line"/><text x="910" y="270" class="axis-label" text-anchor="middle">70</text>
+    <text x="124" y="59" class="axis-title" text-anchor="end">Intermittent</text><line x1="140" y1="54" x2="910" y2="54" class="grid-line"/><text x="124" y="143" class="axis-title" text-anchor="end">Continuous</text><line x1="140" y1="138" x2="910" y2="138" class="grid-line"/><text x="124" y="227" class="axis-title" text-anchor="end">Proactive</text><line x1="140" y1="222" x2="910" y2="222" class="grid-line"/>
+    <g>
+          <circle cx="140" cy="50.5" r="5.5" fill="#b89214" class="scatter-dot" opacity="0.92"/><circle cx="140" cy="57.5" r="5.5" fill="#b89214" class="scatter-dot" opacity="0.92"/>
+          <text x="150" y="30" class="point-label key-label compact-label" text-anchor="start">I04, I05</text>
+          <title>I04: 0 feature activity events, gain -4; I05: 0 feature activity events, gain 0</title>
+        </g><g>
+          <circle cx="151" cy="50.5" r="5.5" fill="#b89214" class="scatter-dot" opacity="0.92"/><circle cx="151" cy="57.5" r="5.5" fill="#b89214" class="scatter-dot" opacity="0.92"/>
+          <text x="161" y="40" class="point-label key-label compact-label" text-anchor="start">I02, I06</text>
+          <title>I02: 1 feature activity events, gain +8; I06: 1 feature activity events, gain +10</title>
+        </g><g>
+          <circle cx="173" cy="47" r="5.5" fill="#b89214" class="scatter-dot" opacity="0.92"/><circle cx="173" cy="54" r="5.5" fill="#b89214" class="scatter-dot" opacity="0.92"/><circle cx="173" cy="61" r="5.5" fill="#b89214" class="scatter-dot" opacity="0.92"/>
+          <text x="183" y="50" class="point-label key-label compact-label" text-anchor="start">I01, I03, I07</text>
+          <title>I01: 3 feature activity events, gain +6; I03: 3 feature activity events, gain +4; I07: 3 feature activity events, gain 0</title>
+        </g><g>
+          <circle cx="228" cy="138" r="8" fill="#2764d8" class="scatter-dot" opacity="0.92"/>
+          <text x="238" y="114" class="point-label key-label compact-label" text-anchor="start">C03</text>
+          <title>C03: 8 feature activity events, gain +4</title>
+        </g><g>
+          <circle cx="239" cy="138" r="8" fill="#2764d8" class="scatter-dot" opacity="0.92"/>
+          <text x="249" y="124" class="point-label key-label compact-label" text-anchor="start">C02</text>
+          <title>C02: 9 feature activity events, gain +4</title>
+        </g><g>
+          <circle cx="250" cy="138" r="8" fill="#2764d8" class="scatter-dot" opacity="0.92"/>
+          <text x="260" y="134" class="point-label key-label compact-label" text-anchor="start">C01</text>
+          <title>C01: 10 feature activity events, gain +4</title>
+        </g><g>
+          <circle cx="261" cy="131" r="5.5" fill="#2764d8" class="scatter-dot" opacity="0.92"/><circle cx="261" cy="138" r="5.5" fill="#2764d8" class="scatter-dot" opacity="0.92"/><circle cx="261" cy="145" r="5.5" fill="#2764d8" class="scatter-dot" opacity="0.92"/>
+          <text x="271" y="144" class="point-label key-label compact-label" text-anchor="start">C05, C06, C07</text>
+          <title>C05: 11 feature activity events, gain +4; C06: 11 feature activity events, gain -2; C07: 11 feature activity events, gain +12</title>
+        </g><g>
+          <circle cx="283" cy="138" r="8" fill="#2764d8" class="scatter-dot" opacity="0.92"/>
+          <text x="293" y="154" class="point-label key-label compact-label" text-anchor="start">C04</text>
+          <title>C04: 13 feature activity events, gain +4</title>
+        </g><g>
+          <circle cx="646" cy="222" r="8" fill="#d83a5d" class="scatter-dot" opacity="0.92"/>
+          <text x="656" y="198" class="point-label key-label compact-label" text-anchor="start">P07</text>
+          <title>P07: 46 feature activity events, gain +4</title>
+        </g><g>
+          <circle cx="690" cy="222" r="8" fill="#d83a5d" class="scatter-dot" opacity="0.92"/>
+          <text x="700" y="208" class="point-label key-label compact-label" text-anchor="start">P03</text>
+          <title>P03: 50 feature activity events, gain +4</title>
+        </g><g>
+          <circle cx="734" cy="222" r="8" fill="#d83a5d" class="scatter-dot" opacity="0.92"/>
+          <text x="744" y="218" class="point-label key-label compact-label" text-anchor="start">P06</text>
+          <title>P06: 54 feature activity events, gain +10</title>
+        </g><g>
+          <circle cx="811" cy="218.5" r="5.5" fill="#d83a5d" class="scatter-dot" opacity="0.92"/><circle cx="811" cy="225.5" r="5.5" fill="#d83a5d" class="scatter-dot" opacity="0.92"/>
+          <text x="821" y="228" class="point-label key-label compact-label" text-anchor="start">P01, P04</text>
+          <title>P01: 61 feature activity events, gain +8; P04: 61 feature activity events, gain -2</title>
+        </g><g>
+          <circle cx="844" cy="222" r="8" fill="#d83a5d" class="scatter-dot" opacity="0.92"/>
+          <text x="834" y="238" class="point-label key-label compact-label" text-anchor="end">P02</text>
+          <title>P02: 64 feature activity events, gain +12</title>
+        </g><g>
+          <circle cx="888" cy="222" r="8" fill="#d83a5d" class="scatter-dot" opacity="0.92"/>
+          <text x="878" y="248" class="point-label key-label compact-label" text-anchor="end">P05</text>
+          <title>P05: 68 feature activity events, gain +4</title>
+        </g>
+    <text x="525" y="322" class="axis-title" text-anchor="middle">Feature activity / exposure per participant</text>
+  </svg>
+        <p class="note">The manipulation was behaviourally complete: feature-activity distributions do not overlap across conditions. This does not mean more feature activity caused more learning; P04 is a useful counterexample with 61 feature activity events and a -2 gain.</p>
+        <ul class="chart-pointers">
+  <li>This chart checks whether the prototypes created different behavioural environments. They did.</li><li>The x-axis is broader activity/exposure, so it should not be read as positive engagement.</li><li>All participant IDs are labelled; repeated activity values are grouped with comma-separated labels.</li>
+</ul>
+    </div>
+    <div id="feature-buckets" class="panel chart-panel" style="margin-top:18px; scroll-margin-top:90px;">
+      <h3>Feature-bucket uptake by prototype</h3>
+      <div class="grid three"><div class="bucket-card" style="--accent:#b89214; --soft:#fff5cf">
+        <h4>Intermittent</h4>
+        <div class="bucket-total">Snap, quiz, and learner-pulled chat: 62 explicit uptake actions total</div>
+        <svg viewBox="0 0 620 145" role="img" aria-label="Intermittent positive uptake feature buckets">
+    <g>
+          <text x="173" y="39" class="bar-label" text-anchor="end">Highlight / snap / visual</text>
+          <rect x="185" y="24" width="377" height="18" class="bar-track" rx="4"/>
+          <rect x="185" y="24" width="35.34375" height="18" fill="#b89214" rx="4"/>
+          <text x="228.34375" y="38" class="bar-value">9</text>
+        </g><g>
+          <text x="173" y="72" class="bar-label" text-anchor="end">Quiz / question</text>
+          <rect x="185" y="57" width="377" height="18" class="bar-track" rx="4"/>
+          <rect x="185" y="57" width="137.44791666666666" height="18" fill="#b89214" rx="4"/>
+          <text x="330.44791666666663" y="71" class="bar-value">35</text>
+        </g><g>
+          <text x="173" y="105" class="bar-label" text-anchor="end">Concept support</text>
+          <rect x="185" y="90" width="377" height="18" class="bar-track" rx="4"/>
+          <rect x="185" y="90" width="70.6875" height="18" fill="#b89214" rx="4"/>
+          <text x="263.6875" y="104" class="bar-value">18</text>
+        </g>
+  </svg>
+        <p class="note">Visual/frame = completed snaps; quiz/question = quiz answers and explanations; keyword/chat = chat messages and suggestion clicks.</p>
+      </div><div class="bucket-card" style="--accent:#2764d8; --soft:#eaf1ff">
+        <h4>Continuous</h4>
+        <div class="bucket-total">Highlights, feed questions, glossary, and chat: 144 explicit uptake actions total</div>
+        <svg viewBox="0 0 620 145" role="img" aria-label="Continuous positive uptake feature buckets">
+    <g>
+          <text x="173" y="39" class="bar-label" text-anchor="end">Highlight / snap / visual</text>
+          <rect x="185" y="24" width="377" height="18" class="bar-track" rx="4"/>
+          <rect x="185" y="24" width="23.5625" height="18" fill="#2764d8" rx="4"/>
+          <text x="216.5625" y="38" class="bar-value">6</text>
+        </g><g>
+          <text x="173" y="72" class="bar-label" text-anchor="end">Quiz / question</text>
+          <rect x="185" y="57" width="377" height="18" class="bar-track" rx="4"/>
+          <rect x="185" y="57" width="377" height="18" fill="#2764d8" rx="4"/>
+          <text x="570" y="71" class="bar-value">96</text>
+        </g><g>
+          <text x="173" y="105" class="bar-label" text-anchor="end">Concept support</text>
+          <rect x="185" y="90" width="377" height="18" class="bar-track" rx="4"/>
+          <rect x="185" y="90" width="164.9375" height="18" fill="#2764d8" rx="4"/>
+          <text x="357.9375" y="104" class="bar-value">42</text>
+        </g>
+  </svg>
+        <p class="note">Visual/frame = highlight detail clicks; quiz/question = feed answers, explanations, and jumps; keyword/chat = glossary clicks plus chat actions.</p>
+      </div><div class="bucket-card" style="--accent:#d83a5d; --soft:#ffe7ed">
+        <h4>Proactive</h4>
+        <div class="bucket-total">Visual cards, proactive quizzes, keywords, and chat: 101 explicit uptake actions total</div>
+        <svg viewBox="0 0 620 145" role="img" aria-label="Proactive positive uptake feature buckets">
+    <g>
+          <text x="173" y="39" class="bar-label" text-anchor="end">Highlight / snap / visual</text>
+          <rect x="185" y="24" width="377" height="18" class="bar-track" rx="4"/>
+          <rect x="185" y="24" width="11.78125" height="18" fill="#d83a5d" rx="4"/>
+          <text x="204.78125" y="38" class="bar-value">3</text>
+        </g><g>
+          <text x="173" y="72" class="bar-label" text-anchor="end">Quiz / question</text>
+          <rect x="185" y="57" width="377" height="18" class="bar-track" rx="4"/>
+          <rect x="185" y="57" width="259.1875" height="18" fill="#d83a5d" rx="4"/>
+          <text x="452.1875" y="71" class="bar-value">66</text>
+        </g><g>
+          <text x="173" y="105" class="bar-label" text-anchor="end">Concept support</text>
+          <rect x="185" y="90" width="377" height="18" class="bar-track" rx="4"/>
+          <rect x="185" y="90" width="125.66666666666666" height="18" fill="#d83a5d" rx="4"/>
+          <text x="318.66666666666663" y="104" class="bar-value">32</text>
+        </g>
+  </svg>
+        <p class="note">Visual/frame = visual detail or save actions; quiz/question = quiz answers and detail requests; keyword/chat = keyword later/pinned/detail plus chat actions.</p>
+      </div></div>
+      <div class="stats-callout" style="margin-top:12px;"><strong>Delivery-style signal:</strong> Continuous produced 43% more explicit positive uptake than Proactive (20.57 vs 14.43 actions per participant), even though Proactive generated much more raw feature activity/exposure.</div>
+      <p class="note" style="margin-top:12px;">This is the clearer chart for the three major feature families: highlight/snap/visual support, quiz/question support, and concept support. Values are total explicit positive uptake actions across the seven participants in each condition, using the same count scale across all three mini charts.</p>
+      <ul class="chart-pointers">
+  <li>Read within and across prototypes because all three mini charts share the same scale.</li><li>Quiz/question activity is the most reliable active learning signal because answering or asking for explanations is clearly intentional.</li><li>Concept-support uptake needs the passive-use caveat: learners may read terms without clicking, especially in Continuous.</li>
+</ul>
+    </div>
+    <div class="panel table-wrap" style="margin-top:18px;">
+      <h3>Exposure, uptake, and passive use</h3>
+      <table>
+    <thead><tr><th>Condition</th><th>Feature</th><th>AI exposure / opportunity</th><th>Explicit positive uptake</th><th>Non-engagement / friction</th><th>Passive-use caveat</th></tr></thead>
+    <tbody><tr><td>Continuous</td><td>Feed questions</td><td>66 questions unlocked</td><td>48 answered, 8 explanation clicks, 40 jumps</td><td>Unanswered questions are not automatically rejection.</td><td>A question may still have prompted thinking even without a logged answer.</td></tr><tr><td>Continuous</td><td>Glossary</td><td>Terms were surfaced visually; shown-count is not exported.</td><td>19 glossary clicks</td><td>No close/dismiss metric.</td><td>Reading visible terms without clicking is likely undercounted; interview notes support clarification/revision use.</td></tr><tr><td>Continuous</td><td>Highlights</td><td>Highlights were surfaced visually.</td><td>6 detail clicks</td><td>No direct rejection metric.</td><td>May support orientation without a detail click.</td></tr><tr><td>Proactive</td><td>Keyword popups</td><td>154 keywords shown</td><td>21 later/pinned/detail actions (14%)</td><td>133 ignored/dismissed</td><td>Ignored/dismissed may include read-then-dismiss, but interview notes indicate weak reception.</td></tr><tr><td>Proactive</td><td>Quiz prompts</td><td>75 quizzes triggered</td><td>57 answered</td><td>7 skipped</td><td>Stronger uptake because the intervention was structured as a learning checkpoint.</td></tr><tr><td>Proactive</td><td>Visual cues</td><td>13 visual cards opened</td><td>3 detail/saved actions</td><td>11 closed</td><td>Small counts; useful as supporting evidence only.</td></tr></tbody>
+  </table>
+      <p class="note">This table changes how the log data should be read. AI exposure is not positive engagement. Explicit uptake is logged action. Passive uptake, such as reading a Continuous glossary term or a Proactive keyword without clicking, is plausible but undercounted and therefore needs interview evidence.</p>
+    </div>
+    <div class="panel chart-panel" style="margin-top:18px;">
+        <h3>Feature-specific exposure and uptake counts</h3>
+        <svg viewBox="0 0 820 316" role="img" aria-label="Feature-level event totals">
+    <g>
+          <text x="198" y="39" class="bar-label" text-anchor="end">I: chat messages</text>
+          <rect x="210" y="24" width="552" height="18" class="bar-track" rx="4"/>
+          <rect x="210" y="24" width="58.65" height="18" fill="#b89214" rx="4"/>
+          <text x="276.65" y="38" class="bar-value">17</text>
+        </g><g>
+          <text x="198" y="69" class="bar-label" text-anchor="end">I: quiz attempts</text>
+          <rect x="210" y="54" width="552" height="18" class="bar-track" rx="4"/>
+          <rect x="210" y="54" width="117.3" height="18" fill="#b89214" rx="4"/>
+          <text x="335.3" y="68" class="bar-value">34</text>
+        </g><g>
+          <text x="198" y="99" class="bar-label" text-anchor="end">I: completed snaps</text>
+          <rect x="210" y="84" width="552" height="18" class="bar-track" rx="4"/>
+          <rect x="210" y="84" width="31.05" height="18" fill="#b89214" rx="4"/>
+          <text x="249.05" y="98" class="bar-value">9</text>
+        </g><g>
+          <text x="198" y="129" class="bar-label" text-anchor="end">C: feed questions unlocked</text>
+          <rect x="210" y="114" width="552" height="18" class="bar-track" rx="4"/>
+          <rect x="210" y="114" width="227.7" height="18" fill="#2764d8" rx="4"/>
+          <text x="445.7" y="128" class="bar-value">66</text>
+        </g><g>
+          <text x="198" y="159" class="bar-label" text-anchor="end">C: feed questions answered</text>
+          <rect x="210" y="144" width="552" height="18" class="bar-track" rx="4"/>
+          <rect x="210" y="144" width="165.6" height="18" fill="#2764d8" rx="4"/>
+          <text x="383.6" y="158" class="bar-value">48</text>
+        </g><g>
+          <text x="198" y="189" class="bar-label" text-anchor="end">C: glossary clicks</text>
+          <rect x="210" y="174" width="552" height="18" class="bar-track" rx="4"/>
+          <rect x="210" y="174" width="65.55" height="18" fill="#2764d8" rx="4"/>
+          <text x="283.55" y="188" class="bar-value">19</text>
+        </g><g>
+          <text x="198" y="219" class="bar-label" text-anchor="end">P: keyword shown</text>
+          <rect x="210" y="204" width="552" height="18" class="bar-track" rx="4"/>
+          <rect x="210" y="204" width="531.3000000000001" height="18" fill="#d83a5d" rx="4"/>
+          <text x="749.3000000000001" y="218" class="bar-value">154</text>
+        </g><g>
+          <text x="198" y="249" class="bar-label" text-anchor="end">P: keyword ignored/dismissed</text>
+          <rect x="210" y="234" width="552" height="18" class="bar-track" rx="4"/>
+          <rect x="210" y="234" width="458.85" height="18" fill="#d83a5d" rx="4"/>
+          <text x="676.85" y="248" class="bar-value">133</text>
+        </g><g>
+          <text x="198" y="279" class="bar-label" text-anchor="end">P: quiz triggers</text>
+          <rect x="210" y="264" width="552" height="18" class="bar-track" rx="4"/>
+          <rect x="210" y="264" width="258.75" height="18" fill="#d83a5d" rx="4"/>
+          <text x="476.75" y="278" class="bar-value">75</text>
+        </g>
+  </svg>
+        <p class="note">These feature-specific counts mix exposure, explicit uptake, and non-engagement. Snaps are Intermittent-only; feed/glossary/highlight events are Continuous-only; keywords/visual opens/quiz triggers are Proactive-only. Use the uptake table above before interpreting any feature count as positive engagement.</p>
+        <ul class="chart-pointers">
+  <li>This chart is diagnostic rather than comparative because each prototype logs different feature types.</li><li>The Proactive keyword-shown bar is exposure, while keyword ignored/dismissed is friction; neither should be counted as positive uptake.</li><li>The most useful comparison is within a feature family: for example, Proactive keyword shown versus later/pinned/detail actions.</li>
+</ul>
+    </div>
+    <div class="panel" style="margin-top:18px;">
+        <h3>Interaction quality checks</h3>
+        <div class="grid two"><article class="corr">
+        <div class="rho neg">-0.52</div>
+        <h3>Baseline pre-test vs gain</h3>
+        <p>Lower starting scores had more room to improve.</p>
+      </article><article class="corr">
+        <div class="rho pos">+0.02</div>
+        <h3>Positive uptake vs gain</h3>
+        <p>Explicit AI uptake still did not cleanly map to more learning.</p>
+      </article><article class="corr">
+        <div class="rho neg">-0.68</div>
+        <h3>Distraction vs UES</h3>
+        <p>Distraction is the clearest experience penalty.</p>
+      </article><article class="corr">
+        <div class="rho neg">-0.61</div>
+        <h3>Control vs distraction</h3>
+        <p>Lower control traveled with higher distraction.</p>
+      </article><article class="corr">
+        <div class="rho neg">-0.45</div>
+        <h3>Suggestions shown vs control</h3>
+        <p>More AI exposure tended to reduce perceived control.</p>
+      </article><article class="corr">
+        <div class="rho neg">-0.53</div>
+        <h3>Timing vs distraction</h3>
+        <p>Better timing related to lower distraction.</p>
+      </article></div>
+        <h3>UES reliability check</h3>
+        <table>
+  <thead><tr><th>Scale</th><th>Items</th><th>Cronbach's &alpha;</th><th>Use in interpretation</th></tr></thead>
+  <tbody>
+    <tr><td>UES overall</td><td class="num">12</td><td class="num">0.78</td><td>Acceptable for exploratory reporting.</td></tr>
+    <tr><td>Focused attention</td><td class="num">3</td><td class="num">0.66</td><td>Usable but modest.</td></tr>
+    <tr><td>Perceived usability</td><td class="num">3</td><td class="num">0.39</td><td>Weak; avoid overinterpreting the subscale alone.</td></tr>
+    <tr><td>Aesthetic appeal</td><td class="num">3</td><td class="num">0.84</td><td>Strong.</td></tr>
+    <tr><td>Reward</td><td class="num">3</td><td class="num">0.62</td><td>Usable but modest.</td></tr>
+  </tbody>
+</table>
+    </div>
+  </section>
+
+  <section id="relationships" class="band">
+    <div class="section-head">
+      <div>
+        <h2>Exploratory relationship maps</h2>
+        <p>The combined map shows broad study-level relationships across all 21 participants. The condition maps show whether those patterns appear prototype-dependent.</p>
+      </div>
+      <p class="note">All cells are Spearman rho correlations. Blue cells are positive relationships, red cells are negative relationships, and stronger colour means a stronger relationship. Bordered cells mark |rho| >= 0.40. Because each condition-specific map has only seven participants, those maps are descriptive pattern checks, not confirmatory statistics.</p>
+    </div>
+    <div class="panel">
+      <h3>Combined map: all participants</h3>
+      <div class="heatmap-wrap">
+    <table class="heatmap-table ">
+      <caption>All participants, n = 21</caption>
+      <thead><tr><th>Metric</th><th>Raw gain</th><th>Normalised gain</th><th>Post-test</th><th>Overall UES</th><th>AI control</th><th>AI distraction</th></tr></thead>
+      <tbody><tr>
+            <th>Pre-test score</th>
+            <td class="strong" style="background:hsl(348 72% 74.20235172609742%);color:#1d2430;" title="Pre-test score vs Raw gain: -0.519">-0.52</td><td class="" style="background:hsl(348 72% 90.6525550695136%);color:#1d2430;" title="Pre-test score vs Normalised gain: -0.127">-0.13</td><td class="strong" style="background:hsl(217 72% 75.25472348225944%);color:#1d2430;" title="Pre-test score vs Post-test: 0.494">+0.49</td><td class="" style="background:hsl(348 72% 95.64992032835994%);color:#1d2430;" title="Pre-test score vs Overall UES: -0.008">-0.01</td><td class="strong" style="background:hsl(217 72% 76.24785691263087%);color:#1d2430;" title="Pre-test score vs AI control: 0.470">+0.47</td><td class="" style="background:hsl(348 72% 95.92694007491363%);color:#1d2430;" title="Pre-test score vs AI distraction: -0.002">-0.00</td>
+          </tr><tr>
+            <th>Pre-knowledge</th>
+            <td class="" style="background:hsl(348 72% 87.35713265621412%);color:#1d2430;" title="Pre-knowledge vs Raw gain: -0.206">-0.21</td><td class="" style="background:hsl(217 72% 94.5103517216659%);color:#1d2430;" title="Pre-knowledge vs Normalised gain: 0.035">+0.04</td><td class="strong" style="background:hsl(217 72% 76.73123324396784%);color:#1d2430;" title="Pre-knowledge vs Post-test: 0.459">+0.46</td><td class="" style="background:hsl(217 72% 94.52764896564318%);color:#1d2430;" title="Pre-knowledge vs Overall UES: 0.035">+0.04</td><td class="" style="background:hsl(217 72% 86.32013223195077%);color:#1d2430;" title="Pre-knowledge vs AI control: 0.230">+0.23</td><td class="" style="background:hsl(348 72% 94.65205931143987%);color:#1d2430;" title="Pre-knowledge vs AI distraction: -0.032">-0.03</td>
+          </tr><tr>
+            <th>Positive AI uptake</th>
+            <td class="" style="background:hsl(217 72% 95.08746407404551%);color:#1d2430;" title="Positive AI uptake vs Raw gain: 0.022">+0.02</td><td class="" style="background:hsl(217 72% 90.57486698148487%);color:#1d2430;" title="Positive AI uptake vs Normalised gain: 0.129">+0.13</td><td class="" style="background:hsl(217 72% 94.18098993804483%);color:#1d2430;" title="Positive AI uptake vs Post-test: 0.043">+0.04</td><td class="" style="background:hsl(348 72% 86.02414302532368%);color:#1d2430;" title="Positive AI uptake vs Overall UES: -0.238">-0.24</td><td class="" style="background:hsl(217 72% 91.33292828389155%);color:#1d2430;" title="Positive AI uptake vs AI control: 0.111">+0.11</td><td class="" style="background:hsl(217 72% 88.69328666899456%);color:#1d2430;" title="Positive AI uptake vs AI distraction: 0.174">+0.17</td>
+          </tr><tr>
+            <th>AI shown / exposure</th>
+            <td class="" style="background:hsl(217 72% 87.45923406801975%);color:#1d2430;" title="AI shown / exposure vs Raw gain: 0.203">+0.20</td><td class="" style="background:hsl(217 72% 88.77564565129379%);color:#1d2430;" title="AI shown / exposure vs Normalised gain: 0.172">+0.17</td><td class="" style="background:hsl(348 72% 95.23629348543867%);color:#1d2430;" title="AI shown / exposure vs Post-test: -0.018">-0.02</td><td class="" style="background:hsl(348 72% 85.31158181284681%);color:#1d2430;" title="AI shown / exposure vs Overall UES: -0.254">-0.25</td><td class="strong" style="background:hsl(348 72% 77.20247114958167%);color:#1d2430;" title="AI shown / exposure vs AI control: -0.448">-0.45</td><td class="" style="background:hsl(217 72% 81.68684922830442%);color:#1d2430;" title="AI shown / exposure vs AI distraction: 0.341">+0.34</td>
+          </tr><tr>
+            <th>Feature activity / exposure</th>
+            <td class="" style="background:hsl(217 72% 86.36301673248111%);color:#1d2430;" title="Feature activity / exposure vs Raw gain: 0.229">+0.23</td><td class="" style="background:hsl(217 72% 87.1159059358117%);color:#1d2430;" title="Feature activity / exposure vs Normalised gain: 0.212">+0.21</td><td class="" style="background:hsl(217 72% 94.80427972950015%);color:#1d2430;" title="Feature activity / exposure vs Post-test: 0.028">+0.03</td><td class="" style="background:hsl(348 72% 84.78993254491616%);color:#1d2430;" title="Feature activity / exposure vs Overall UES: -0.267">-0.27</td><td class="strong" style="background:hsl(348 72% 78.21318664458747%);color:#1d2430;" title="Feature activity / exposure vs AI control: -0.423">-0.42</td><td class="" style="background:hsl(217 72% 81.29588309513441%);color:#1d2430;" title="Feature activity / exposure vs AI distraction: 0.350">+0.35</td>
+          </tr><tr>
+            <th>Visual/frame uptake</th>
+            <td class="" style="background:hsl(217 72% 86.70504260089399%);color:#1d2430;" title="Visual/frame uptake vs Raw gain: 0.221">+0.22</td><td class="" style="background:hsl(217 72% 83.66279647057648%);color:#1d2430;" title="Visual/frame uptake vs Normalised gain: 0.294">+0.29</td><td class="" style="background:hsl(217 72% 86.19121909693084%);color:#1d2430;" title="Visual/frame uptake vs Post-test: 0.234">+0.23</td><td class="strong" style="background:hsl(217 72% 74.1007608033089%);color:#1d2430;" title="Visual/frame uptake vs Overall UES: 0.521">+0.52</td><td class="" style="background:hsl(217 72% 81.15959773507313%);color:#1d2430;" title="Visual/frame uptake vs AI control: 0.353">+0.35</td><td class="strong" style="background:hsl(348 72% 76.99879705665994%);color:#1d2430;" title="Visual/frame uptake vs AI distraction: -0.452">-0.45</td>
+          </tr><tr>
+            <th>Quiz/question uptake</th>
+            <td class="" style="background:hsl(348 72% 92.29254206793077%);color:#1d2430;" title="Quiz/question uptake vs Raw gain: -0.088">-0.09</td><td class="" style="background:hsl(217 72% 94.37294672577582%);color:#1d2430;" title="Quiz/question uptake vs Normalised gain: 0.039">+0.04</td><td class="" style="background:hsl(217 72% 93.58833833923823%);color:#1d2430;" title="Quiz/question uptake vs Post-test: 0.057">+0.06</td><td class="" style="background:hsl(348 72% 86.86531902434729%);color:#1d2430;" title="Quiz/question uptake vs Overall UES: -0.217">-0.22</td><td class="" style="background:hsl(217 72% 92.45347773238436%);color:#1d2430;" title="Quiz/question uptake vs AI control: 0.084">+0.08</td><td class="" style="background:hsl(217 72% 89.68373539476092%);color:#1d2430;" title="Quiz/question uptake vs AI distraction: 0.150">+0.15</td>
+          </tr><tr>
+            <th>Concept-support uptake</th>
+            <td class="" style="background:hsl(217 72% 83.15204597944157%);color:#1d2430;" title="Concept-support uptake vs Raw gain: 0.306">+0.31</td><td class="strong" style="background:hsl(217 72% 78.26672770405678%);color:#1d2430;" title="Concept-support uptake vs Normalised gain: 0.422">+0.42</td><td class="" style="background:hsl(217 72% 86.11913503047106%);color:#1d2430;" title="Concept-support uptake vs Post-test: 0.235">+0.24</td><td class="" style="background:hsl(348 72% 85.59983406832161%);color:#1d2430;" title="Concept-support uptake vs Overall UES: -0.248">-0.25</td><td class="" style="background:hsl(217 72% 93.87232688567507%);color:#1d2430;" title="Concept-support uptake vs AI control: 0.051">+0.05</td><td class="" style="background:hsl(217 72% 89.06777416538482%);color:#1d2430;" title="Concept-support uptake vs AI distraction: 0.165">+0.17</td>
+          </tr><tr>
+            <th>Chat messages</th>
+            <td class="" style="background:hsl(217 72% 95.76623223236437%);color:#1d2430;" title="Chat messages vs Raw gain: 0.006">+0.01</td><td class="" style="background:hsl(217 72% 88.1468816242419%);color:#1d2430;" title="Chat messages vs Normalised gain: 0.187">+0.19</td><td class="" style="background:hsl(217 72% 89.95289673072757%);color:#1d2430;" title="Chat messages vs Post-test: 0.144">+0.14</td><td class="" style="background:hsl(217 72% 87.79976437961902%);color:#1d2430;" title="Chat messages vs Overall UES: 0.195">+0.20</td><td class="" style="background:hsl(217 72% 79.88724208144566%);color:#1d2430;" title="Chat messages vs AI control: 0.384">+0.38</td><td class="" style="background:hsl(348 72% 89.90478332412171%);color:#1d2430;" title="Chat messages vs AI distraction: -0.145">-0.15</td>
+          </tr><tr>
+            <th>Time to first interaction</th>
+            <td class="" style="background:hsl(348 72% 81.432646103349%);color:#1d2430;" title="Time to first interaction vs Raw gain: -0.347">-0.35</td><td class="" style="background:hsl(348 72% 87.12028517797913%);color:#1d2430;" title="Time to first interaction vs Normalised gain: -0.211">-0.21</td><td class="" style="background:hsl(217 72% 91.95463815292135%);color:#1d2430;" title="Time to first interaction vs Post-test: 0.096">+0.10</td><td class="" style="background:hsl(217 72% 95.26171624659219%);color:#1d2430;" title="Time to first interaction vs Overall UES: 0.018">+0.02</td><td class="" style="background:hsl(217 72% 86.65843959859286%);color:#1d2430;" title="Time to first interaction vs AI control: 0.222">+0.22</td><td class="" style="background:hsl(348 72% 92.94700805157011%);color:#1d2430;" title="Time to first interaction vs AI distraction: -0.073">-0.07</td>
+          </tr><tr>
+            <th>AI timing rating</th>
+            <td class="" style="background:hsl(217 72% 95.11480080226319%);color:#1d2430;" title="AI timing rating vs Raw gain: 0.021">+0.02</td><td class="" style="background:hsl(348 72% 95.41194721989437%);color:#1d2430;" title="AI timing rating vs Normalised gain: -0.014">-0.01</td><td class="" style="background:hsl(348 72% 90.470959561217%);color:#1d2430;" title="AI timing rating vs Post-test: -0.132">-0.13</td><td class="" style="background:hsl(217 72% 79.74819451234738%);color:#1d2430;" title="AI timing rating vs Overall UES: 0.387">+0.39</td><td class="" style="background:hsl(217 72% 85.33247658824259%);color:#1d2430;" title="AI timing rating vs AI control: 0.254">+0.25</td><td class="strong" style="background:hsl(348 72% 73.79188990618908%);color:#1d2430;" title="AI timing rating vs AI distraction: -0.529">-0.53</td>
+          </tr><tr>
+            <th>AI control rating</th>
+            <td class="" style="background:hsl(348 72% 82.3982319894562%);color:#1d2430;" title="AI control rating vs Raw gain: -0.324">-0.32</td><td class="" style="background:hsl(348 72% 89.44898391546623%);color:#1d2430;" title="AI control rating vs Normalised gain: -0.156">-0.16</td><td class="" style="background:hsl(217 72% 89.93006788078716%);color:#1d2430;" title="AI control rating vs Post-test: 0.145">+0.14</td><td class="" style="background:hsl(217 72% 86.37551254015827%);color:#1d2430;" title="AI control rating vs Overall UES: 0.229">+0.23</td><td class="" style="background:#f6f4eb;color:#8f8877;" title="AI control rating vs AI control: n/a">NA</td><td class="strong" style="background:hsl(348 72% 70.26314727500483%);color:#1d2430;" title="AI control rating vs AI distraction: -0.613">-0.61</td>
+          </tr><tr>
+            <th>AI distraction rating</th>
+            <td class="" style="background:hsl(217 72% 95.68745444928783%);color:#1d2430;" title="AI distraction rating vs Raw gain: 0.007">+0.01</td><td class="" style="background:hsl(217 72% 95.22583936548334%);color:#1d2430;" title="AI distraction rating vs Normalised gain: 0.018">+0.02</td><td class="" style="background:hsl(217 72% 94.9274450435113%);color:#1d2430;" title="AI distraction rating vs Post-test: 0.026">+0.03</td><td class="strong" style="background:hsl(348 72% 67.43587478243587%);color:#1d2430;" title="AI distraction rating vs Overall UES: -0.680">-0.68</td><td class="strong" style="background:hsl(348 72% 70.26314727500483%);color:#1d2430;" title="AI distraction rating vs AI control: -0.613">-0.61</td><td class="" style="background:#f6f4eb;color:#8f8877;" title="AI distraction rating vs AI distraction: n/a">NA</td>
+          </tr><tr>
+            <th>AI overload rating</th>
+            <td class="" style="background:hsl(217 72% 83.54870357718941%);color:#1d2430;" title="AI overload rating vs Raw gain: 0.296">+0.30</td><td class="" style="background:hsl(217 72% 82.01426243239028%);color:#1d2430;" title="AI overload rating vs Normalised gain: 0.333">+0.33</td><td class="" style="background:hsl(217 72% 84.45983412720575%);color:#1d2430;" title="AI overload rating vs Post-test: 0.275">+0.27</td><td class="" style="background:hsl(348 72% 81.60931518262602%);color:#1d2430;" title="AI overload rating vs Overall UES: -0.343">-0.34</td><td class="strong" style="background:hsl(348 72% 72.95787137774376%);color:#1d2430;" title="AI overload rating vs AI control: -0.549">-0.55</td><td class="strong" style="background:hsl(217 72% 72.0856492599668%);color:#1d2430;" title="AI overload rating vs AI distraction: 0.569">+0.57</td>
+          </tr></tbody>
+    </table>
+  </div>
+      <p class="note">This map should carry the main interpretation: positive AI uptake is weakly related to learning gain, while experience-quality measures such as distraction, control, and timing show clearer relationships with subjective engagement.</p>
+      <ul class="chart-pointers">
+  <li>Use this heatmap as an exploratory map, not as proof of causation.</li><li>Blue means the two measures rise together; red means one rises as the other falls.</li><li>The most useful story is that experience-quality measures relate more clearly to UES than interaction volume relates to knowledge gain.</li>
+</ul>
+    </div>
+    <div class="grid" style="margin-top:18px;">
+      <div class="panel">
+          <h3>Intermittent</h3>
+          <div class="heatmap-wrap">
+    <table class="heatmap-table compact">
+      <caption>Intermittent, n = 7</caption>
+      <thead><tr><th>Metric</th><th>Raw gain</th><th>Normalised gain</th><th>Post-test</th><th>Overall UES</th><th>AI control</th><th>AI distraction</th></tr></thead>
+      <tbody><tr>
+            <th>Pre-test score</th>
+            <td class="strong" style="background:hsl(348 72% 56.69559358498893%);color:#fff;" title="Pre-test score vs Raw gain: -0.936">-0.94</td><td class="strong" style="background:hsl(348 72% 61.388888888888886%);color:#fff;" title="Pre-test score vs Normalised gain: -0.824">-0.82</td><td class="strong" style="background:hsl(217 72% 73.66842425258982%);color:#1d2430;" title="Pre-test score vs Post-test: 0.532">+0.53</td><td class="strong" style="background:hsl(348 72% 64.78767725866769%);color:#fff;" title="Pre-test score vs Overall UES: -0.743">-0.74</td><td class="strong" style="background:hsl(217 72% 70.28035770077662%);color:#1d2430;" title="Pre-test score vs AI control: 0.612">+0.61</td><td class="strong" style="background:hsl(217 72% 79.09339379611232%);color:#1d2430;" title="Pre-test score vs AI distraction: 0.403">+0.40</td>
+          </tr><tr>
+            <th>Pre-knowledge</th>
+            <td class="strong" style="background:hsl(348 72% 63.486276036275%);color:#fff;" title="Pre-knowledge vs Raw gain: -0.774">-0.77</td><td class="strong" style="background:hsl(348 72% 69.18905452272112%);color:#1d2430;" title="Pre-knowledge vs Normalised gain: -0.638">-0.64</td><td class="strong" style="background:hsl(217 72% 69.98603562101698%);color:#1d2430;" title="Pre-knowledge vs Post-test: 0.619">+0.62</td><td class="strong" style="background:hsl(348 72% 67.84787315336007%);color:#1d2430;" title="Pre-knowledge vs Overall UES: -0.670">-0.67</td><td class="strong" style="background:hsl(217 72% 76.39607882360787%);color:#1d2430;" title="Pre-knowledge vs AI control: 0.467">+0.47</td><td class="" style="background:hsl(217 72% 82.08259659106416%);color:#1d2430;" title="Pre-knowledge vs AI distraction: 0.331">+0.33</td>
+          </tr><tr>
+            <th>Positive AI uptake</th>
+            <td class="strong" style="background:hsl(348 72% 78.05454545454546%);color:#1d2430;" title="Positive AI uptake vs Raw gain: -0.427">-0.43</td><td class="strong" style="background:hsl(348 72% 77.88914606367138%);color:#1d2430;" title="Positive AI uptake vs Normalised gain: -0.431">-0.43</td><td class="" style="background:hsl(348 72% 85.97994106665695%);color:#1d2430;" title="Positive AI uptake vs Post-test: -0.239">-0.24</td><td class="strong" style="background:hsl(348 72% 68.5090909090909%);color:#1d2430;" title="Positive AI uptake vs Overall UES: -0.655">-0.65</td><td class="strong" style="background:hsl(217 72% 63.90808654674967%);color:#fff;" title="Positive AI uptake vs AI control: 0.764">+0.76</td><td class="" style="background:hsl(217 72% 79.24779526043322%);color:#1d2430;" title="Positive AI uptake vs AI distraction: 0.399">+0.40</td>
+          </tr><tr>
+            <th>AI shown / exposure</th>
+            <td class="" style="background:hsl(217 72% 81.86360151107212%);color:#1d2430;" title="AI shown / exposure vs Raw gain: 0.337">+0.34</td><td class="" style="background:hsl(217 72% 89.65924860879026%);color:#1d2430;" title="AI shown / exposure vs Normalised gain: 0.151">+0.15</td><td class="strong" style="background:hsl(348 72% 70.23738416654977%);color:#1d2430;" title="AI shown / exposure vs Post-test: -0.613">-0.61</td><td class="" style="background:hsl(217 72% 92.85857811357158%);color:#1d2430;" title="AI shown / exposure vs Overall UES: 0.075">+0.07</td><td class="" style="background:hsl(348 72% 90.1756479396351%);color:#1d2430;" title="AI shown / exposure vs AI control: -0.139">-0.14</td><td class="" style="background:hsl(217 72% 96%);color:#1d2430;" title="AI shown / exposure vs AI distraction: 0.000">0.00</td>
+          </tr><tr>
+            <th>Feature activity / exposure</th>
+            <td class="" style="background:hsl(217 72% 83.58591708802238%);color:#1d2430;" title="Feature activity / exposure vs Raw gain: 0.296">+0.30</td><td class="" style="background:hsl(217 72% 83.47149915858512%);color:#1d2430;" title="Feature activity / exposure vs Normalised gain: 0.298">+0.30</td><td class="" style="background:hsl(348 72% 83.739352453444%);color:#1d2430;" title="Feature activity / exposure vs Post-test: -0.292">-0.29</td><td class="" style="background:hsl(217 72% 94.3981828500674%);color:#1d2430;" title="Feature activity / exposure vs Overall UES: 0.038">+0.04</td><td class="" style="background:hsl(217 72% 89.07035354437183%);color:#1d2430;" title="Feature activity / exposure vs AI control: 0.165">+0.16</td><td class="" style="background:hsl(348 72% 92.48602788855688%);color:#1d2430;" title="Feature activity / exposure vs AI distraction: -0.084">-0.08</td>
+          </tr><tr>
+            <th>Visual/frame uptake</th>
+            <td class="" style="background:hsl(217 72% 83.98637137550554%);color:#1d2430;" title="Visual/frame uptake vs Raw gain: 0.286">+0.29</td><td class="" style="background:hsl(217 72% 81.85491840485417%);color:#1d2430;" title="Visual/frame uptake vs Normalised gain: 0.337">+0.34</td><td class="" style="background:hsl(217 72% 96%);color:#1d2430;" title="Visual/frame uptake vs Post-test: 0.000">0.00</td><td class="" style="background:hsl(217 72% 96%);color:#1d2430;" title="Visual/frame uptake vs Overall UES: 0.000">0.00</td><td class="" style="background:hsl(217 72% 96%);color:#1d2430;" title="Visual/frame uptake vs AI control: 0.000">0.00</td><td class="" style="background:hsl(217 72% 96%);color:#1d2430;" title="Visual/frame uptake vs AI distraction: 0.000">0.00</td>
+          </tr><tr>
+            <th>Quiz/question uptake</th>
+            <td class="strong" style="background:hsl(348 72% 64.67580252275275%);color:#fff;" title="Quiz/question uptake vs Raw gain: -0.746">-0.75</td><td class="strong" style="background:hsl(348 72% 63.186604042733315%);color:#fff;" title="Quiz/question uptake vs Normalised gain: -0.781">-0.78</td><td class="" style="background:hsl(348 72% 93.3986035621017%);color:#1d2430;" title="Quiz/question uptake vs Post-test: -0.062">-0.06</td><td class="strong" style="background:hsl(348 72% 57.14213477506037%);color:#fff;" title="Quiz/question uptake vs Overall UES: -0.925">-0.93</td><td class="strong" style="background:hsl(217 72% 70.51490247069022%);color:#1d2430;" title="Quiz/question uptake vs AI control: 0.607">+0.61</td><td class="strong" style="background:hsl(217 72% 64.68584232989437%);color:#fff;" title="Quiz/question uptake vs AI distraction: 0.746">+0.75</td>
+          </tr><tr>
+            <th>Concept-support uptake</th>
+            <td class="" style="background:hsl(348 72% 95.20698234234817%);color:#1d2430;" title="Concept-support uptake vs Raw gain: -0.019">-0.02</td><td class="" style="background:hsl(217 72% 95.19967326933497%);color:#1d2430;" title="Concept-support uptake vs Normalised gain: 0.019">+0.02</td><td class="" style="background:hsl(348 72% 89.9300749782373%);color:#1d2430;" title="Concept-support uptake vs Post-test: -0.145">-0.14</td><td class="" style="background:hsl(348 72% 88.86284108113354%);color:#1d2430;" title="Concept-support uptake vs Overall UES: -0.170">-0.17</td><td class="strong" style="background:hsl(217 72% 75.41588276478825%);color:#1d2430;" title="Concept-support uptake vs AI control: 0.490">+0.49</td><td class="" style="background:hsl(217 72% 96%);color:#1d2430;" title="Concept-support uptake vs AI distraction: 0.000">0.00</td>
+          </tr><tr>
+            <th>Chat messages</th>
+            <td class="" style="background:hsl(348 72% 91.37595218646929%);color:#1d2430;" title="Chat messages vs Raw gain: -0.110">-0.11</td><td class="" style="background:hsl(348 72% 93.66666666666667%);color:#1d2430;" title="Chat messages vs Normalised gain: -0.056">-0.06</td><td class="" style="background:hsl(217 72% 96%);color:#1d2430;" title="Chat messages vs Post-test: 0.000">0.00</td><td class="" style="background:hsl(348 72% 86.75190437293857%);color:#1d2430;" title="Chat messages vs Overall UES: -0.220">-0.22</td><td class="strong" style="background:hsl(217 72% 75.99583376727071%);color:#1d2430;" title="Chat messages vs AI control: 0.476">+0.48</td><td class="" style="background:hsl(217 72% 96%);color:#1d2430;" title="Chat messages vs AI distraction: 0.000">0.00</td>
+          </tr><tr>
+            <th>Time to first interaction</th>
+            <td class="strong" style="background:hsl(348 72% 64.97171378476494%);color:#fff;" title="Time to first interaction vs Raw gain: -0.739">-0.74</td><td class="strong" style="background:hsl(348 72% 59.33939444035328%);color:#fff;" title="Time to first interaction vs Normalised gain: -0.873">-0.87</td><td class="" style="background:hsl(348 72% 89.37987258759155%);color:#1d2430;" title="Time to first interaction vs Post-test: -0.158">-0.16</td><td class="strong" style="background:hsl(348 72% 72.53958847140764%);color:#1d2430;" title="Time to first interaction vs Overall UES: -0.559">-0.56</td><td class="strong" style="background:hsl(217 72% 79.16254175951727%);color:#1d2430;" title="Time to first interaction vs AI control: 0.401">+0.40</td><td class="" style="background:hsl(217 72% 89.3592169136464%);color:#1d2430;" title="Time to first interaction vs AI distraction: 0.158">+0.16</td>
+          </tr><tr>
+            <th>AI timing rating</th>
+            <td class="strong" style="background:hsl(217 72% 70.04759601256036%);color:#1d2430;" title="AI timing rating vs Raw gain: 0.618">+0.62</td><td class="strong" style="background:hsl(217 72% 69.80839829258241%);color:#1d2430;" title="AI timing rating vs Normalised gain: 0.624">+0.62</td><td class="" style="background:hsl(348 72% 91.27035252715477%);color:#1d2430;" title="AI timing rating vs Post-test: -0.113">-0.11</td><td class="strong" style="background:hsl(217 72% 70.04759601256036%);color:#1d2430;" title="AI timing rating vs Overall UES: 0.618">+0.62</td><td class="" style="background:hsl(348 72% 85.30732337843637%);color:#1d2430;" title="AI timing rating vs AI control: -0.255">-0.25</td><td class="strong" style="background:hsl(348 72% 68.88911657654808%);color:#1d2430;" title="AI timing rating vs AI distraction: -0.645">-0.65</td>
+          </tr><tr>
+            <th>AI control rating</th>
+            <td class="strong" style="background:hsl(348 72% 62.020326931852594%);color:#fff;" title="AI control rating vs Raw gain: -0.809">-0.81</td><td class="strong" style="background:hsl(348 72% 63.61230228986687%);color:#fff;" title="AI control rating vs Normalised gain: -0.771">-0.77</td><td class="" style="background:hsl(348 72% 93.93581261383144%);color:#1d2430;" title="AI control rating vs Post-test: -0.049">-0.05</td><td class="strong" style="background:hsl(348 72% 62.96420673930113%);color:#fff;" title="AI control rating vs Overall UES: -0.787">-0.79</td><td class="" style="background:#f6f4eb;color:#8f8877;" title="AI control rating vs AI control: n/a">NA</td><td class="" style="background:hsl(217 72% 79.43497660732108%);color:#1d2430;" title="AI control rating vs AI distraction: 0.394">+0.39</td>
+          </tr><tr>
+            <th>AI distraction rating</th>
+            <td class="strong" style="background:hsl(348 72% 75.89735431251987%);color:#1d2430;" title="AI distraction rating vs Raw gain: -0.479">-0.48</td><td class="strong" style="background:hsl(348 72% 79.09339379611232%);color:#1d2430;" title="AI distraction rating vs Normalised gain: -0.403">-0.40</td><td class="" style="background:hsl(217 72% 88.67286164169536%);color:#1d2430;" title="AI distraction rating vs Post-test: 0.174">+0.17</td><td class="strong" style="background:hsl(348 72% 62.49559052086644%);color:#fff;" title="AI distraction rating vs Overall UES: -0.798">-0.80</td><td class="" style="background:hsl(217 72% 79.43497660732108%);color:#1d2430;" title="AI distraction rating vs AI control: 0.394">+0.39</td><td class="" style="background:#f6f4eb;color:#8f8877;" title="AI distraction rating vs AI distraction: n/a">NA</td>
+          </tr><tr>
+            <th>AI overload rating</th>
+            <td class="strong" style="background:hsl(217 72% 73.20574234992108%);color:#1d2430;" title="AI overload rating vs Raw gain: 0.543">+0.54</td><td class="strong" style="background:hsl(217 72% 70.43961398309224%);color:#1d2430;" title="AI overload rating vs Normalised gain: 0.609">+0.61</td><td class="" style="background:hsl(217 72% 79.38361207042617%);color:#1d2430;" title="AI overload rating vs Post-test: 0.396">+0.40</td><td class="strong" style="background:hsl(217 72% 69.40669940824125%);color:#1d2430;" title="AI overload rating vs Overall UES: 0.633">+0.63</td><td class="strong" style="background:hsl(348 72% 64.69504831500294%);color:#fff;" title="AI overload rating vs AI control: -0.745">-0.75</td><td class="strong" style="background:hsl(348 72% 73.77568898705744%);color:#1d2430;" title="AI overload rating vs AI distraction: -0.529">-0.53</td>
+          </tr></tbody>
+    </table>
+  </div>
+        </div><div class="panel">
+          <h3>Continuous</h3>
+          <div class="heatmap-wrap">
+    <table class="heatmap-table compact">
+      <caption>Continuous, n = 7</caption>
+      <thead><tr><th>Metric</th><th>Raw gain</th><th>Normalised gain</th><th>Post-test</th><th>Overall UES</th><th>AI control</th><th>AI distraction</th></tr></thead>
+      <tbody><tr>
+            <th>Pre-test score</th>
+            <td class="" style="background:hsl(217 72% 96%);color:#1d2430;" title="Pre-test score vs Raw gain: 0.000">0.00</td><td class="strong" style="background:hsl(217 72% 69.29791396535846%);color:#1d2430;" title="Pre-test score vs Normalised gain: 0.636">+0.64</td><td class="strong" style="background:hsl(217 72% 69.29791396535846%);color:#1d2430;" title="Pre-test score vs Post-test: 0.636">+0.64</td><td class="" style="background:hsl(217 72% 83.5470114800935%);color:#1d2430;" title="Pre-test score vs Overall UES: 0.296">+0.30</td><td class="" style="background:hsl(217 72% 82.95084129200563%);color:#1d2430;" title="Pre-test score vs AI control: 0.311">+0.31</td><td class="" style="background:hsl(348 72% 86.21313096900423%);color:#1d2430;" title="Pre-test score vs AI distraction: -0.233">-0.23</td>
+          </tr><tr>
+            <th>Pre-knowledge</th>
+            <td class="strong" style="background:hsl(217 72% 78.69256894246519%);color:#1d2430;" title="Pre-knowledge vs Raw gain: 0.412">+0.41</td><td class="strong" style="background:hsl(217 72% 69.16206443126136%);color:#1d2430;" title="Pre-knowledge vs Normalised gain: 0.639">+0.64</td><td class="strong" style="background:hsl(217 72% 69.16206443126136%);color:#1d2430;" title="Pre-knowledge vs Post-test: 0.639">+0.64</td><td class="strong" style="background:hsl(217 72% 72.10103815312283%);color:#1d2430;" title="Pre-knowledge vs Overall UES: 0.569">+0.57</td><td class="" style="background:hsl(348 72% 85.90197874351924%);color:#1d2430;" title="Pre-knowledge vs AI control: -0.240">-0.24</td><td class="" style="background:hsl(348 72% 91.15294979688923%);color:#1d2430;" title="Pre-knowledge vs AI distraction: -0.115">-0.12</td>
+          </tr><tr>
+            <th>Positive AI uptake</th>
+            <td class="strong" style="background:hsl(217 72% 79.0101634659263%);color:#1d2430;" title="Positive AI uptake vs Raw gain: 0.405">+0.40</td><td class="strong" style="background:hsl(217 72% 79.2%);color:#1d2430;" title="Positive AI uptake vs Normalised gain: 0.400">+0.40</td><td class="strong" style="background:hsl(217 72% 79.2%);color:#1d2430;" title="Positive AI uptake vs Post-test: 0.400">+0.40</td><td class="" style="background:hsl(348 72% 94.48642506267146%);color:#1d2430;" title="Positive AI uptake vs Overall UES: -0.036">-0.04</td><td class="strong" style="background:hsl(217 72% 73.39899675692287%);color:#1d2430;" title="Positive AI uptake vs AI control: 0.538">+0.54</td><td class="" style="background:hsl(348 72% 85.2942616217003%);color:#1d2430;" title="Positive AI uptake vs AI distraction: -0.255">-0.25</td>
+          </tr><tr>
+            <th>AI shown / exposure</th>
+            <td class="" style="background:hsl(217 72% 84.56904786701183%);color:#1d2430;" title="AI shown / exposure vs Raw gain: 0.272">+0.27</td><td class="" style="background:hsl(217 72% 83.28386851279053%);color:#1d2430;" title="AI shown / exposure vs Normalised gain: 0.303">+0.30</td><td class="" style="background:hsl(217 72% 83.28386851279053%);color:#1d2430;" title="AI shown / exposure vs Post-test: 0.303">+0.30</td><td class="strong" style="background:hsl(217 72% 75.37840937269871%);color:#1d2430;" title="AI shown / exposure vs Overall UES: 0.491">+0.49</td><td class="strong" style="background:hsl(217 72% 76.39199509870649%);color:#1d2430;" title="AI shown / exposure vs AI control: 0.467">+0.47</td><td class="strong" style="background:hsl(348 72% 71.18987134938372%);color:#1d2430;" title="AI shown / exposure vs AI distraction: -0.591">-0.59</td>
+          </tr><tr>
+            <th>Feature activity / exposure</th>
+            <td class="" style="background:hsl(217 72% 96%);color:#1d2430;" title="Feature activity / exposure vs Raw gain: 0.000">0.00</td><td class="" style="background:hsl(217 72% 89.71715622714316%);color:#1d2430;" title="Feature activity / exposure vs Normalised gain: 0.150">+0.15</td><td class="" style="background:hsl(217 72% 89.71715622714316%);color:#1d2430;" title="Feature activity / exposure vs Post-test: 0.150">+0.15</td><td class="strong" style="background:hsl(217 72% 67.98077583021038%);color:#1d2430;" title="Feature activity / exposure vs Overall UES: 0.667">+0.67</td><td class="strong" style="background:hsl(217 72% 76.42626193800844%);color:#1d2430;" title="Feature activity / exposure vs AI control: 0.466">+0.47</td><td class="strong" style="background:hsl(348 72% 65.00824806851335%);color:#fff;" title="Feature activity / exposure vs AI distraction: -0.738">-0.74</td>
+          </tr><tr>
+            <th>Visual/frame uptake</th>
+            <td class="strong" style="background:hsl(217 72% 77.21702898900176%);color:#1d2430;" title="Visual/frame uptake vs Raw gain: 0.447">+0.45</td><td class="strong" style="background:hsl(217 72% 74.47208999714768%);color:#1d2430;" title="Visual/frame uptake vs Normalised gain: 0.513">+0.51</td><td class="strong" style="background:hsl(217 72% 74.47208999714768%);color:#1d2430;" title="Visual/frame uptake vs Post-test: 0.513">+0.51</td><td class="strong" style="background:hsl(217 72% 73.41017928357996%);color:#1d2430;" title="Visual/frame uptake vs Overall UES: 0.538">+0.54</td><td class="" style="background:hsl(217 72% 86.7945029210483%);color:#1d2430;" title="Visual/frame uptake vs AI control: 0.219">+0.22</td><td class="" style="background:hsl(348 72% 80.21914786465423%);color:#1d2430;" title="Visual/frame uptake vs AI distraction: -0.376">-0.38</td>
+          </tr><tr>
+            <th>Quiz/question uptake</th>
+            <td class="strong" style="background:hsl(217 72% 76.17852404358068%);color:#1d2430;" title="Quiz/question uptake vs Raw gain: 0.472">+0.47</td><td class="strong" style="background:hsl(217 72% 77.2909090909091%);color:#1d2430;" title="Quiz/question uptake vs Normalised gain: 0.445">+0.45</td><td class="strong" style="background:hsl(217 72% 77.2909090909091%);color:#1d2430;" title="Quiz/question uptake vs Post-test: 0.445">+0.45</td><td class="" style="background:hsl(217 72% 92.97285012534292%);color:#1d2430;" title="Quiz/question uptake vs Overall UES: 0.072">+0.07</td><td class="strong" style="background:hsl(217 72% 78.95012036048567%);color:#1d2430;" title="Quiz/question uptake vs AI control: 0.406">+0.41</td><td class="" style="background:hsl(348 72% 87.27680576582988%);color:#1d2430;" title="Quiz/question uptake vs AI distraction: -0.208">-0.21</td>
+          </tr><tr>
+            <th>Concept-support uptake</th>
+            <td class="" style="background:hsl(217 72% 81.84180288827191%);color:#1d2430;" title="Concept-support uptake vs Raw gain: 0.337">+0.34</td><td class="" style="background:hsl(217 72% 79.58181818181818%);color:#1d2430;" title="Concept-support uptake vs Normalised gain: 0.391">+0.39</td><td class="" style="background:hsl(217 72% 79.58181818181818%);color:#1d2430;" title="Concept-support uptake vs Post-test: 0.391">+0.39</td><td class="" style="background:hsl(217 72% 94.48642506267146%);color:#1d2430;" title="Concept-support uptake vs Overall UES: 0.036">+0.04</td><td class="strong" style="background:hsl(217 72% 63.486276036275%);color:#fff;" title="Concept-support uptake vs AI control: 0.774">+0.77</td><td class="strong" style="background:hsl(348 72% 74.98503207222653%);color:#1d2430;" title="Concept-support uptake vs AI distraction: -0.500">-0.50</td>
+          </tr><tr>
+            <th>Chat messages</th>
+            <td class="" style="background:hsl(217 72% 96%);color:#1d2430;" title="Chat messages vs Raw gain: 0.000">0.00</td><td class="" style="background:hsl(217 72% 82.51869981991891%);color:#1d2430;" title="Chat messages vs Normalised gain: 0.321">+0.32</td><td class="" style="background:hsl(217 72% 82.51869981991891%);color:#1d2430;" title="Chat messages vs Post-test: 0.321">+0.32</td><td class="" style="background:hsl(348 72% 88.92685276805962%);color:#1d2430;" title="Chat messages vs Overall UES: -0.168">-0.17</td><td class="strong" style="background:hsl(217 72% 67.58823529411765%);color:#1d2430;" title="Chat messages vs AI control: 0.676">+0.68</td><td class="" style="background:hsl(348 72% 86.52941176470588%);color:#1d2430;" title="Chat messages vs AI distraction: -0.225">-0.23</td>
+          </tr><tr>
+            <th>Time to first interaction</th>
+            <td class="" style="background:hsl(348 72% 90.3875139198391%);color:#1d2430;" title="Time to first interaction vs Raw gain: -0.134">-0.13</td><td class="" style="background:hsl(217 72% 92.21606265667866%);color:#1d2430;" title="Time to first interaction vs Normalised gain: 0.090">+0.09</td><td class="" style="background:hsl(217 72% 92.21606265667866%);color:#1d2430;" title="Time to first interaction vs Post-test: 0.090">+0.09</td><td class="strong" style="background:hsl(217 72% 69%);color:#1d2430;" title="Time to first interaction vs Overall UES: 0.643">+0.64</td><td class="strong" style="background:hsl(217 72% 77.92417929615236%);color:#1d2430;" title="Time to first interaction vs AI control: 0.430">+0.43</td><td class="strong" style="background:hsl(348 72% 61.420169088291466%);color:#fff;" title="Time to first interaction vs AI distraction: -0.823">-0.82</td>
+          </tr><tr>
+            <th>AI timing rating</th>
+            <td class="strong" style="background:hsl(348 72% 77.21702898900176%);color:#1d2430;" title="AI timing rating vs Raw gain: -0.447">-0.45</td><td class="" style="background:hsl(348 72% 90.09037764627584%);color:#1d2430;" title="AI timing rating vs Normalised gain: -0.141">-0.14</td><td class="" style="background:hsl(348 72% 90.09037764627584%);color:#1d2430;" title="AI timing rating vs Post-test: -0.141">-0.14</td><td class="" style="background:hsl(217 72% 83.45009960198887%);color:#1d2430;" title="AI timing rating vs Overall UES: 0.299">+0.30</td><td class="" style="background:hsl(348 72% 85.04107490600988%);color:#1d2430;" title="AI timing rating vs AI control: -0.261">-0.26</td><td class="" style="background:hsl(217 72% 93.80821498120197%);color:#1d2430;" title="AI timing rating vs AI distraction: 0.052">+0.05</td>
+          </tr><tr>
+            <th>AI control rating</th>
+            <td class="" style="background:hsl(217 72% 96%);color:#1d2430;" title="AI control rating vs Raw gain: 0.000">0.00</td><td class="" style="background:hsl(217 72% 83.70822630639665%);color:#1d2430;" title="AI control rating vs Normalised gain: 0.293">+0.29</td><td class="" style="background:hsl(217 72% 83.70822630639665%);color:#1d2430;" title="AI control rating vs Post-test: 0.293">+0.29</td><td class="" style="background:hsl(217 72% 92.8563790080265%);color:#1d2430;" title="AI control rating vs Overall UES: 0.075">+0.07</td><td class="" style="background:#f6f4eb;color:#8f8877;" title="AI control rating vs AI control: n/a">NA</td><td class="strong" style="background:hsl(348 72% 65.11764705882354%);color:#fff;" title="AI control rating vs AI distraction: -0.735">-0.74</td>
+          </tr><tr>
+            <th>AI distraction rating</th>
+            <td class="" style="background:hsl(217 72% 87.17823547062353%);color:#1d2430;" title="AI distraction rating vs Raw gain: 0.210">+0.21</td><td class="" style="background:hsl(348 72% 89.25934990995945%);color:#1d2430;" title="AI distraction rating vs Normalised gain: -0.160">-0.16</td><td class="" style="background:hsl(348 72% 89.25934990995945%);color:#1d2430;" title="AI distraction rating vs Post-test: -0.160">-0.16</td><td class="strong" style="background:hsl(348 72% 67.70741107223847%);color:#1d2430;" title="AI distraction rating vs Overall UES: -0.674">-0.67</td><td class="strong" style="background:hsl(348 72% 65.11764705882354%);color:#fff;" title="AI distraction rating vs AI control: -0.735">-0.74</td><td class="" style="background:#f6f4eb;color:#8f8877;" title="AI distraction rating vs AI distraction: n/a">NA</td>
+          </tr><tr>
+            <th>AI overload rating</th>
+            <td class="" style="background:hsl(217 72% 87.42678590025888%);color:#1d2430;" title="AI overload rating vs Raw gain: 0.204">+0.20</td><td class="" style="background:hsl(348 72% 94.4586507288231%);color:#1d2430;" title="AI overload rating vs Normalised gain: -0.037">-0.04</td><td class="" style="background:hsl(348 72% 94.4586507288231%);color:#1d2430;" title="AI overload rating vs Post-test: -0.037">-0.04</td><td class="strong" style="background:hsl(348 72% 66.21325798278704%);color:#1d2430;" title="AI overload rating vs Overall UES: -0.709">-0.71</td><td class="" style="background:hsl(348 72% 81.99428221336177%);color:#1d2430;" title="AI overload rating vs AI control: -0.333">-0.33</td><td class="strong" style="background:hsl(217 72% 66.788074330726%);color:#1d2430;" title="AI overload rating vs AI distraction: 0.696">+0.70</td>
+          </tr></tbody>
+    </table>
+  </div>
+        </div><div class="panel">
+          <h3>Proactive</h3>
+          <div class="heatmap-wrap">
+    <table class="heatmap-table compact">
+      <caption>Proactive, n = 7</caption>
+      <thead><tr><th>Metric</th><th>Raw gain</th><th>Normalised gain</th><th>Post-test</th><th>Overall UES</th><th>AI control</th><th>AI distraction</th></tr></thead>
+      <tbody><tr>
+            <th>Pre-test score</th>
+            <td class="" style="background:hsl(217 72% 93.5998911490577%);color:#1d2430;" title="Pre-test score vs Raw gain: 0.057">+0.06</td><td class="" style="background:hsl(217 72% 90.55462176866172%);color:#1d2430;" title="Pre-test score vs Normalised gain: 0.130">+0.13</td><td class="strong" style="background:hsl(217 72% 68.66037735849056%);color:#1d2430;" title="Pre-test score vs Post-test: 0.651">+0.65</td><td class="" style="background:hsl(348 72% 90.8969733977624%);color:#1d2430;" title="Pre-test score vs Overall UES: -0.122">-0.12</td><td class="" style="background:hsl(217 72% 80.26364413797646%);color:#1d2430;" title="Pre-test score vs AI control: 0.375">+0.37</td><td class="" style="background:hsl(217 72% 92.32853944028955%);color:#1d2430;" title="Pre-test score vs AI distraction: 0.087">+0.09</td>
+          </tr><tr>
+            <th>Pre-knowledge</th>
+            <td class="" style="background:hsl(217 72% 86.21313096900423%);color:#1d2430;" title="Pre-knowledge vs Raw gain: 0.233">+0.23</td><td class="" style="background:hsl(217 72% 80.53615567578933%);color:#1d2430;" title="Pre-knowledge vs Normalised gain: 0.368">+0.37</td><td class="" style="background:hsl(217 72% 90.34510809637077%);color:#1d2430;" title="Pre-knowledge vs Post-test: 0.135">+0.13</td><td class="strong" style="background:hsl(348 72% 75.99183173337397%);color:#1d2430;" title="Pre-knowledge vs Overall UES: -0.476">-0.48</td><td class="strong" style="background:hsl(348 72% 74.32169635084747%);color:#1d2430;" title="Pre-knowledge vs AI control: -0.516">-0.52</td><td class="strong" style="background:hsl(217 72% 78.53379734189147%);color:#1d2430;" title="Pre-knowledge vs AI distraction: 0.416">+0.42</td>
+          </tr><tr>
+            <th>Positive AI uptake</th>
+            <td class="strong" style="background:hsl(348 72% 76.97774582637079%);color:#1d2430;" title="Positive AI uptake vs Raw gain: -0.453">-0.45</td><td class="strong" style="background:hsl(348 72% 72.87976093234643%);color:#1d2430;" title="Positive AI uptake vs Normalised gain: -0.550">-0.55</td><td class="strong" style="background:hsl(348 72% 60.671354292201215%);color:#fff;" title="Positive AI uptake vs Post-test: -0.841">-0.84</td><td class="strong" style="background:hsl(217 72% 70.72222222222223%);color:#1d2430;" title="Positive AI uptake vs Overall UES: 0.602">+0.60</td><td class="" style="background:hsl(348 72% 92.62919611359847%);color:#1d2430;" title="Positive AI uptake vs AI control: -0.080">-0.08</td><td class="" style="background:hsl(348 72% 80.64248283955595%);color:#1d2430;" title="Positive AI uptake vs AI distraction: -0.366">-0.37</td>
+          </tr><tr>
+            <th>AI shown / exposure</th>
+            <td class="" style="background:hsl(348 72% 84.21966792589343%);color:#1d2430;" title="AI shown / exposure vs Raw gain: -0.280">-0.28</td><td class="strong" style="background:hsl(348 72% 78.05454545454546%);color:#1d2430;" title="AI shown / exposure vs Normalised gain: -0.427">-0.43</td><td class="" style="background:hsl(348 72% 81.99759883370157%);color:#1d2430;" title="AI shown / exposure vs Post-test: -0.333">-0.33</td><td class="strong" style="background:hsl(217 72% 75.19178483911179%);color:#1d2430;" title="AI shown / exposure vs Overall UES: 0.495">+0.50</td><td class="strong" style="background:hsl(217 72% 66.3573256555268%);color:#1d2430;" title="AI shown / exposure vs AI control: 0.706">+0.71</td><td class="strong" style="background:hsl(348 72% 65.96592843876384%);color:#1d2430;" title="AI shown / exposure vs AI distraction: -0.715">-0.72</td>
+          </tr><tr>
+            <th>Feature activity / exposure</th>
+            <td class="" style="background:hsl(217 72% 88.14644528392895%);color:#1d2430;" title="Feature activity / exposure vs Raw gain: 0.187">+0.19</td><td class="" style="background:hsl(217 72% 93.7090909090909%);color:#1d2430;" title="Feature activity / exposure vs Normalised gain: 0.055">+0.05</td><td class="" style="background:hsl(217 72% 89.77671059275626%);color:#1d2430;" title="Feature activity / exposure vs Post-test: 0.148">+0.15</td><td class="" style="background:hsl(217 72% 93.30263877544041%);color:#1d2430;" title="Feature activity / exposure vs Overall UES: 0.064">+0.06</td><td class="strong" style="background:hsl(217 72% 71.78485757775428%);color:#1d2430;" title="Feature activity / exposure vs AI control: 0.577">+0.58</td><td class="strong" style="background:hsl(348 72% 77.57910277577516%);color:#1d2430;" title="Feature activity / exposure vs AI distraction: -0.439">-0.44</td>
+          </tr><tr>
+            <th>Visual/frame uptake</th>
+            <td class="" style="background:hsl(217 72% 96%);color:#1d2430;" title="Visual/frame uptake vs Raw gain: 0.000">0.00</td><td class="" style="background:hsl(217 72% 96%);color:#1d2430;" title="Visual/frame uptake vs Normalised gain: 0.000">0.00</td><td class="" style="background:hsl(217 72% 80.42153155007583%);color:#1d2430;" title="Visual/frame uptake vs Post-test: 0.371">+0.37</td><td class="" style="background:hsl(217 72% 83.65316054836525%);color:#1d2430;" title="Visual/frame uptake vs Overall UES: 0.294">+0.29</td><td class="strong" style="background:hsl(217 72% 65.90070779396386%);color:#1d2430;" title="Visual/frame uptake vs AI control: 0.717">+0.72</td><td class="strong" style="background:hsl(348 72% 73.54537909471638%);color:#1d2430;" title="Visual/frame uptake vs AI distraction: -0.535">-0.53</td>
+          </tr><tr>
+            <th>Quiz/question uptake</th>
+            <td class="strong" style="background:hsl(348 72% 71.094022960187%);color:#1d2430;" title="Quiz/question uptake vs Raw gain: -0.593">-0.59</td><td class="strong" style="background:hsl(348 72% 64.97171378476494%);color:#fff;" title="Quiz/question uptake vs Normalised gain: -0.739">-0.74</td><td class="strong" style="background:hsl(348 72% 61.30795860937185%);color:#fff;" title="Quiz/question uptake vs Post-test: -0.826">-0.83</td><td class="strong" style="background:hsl(217 72% 62.394444903657174%);color:#fff;" title="Quiz/question uptake vs Overall UES: 0.800">+0.80</td><td class="" style="background:hsl(217 72% 86.89732480793839%);color:#1d2430;" title="Quiz/question uptake vs AI control: 0.217">+0.22</td><td class="strong" style="background:hsl(348 72% 74.56941438037681%);color:#1d2430;" title="Quiz/question uptake vs AI distraction: -0.510">-0.51</td>
+          </tr><tr>
+            <th>Concept-support uptake</th>
+            <td class="" style="background:hsl(217 72% 81.86360151107212%);color:#1d2430;" title="Concept-support uptake vs Raw gain: 0.337">+0.34</td><td class="strong" style="background:hsl(217 72% 76.52727272727273%);color:#1d2430;" title="Concept-support uptake vs Normalised gain: 0.464">+0.46</td><td class="" style="background:hsl(217 72% 88.99879941685079%);color:#1d2430;" title="Concept-support uptake vs Post-test: 0.167">+0.17</td><td class="strong" style="background:hsl(348 72% 74.80644752131757%);color:#1d2430;" title="Concept-support uptake vs Overall UES: -0.505">-0.50</td><td class="strong" style="background:hsl(348 72% 78.88239932220561%);color:#1d2430;" title="Concept-support uptake vs AI control: -0.408">-0.41</td><td class="" style="background:hsl(217 72% 85.98864281292128%);color:#1d2430;" title="Concept-support uptake vs AI distraction: 0.238">+0.24</td>
+          </tr><tr>
+            <th>Chat messages</th>
+            <td class="strong" style="background:hsl(217 72% 79.19923804340392%);color:#1d2430;" title="Chat messages vs Raw gain: 0.400">+0.40</td><td class="" style="background:hsl(217 72% 85.49819912527619%);color:#1d2430;" title="Chat messages vs Normalised gain: 0.250">+0.25</td><td class="" style="background:hsl(348 72% 94.81132075471699%);color:#1d2430;" title="Chat messages vs Post-test: -0.028">-0.03</td><td class="" style="background:hsl(217 72% 82.26108222474491%);color:#1d2430;" title="Chat messages vs Overall UES: 0.327">+0.33</td><td class="" style="background:hsl(348 72% 90.04570318734244%);color:#1d2430;" title="Chat messages vs AI control: -0.142">-0.14</td><td class="" style="background:hsl(348 72% 92.7364795024796%);color:#1d2430;" title="Chat messages vs AI distraction: -0.078">-0.08</td>
+          </tr><tr>
+            <th>Time to first interaction</th>
+            <td class="" style="background:hsl(217 72% 94.44337643501169%);color:#1d2430;" title="Time to first interaction vs Raw gain: 0.037">+0.04</td><td class="" style="background:hsl(348 72% 95.24321253133573%);color:#1d2430;" title="Time to first interaction vs Normalised gain: -0.018">-0.02</td><td class="" style="background:hsl(348 72% 87.51972321562423%);color:#1d2430;" title="Time to first interaction vs Post-test: -0.202">-0.20</td><td class="" style="background:hsl(348 72% 89.12613645756625%);color:#1d2430;" title="Time to first interaction vs Overall UES: -0.164">-0.16</td><td class="strong" style="background:hsl(348 72% 76.13961776277466%);color:#1d2430;" title="Time to first interaction vs AI control: -0.473">-0.47</td><td class="strong" style="background:hsl(217 72% 76.95059056033494%);color:#1d2430;" title="Time to first interaction vs AI distraction: 0.454">+0.45</td>
+          </tr><tr>
+            <th>AI timing rating</th>
+            <td class="" style="background:hsl(348 72% 93.5998911490577%);color:#1d2430;" title="AI timing rating vs Raw gain: -0.057">-0.06</td><td class="" style="background:hsl(348 72% 94.44417764818907%);color:#1d2430;" title="AI timing rating vs Normalised gain: -0.037">-0.04</td><td class="" style="background:hsl(348 72% 91.64150943396227%);color:#1d2430;" title="AI timing rating vs Post-test: -0.104">-0.10</td><td class="" style="background:hsl(348 72% 86.18648730338923%);color:#1d2430;" title="AI timing rating vs Overall UES: -0.234">-0.23</td><td class="strong" style="background:hsl(217 72% 69.20566434304098%);color:#1d2430;" title="AI timing rating vs AI control: 0.638">+0.64</td><td class="strong" style="background:hsl(348 72% 67.8521357088865%);color:#1d2430;" title="AI timing rating vs AI distraction: -0.670">-0.67</td>
+          </tr><tr>
+            <th>AI control rating</th>
+            <td class="" style="background:hsl(217 72% 95.141246138885%);color:#1d2430;" title="AI control rating vs Raw gain: 0.020">+0.02</td><td class="" style="background:hsl(348 72% 94.74749263333212%);color:#1d2430;" title="AI control rating vs Normalised gain: -0.030">-0.03</td><td class="" style="background:hsl(217 72% 86.64324786582384%);color:#1d2430;" title="AI control rating vs Post-test: 0.223">+0.22</td><td class="" style="background:hsl(217 72% 88.83704174139673%);color:#1d2430;" title="AI control rating vs Overall UES: 0.171">+0.17</td><td class="" style="background:#f6f4eb;color:#8f8877;" title="AI control rating vs AI control: n/a">NA</td><td class="strong" style="background:hsl(348 72% 59.21805736033201%);color:#fff;" title="AI control rating vs AI distraction: -0.876">-0.88</td>
+          </tr><tr>
+            <th>AI distraction rating</th>
+            <td class="" style="background:hsl(217 72% 95.17631223241963%);color:#1d2430;" title="AI distraction rating vs Raw gain: 0.020">+0.02</td><td class="" style="background:hsl(217 72% 91.59500283768537%);color:#1d2430;" title="AI distraction rating vs Normalised gain: 0.105">+0.10</td><td class="" style="background:hsl(217 72% 92.7364795024796%);color:#1d2430;" title="AI distraction rating vs Post-test: 0.078">+0.08</td><td class="" style="background:hsl(348 72% 82.66320878171965%);color:#1d2430;" title="AI distraction rating vs Overall UES: -0.318">-0.32</td><td class="strong" style="background:hsl(348 72% 59.21805736033201%);color:#fff;" title="AI distraction rating vs AI control: -0.876">-0.88</td><td class="" style="background:#f6f4eb;color:#8f8877;" title="AI distraction rating vs AI distraction: n/a">NA</td>
+          </tr><tr>
+            <th>AI overload rating</th>
+            <td class="" style="background:hsl(217 72% 90.45184253269149%);color:#1d2430;" title="AI overload rating vs Raw gain: 0.132">+0.13</td><td class="" style="background:hsl(217 72% 84.05454314837898%);color:#1d2430;" title="AI overload rating vs Normalised gain: 0.284">+0.28</td><td class="" style="background:hsl(217 72% 83.04616324047377%);color:#1d2430;" title="AI overload rating vs Post-test: 0.308">+0.31</td><td class="strong" style="background:hsl(348 72% 67.22222222222223%);color:#1d2430;" title="AI overload rating vs Overall UES: -0.685">-0.69</td><td class="strong" style="background:hsl(348 72% 71.98302230938904%);color:#1d2430;" title="AI overload rating vs AI control: -0.572">-0.57</td><td class="strong" style="background:hsl(217 72% 61.64765898321727%);color:#fff;" title="AI overload rating vs AI distraction: 0.818">+0.82</td>
+          </tr></tbody>
+    </table>
+  </div>
+        </div>
+    </div>
+    <div class="stats-callout" style="margin-top:18px;">
+    <strong>Two descriptive within-prototype patterns:</strong>
+    In Intermittent, quiz/question uptake was negatively related to raw gain (rho = -0.75) and overall UES (rho = -0.93), suggesting that learners may have reached for the quiz more when they were struggling or enjoying the experience less. In Proactive, positive AI uptake was negatively related to post-test score (rho = -0.84), which is consistent with either struggling learners seeking more AI help or heavy AI activity competing with focus. Treat both as design clues, not confirmatory statistics, because each condition has n = 7.
+  </div>
+    <div class="stats-callout" style="margin-top:18px;">
+      <strong>How to read this section:</strong> use the combined map for the main findings, and use the three condition-specific maps to generate design explanations. A relationship that appears only inside one prototype is useful for interpretation, but it is too small to report as a stable statistical result.
+    </div>
+  </section>
+
+  <section id="rq3" class="band">
+    <div class="section-head">
+      <div>
+        <h2>RQ3: AI initiative vs learner control</h2>
+        <p>This is the design contribution. Initiative helped when it was structured and controllable, especially quizzes. Keyword and glossary features require a more careful reading: clicks show explicit uptake, but reading without clicking may still be useful and is not fully captured.</p>
+      </div>
+      <p class="note">Control differed by condition (p = 0.0425), as did distraction (p = 0.0221). Continuous reported slightly higher distraction than Proactive (3.00 vs 2.86), so the qualitative explanation differs by condition: Continuous visual density versus Proactive keyword timing/control. Distraction and UES were strongly related (rho = -0.68).</p>
+    </div>
+    <div class="panel chart-panel">
+        <h3>Control vs distraction</h3>
+        <svg viewBox="0 0 940 510" role="img" aria-label="AI control and distraction">
+    <line x1="88" y1="54" x2="88" y2="420" class="grid-line"/><text x="88" y="444" class="axis-label" text-anchor="middle">1</text><line x1="278.5" y1="54" x2="278.5" y2="420" class="grid-line"/><text x="278.5" y="444" class="axis-label" text-anchor="middle">2</text><line x1="469" y1="54" x2="469" y2="420" class="grid-line"/><text x="469" y="444" class="axis-label" text-anchor="middle">3</text><line x1="659.5" y1="54" x2="659.5" y2="420" class="grid-line"/><text x="659.5" y="444" class="axis-label" text-anchor="middle">4</text><line x1="850" y1="54" x2="850" y2="420" class="grid-line"/><text x="850" y="444" class="axis-label" text-anchor="middle">5</text>
+    <line x1="88" y1="420" x2="850" y2="420" class="grid-line"/><text x="70" y="424" class="axis-label" text-anchor="end">1</text><line x1="88" y1="328.5" x2="850" y2="328.5" class="grid-line"/><text x="70" y="332.5" class="axis-label" text-anchor="end">2</text><line x1="88" y1="237" x2="850" y2="237" class="grid-line"/><text x="70" y="241" class="axis-label" text-anchor="end">3</text><line x1="88" y1="145.5" x2="850" y2="145.5" class="grid-line"/><text x="70" y="149.5" class="axis-label" text-anchor="end">4</text><line x1="88" y1="54" x2="850" y2="54" class="grid-line"/><text x="70" y="58" class="axis-label" text-anchor="end">5</text>
+    <text x="469" y="484" class="axis-title" text-anchor="middle">Felt in control</text>
+    <text x="24" y="237" class="axis-title" text-anchor="middle" transform="rotate(-90 24 237)">AI distraction</text>
+    
+    <g>
+          <circle cx="850" cy="237" r="10.2" fill="#2764d8" class="scatter-dot" opacity="0.92"/>
+          <text x="831.8" y="228" class="point-label key-label compact-label" text-anchor="end">C01</text>
+          <title>C01: Felt in control 5.00, AI distraction 3.00</title>
+        </g><g>
+          <circle cx="659.5" cy="145.5" r="10.2" fill="#2764d8" class="scatter-dot" opacity="0.92"/>
+          <text x="641.3" y="136.5" class="point-label key-label compact-label" text-anchor="end">C02</text>
+          <title>C02: Felt in control 4.00, AI distraction 4.00</title>
+        </g><g>
+          <circle cx="275.25" cy="145.5" r="5.5" fill="#2764d8" class="scatter-dot" opacity="0.92"/><circle cx="281.75" cy="145.5" r="5.5" fill="#d83a5d" class="scatter-dot" opacity="0.92"/>
+          <text x="296.7" y="136.5" class="point-label key-label compact-label" text-anchor="start">C03, P07</text>
+          <title>C03: Felt in control 2.00, AI distraction 4.00; P07: Felt in control 2.00, AI distraction 4.00</title>
+        </g><g>
+          <circle cx="840.25" cy="420" r="5.5" fill="#2764d8" class="scatter-dot" opacity="0.92"/><circle cx="846.75" cy="420" r="5.5" fill="#b89214" class="scatter-dot" opacity="0.92"/><circle cx="853.25" cy="420" r="5.5" fill="#b89214" class="scatter-dot" opacity="0.92"/><circle cx="859.75" cy="420" r="5.5" fill="#b89214" class="scatter-dot" opacity="0.92"/>
+          <text x="831.8" y="409" class="point-label key-label compact-label" text-anchor="end">C04, I01, I05, I07</text>
+          <title>C04: Felt in control 5.00, AI distraction 1.00; I01: Felt in control 5.00, AI distraction 1.00; I05: Felt in control 5.00, AI distraction 1.00; I07: Felt in control 5.00, AI distraction 1.00</title>
+        </g><g>
+          <circle cx="465.75" cy="145.5" r="5.5" fill="#2764d8" class="scatter-dot" opacity="0.92"/><circle cx="472.25" cy="145.5" r="5.5" fill="#d83a5d" class="scatter-dot" opacity="0.92"/>
+          <text x="487.2" y="136.5" class="point-label key-label compact-label" text-anchor="start">C05, P02</text>
+          <title>C05: Felt in control 3.00, AI distraction 4.00; P02: Felt in control 3.00, AI distraction 4.00</title>
+        </g><g>
+          <circle cx="659.5" cy="328.5" r="6" fill="#2764d8" class="scatter-dot" opacity="0.92"/>
+          <text x="645.5" y="319.5" class="point-label key-label compact-label" text-anchor="end">C06</text>
+          <title>C06: Felt in control 4.00, AI distraction 2.00</title>
+        </g><g>
+          <circle cx="653" cy="237" r="5.5" fill="#2764d8" class="scatter-dot" opacity="0.92"/><circle cx="659.5" cy="237" r="5.5" fill="#d83a5d" class="scatter-dot" opacity="0.92"/><circle cx="666" cy="237" r="5.5" fill="#d83a5d" class="scatter-dot" opacity="0.92"/>
+          <text x="633.5" y="228" class="point-label key-label compact-label" text-anchor="end">C07, P01, P04</text>
+          <title>C07: Felt in control 4.00, AI distraction 3.00; P01: Felt in control 4.00, AI distraction 3.00; P04: Felt in control 4.00, AI distraction 3.00</title>
+        </g><g>
+          <circle cx="653" cy="420" r="5.5" fill="#b89214" class="scatter-dot" opacity="0.92"/><circle cx="659.5" cy="420" r="5.5" fill="#d83a5d" class="scatter-dot" opacity="0.92"/><circle cx="666" cy="420" r="5.5" fill="#d83a5d" class="scatter-dot" opacity="0.92"/>
+          <text x="637.1" y="409" class="point-label key-label compact-label" text-anchor="end">I02, P05, P06</text>
+          <title>I02: Felt in control 4.00, AI distraction 1.00; P05: Felt in control 4.00, AI distraction 1.00; P06: Felt in control 4.00, AI distraction 1.00</title>
+        </g><g>
+          <circle cx="846.75" cy="328.5" r="5.5" fill="#b89214" class="scatter-dot" opacity="0.92"/><circle cx="853.25" cy="328.5" r="5.5" fill="#b89214" class="scatter-dot" opacity="0.92"/>
+          <text x="831.8" y="319.5" class="point-label key-label compact-label" text-anchor="end">I03, I04</text>
+          <title>I03: Felt in control 5.00, AI distraction 2.00; I04: Felt in control 5.00, AI distraction 2.00</title>
+        </g><g>
+          <circle cx="469" cy="420" r="16.5" fill="#b89214" class="scatter-dot" opacity="0.92"/>
+          <text x="493.5" y="409" class="point-label key-label compact-label" text-anchor="start">I06</text>
+          <title>I06: Felt in control 3.00, AI distraction 1.00</title>
+        </g><g>
+          <circle cx="88" cy="145.5" r="10.2" fill="#d83a5d" class="scatter-dot" opacity="0.92"/>
+          <text x="106.2" y="136.5" class="point-label key-label compact-label" text-anchor="start">P03</text>
+          <title>P03: Felt in control 1.00, AI distraction 4.00</title>
+        </g>
+  </svg>
+        <ul class="chart-pointers">
+  <li>Points toward the upper-left represent a risky experience: low control and high distraction.</li><li>The point size follows positive learning gain, so this chart separates experience quality from learning outcome.</li><li>All participant IDs are visible, and repeated rating coordinates use grouped comma labels and multi-colour markers.</li>
+</ul>
+    </div>
+    <div class="panel chart-panel" style="margin-top:18px;">
+        <h3>AI-support experience means</h3>
+        <svg viewBox="0 0 860 360" role="img" aria-label="AI-support items by condition">
+    <line x1="64" y1="302" x2="810" y2="302" class="grid-line"/><line x1="64" y1="240" x2="810" y2="240" class="grid-line"/><line x1="64" y1="178" x2="810" y2="178" class="grid-line"/><line x1="64" y1="116" x2="810" y2="116" class="grid-line"/><line x1="64" y1="54" x2="810" y2="54" class="grid-line"/>
+    <text x="133.5" y="327" class="axis-label" text-anchor="middle">Helped</text><text x="256.5" y="327" class="axis-label" text-anchor="middle">Relevant</text><text x="379.5" y="327" class="axis-label" text-anchor="middle">Timing</text><text x="502.5" y="327" class="axis-label" text-anchor="middle">Control</text><text x="625.5" y="327" class="axis-label" text-anchor="middle">Distract</text><text x="748.5" y="327" class="axis-label" text-anchor="middle">Overload</text>
+    <g>
+            <rect x="97.5" y="96.5142857142857" width="18" height="205.4857142857143" fill="#b89214" rx="4"/>
+            <text x="106.5" y="89.5142857142857" class="bar-value" text-anchor="middle">4.14</text>
+            <title>Intermittent Helped: 4.14</title>
+          </g><g>
+            <rect x="121.5" y="110.68571428571428" width="18" height="191.31428571428572" fill="#2764d8" rx="4"/>
+            <text x="130.5" y="103.68571428571428" class="bar-value" text-anchor="middle">3.86</text>
+            <title>Continuous Helped: 3.86</title>
+          </g><g>
+            <rect x="145.5" y="103.6" width="18" height="198.4" fill="#d83a5d" rx="4"/>
+            <text x="154.5" y="96.6" class="bar-value" text-anchor="middle">4.00</text>
+            <title>Proactive Helped: 4.00</title>
+          </g><g>
+            <rect x="220.5" y="96.5142857142857" width="18" height="205.4857142857143" fill="#b89214" rx="4"/>
+            <text x="229.5" y="89.5142857142857" class="bar-value" text-anchor="middle">4.14</text>
+            <title>Intermittent Relevant: 4.14</title>
+          </g><g>
+            <rect x="244.5" y="96.5142857142857" width="18" height="205.4857142857143" fill="#2764d8" rx="4"/>
+            <text x="253.5" y="89.5142857142857" class="bar-value" text-anchor="middle">4.14</text>
+            <title>Continuous Relevant: 4.14</title>
+          </g><g>
+            <rect x="268.5" y="110.68571428571428" width="18" height="191.31428571428572" fill="#d83a5d" rx="4"/>
+            <text x="277.5" y="103.68571428571428" class="bar-value" text-anchor="middle">3.86</text>
+            <title>Proactive Relevant: 3.86</title>
+          </g><g>
+            <rect x="343.5" y="68.17142857142858" width="18" height="233.82857142857142" fill="#b89214" rx="4"/>
+            <text x="352.5" y="61.17142857142858" class="bar-value" text-anchor="middle">4.71</text>
+            <title>Intermittent Timing: 4.71</title>
+          </g><g>
+            <rect x="367.5" y="110.68571428571428" width="18" height="191.31428571428572" fill="#2764d8" rx="4"/>
+            <text x="376.5" y="103.68571428571428" class="bar-value" text-anchor="middle">3.86</text>
+            <title>Continuous Timing: 3.86</title>
+          </g><g>
+            <rect x="391.5" y="124.85714285714286" width="18" height="177.14285714285714" fill="#d83a5d" rx="4"/>
+            <text x="400.5" y="117.85714285714286" class="bar-value" text-anchor="middle">3.57</text>
+            <title>Proactive Timing: 3.57</title>
+          </g><g>
+            <rect x="466.5" y="75.25714285714287" width="18" height="226.74285714285713" fill="#b89214" rx="4"/>
+            <text x="475.5" y="68.25714285714287" class="bar-value" text-anchor="middle">4.57</text>
+            <title>Intermittent Control: 4.57</title>
+          </g><g>
+            <rect x="490.5" y="110.68571428571428" width="18" height="191.31428571428572" fill="#2764d8" rx="4"/>
+            <text x="499.5" y="103.68571428571428" class="bar-value" text-anchor="middle">3.86</text>
+            <title>Continuous Control: 3.86</title>
+          </g><g>
+            <rect x="514.5" y="146.11428571428573" width="18" height="155.88571428571427" fill="#d83a5d" rx="4"/>
+            <text x="523.5" y="139.11428571428573" class="bar-value" text-anchor="middle">3.14</text>
+            <title>Proactive Control: 3.14</title>
+          </g><g>
+            <rect x="589.5" y="238.22857142857143" width="18" height="63.77142857142858" fill="#b89214" rx="4"/>
+            <text x="598.5" y="231.22857142857143" class="bar-value" text-anchor="middle">1.29</text>
+            <title>Intermittent Distract: 1.29</title>
+          </g><g>
+            <rect x="613.5" y="153.20000000000002" width="18" height="148.79999999999998" fill="#2764d8" rx="4"/>
+            <text x="622.5" y="146.20000000000002" class="bar-value" text-anchor="middle">3.00</text>
+            <title>Continuous Distract: 3.00</title>
+          </g><g>
+            <rect x="637.5" y="160.2857142857143" width="18" height="141.7142857142857" fill="#d83a5d" rx="4"/>
+            <text x="646.5" y="153.2857142857143" class="bar-value" text-anchor="middle">2.86</text>
+            <title>Proactive Distract: 2.86</title>
+          </g><g>
+            <rect x="712.5" y="202.8" width="18" height="99.2" fill="#b89214" rx="4"/>
+            <text x="721.5" y="195.8" class="bar-value" text-anchor="middle">2.00</text>
+            <title>Intermittent Overload: 2.00</title>
+          </g><g>
+            <rect x="736.5" y="160.2857142857143" width="18" height="141.7142857142857" fill="#2764d8" rx="4"/>
+            <text x="745.5" y="153.2857142857143" class="bar-value" text-anchor="middle">2.86</text>
+            <title>Continuous Overload: 2.86</title>
+          </g><g>
+            <rect x="760.5" y="160.2857142857143" width="18" height="141.7142857142857" fill="#d83a5d" rx="4"/>
+            <text x="769.5" y="153.2857142857143" class="bar-value" text-anchor="middle">2.86</text>
+            <title>Proactive Overload: 2.86</title>
+          </g>
+    <circle cx="72" cy="338" r="6" fill="#b89214"/><text x="84" y="342" class="legend-text">Intermittent</text><circle cx="232" cy="338" r="6" fill="#2764d8"/><text x="244" y="342" class="legend-text">Continuous</text><circle cx="392" cy="338" r="6" fill="#d83a5d"/><text x="404" y="342" class="legend-text">Proactive</text>
+  </svg>
+        <ul class="chart-pointers">
+  <li>Intermittent is strongest on control and lowest on distraction, matching the engagement paradox.</li><li>Continuous has slightly higher distraction than Proactive, so the final narrative should not imply Proactive is uniquely distracting.</li><li>The qualitative explanation differs: Continuous appears visually dense, while Proactive keyword timing and persistence caused friction.</li>
+</ul>
+    </div>
+    <div class="grid three" style="margin-top:18px;"><article class="feature-card" style="--accent:#b89214; --soft:#fff5cf">
+        <div class="tag">Intermittent</div>
+        <h3>Controlled but dependent on initiative</h3>
+        <p>Intermittent kept AI quiet until learners asked. This protected control and reduced distraction, but support could remain unused.</p>
+        <div class="feature-stat"><span>Chat messages/session</span><strong>2.4</strong></div><div class="feature-stat"><span>Positive AI uptake/session</span><strong>8.9</strong></div><div class="feature-stat"><span>Quiz/question uptake</span><strong>5.0</strong></div><div class="feature-stat"><span>AI control</span><strong>4.57 / 5</strong></div>
+      </article><article class="feature-card" style="--accent:#2764d8; --soft:#eaf1ff">
+        <div class="tag">Continuous</div>
+        <h3>Ambient support for explanation and revision</h3>
+        <p>Continuous made support persistently available. The glossary and feed questions helped, but screen density became a design issue.</p>
+        <div class="feature-stat"><span>Feed answer rate</span><strong>73%</strong></div><div class="feature-stat"><span>Positive AI uptake/session</span><strong>20.6</strong></div><div class="feature-stat"><span>Concept/chat uptake</span><strong>6.0</strong></div><div class="feature-stat"><span>Post-test mean</span><strong>13.71 / 20</strong></div>
+      </article><article class="feature-card" style="--accent:#d83a5d; --soft:#ffe7ed">
+        <div class="tag">Proactive</div>
+        <h3>Quizzes worked; keyword popups did not</h3>
+        <p>Proactive was strongest when initiative became a checkpoint quiz with frequency control. Keyword popups lacked enough control and were disliked.</p>
+        <div class="feature-stat"><span>Positive AI uptake/session</span><strong>14.4</strong></div><div class="feature-stat"><span>Quiz/question uptake</span><strong>9.4</strong></div><div class="feature-stat"><span>Keyword positive action rate</span><strong>14% (21/154)</strong></div><div class="feature-stat"><span>Ignored/dismissed keywords/session</span><strong>19.0</strong></div>
+      </article></div>
+  </section>
+
+  <section id="participants" class="band">
+    <div class="section-head">
+      <div>
+        <h2>Participant-level matrix</h2>
+        <p>This table keeps outliers visible. The condition averages should be read alongside participants such as C07 and P02 with large gains, and I04/C06/P04 with negative gains.</p>
+      </div>
+      <p class="note">Heat colours are descriptive. AI uptake counts only explicit positive actions; AI shown approximates AI exposure/opportunity; Activity is the broader feature activity/export metric. A high activity count is not automatically good; it can mean useful uptake, system pressure, or struggling behaviour. P04 is a counterexample: high activity with negative gain. P03 also shows why UES and custom AI items must be read separately.</p>
+    </div>
+    <div class="panel table-wrap"><table class="matrix">
+    <thead><tr><th>ID</th><th>Condition</th><th>Pre</th><th>Pre-know</th><th>Post</th><th>Gain</th><th>Norm</th><th>UES</th><th>Control</th><th>Distract</th><th>AI uptake</th><th>AI shown</th><th>Activity</th></tr></thead>
+    <tbody><tr>
+          <th>C01</th>
+          <td><span class="pill" style="--c:#2764d8; --bg:#eaf1ff">Continuous</span></td>
+          <td class="num" style="background:hsl(64.80000000000001 68% 91%);" title="C01 Pre: 8">8</td><td class="num" style="background:hsl(22.200000000000003 68% 91%);" title="C01 Pre-know: 1">1</td><td class="num" style="background:hsl(93.2 68% 91%);" title="C01 Post: 12">12</td><td class="num" style="background:hsl(55.33333333333333 68% 91%);" title="C01 Gain: +4">+4</td><td class="num" style="background:hsl(55.33333333333333 68% 91%);" title="C01 Norm: 0.33">0.33</td><td class="num" style="background:hsl(88.46666666666667 68% 91%);" title="C01 UES: 2.8">2.8</td><td class="num" style="background:hsl(150 68% 91%);" title="C01 Control: 5.0">5.0</td><td class="num" style="background:hsl(64.80000000000001 68% 91%);" title="C01 Distract: 3.0">3.0</td><td class="num" style="background:hsl(83.53191489361701 68% 91%);" title="C01 AI uptake: 25">25</td><td class="num" style="background:hsl(41.80952380952381 68% 91%);" title="C01 AI shown: 10">10</td><td class="num" style="background:hsl(28.285714285714285 68% 91%);" title="C01 Activity: 10">10</td>
+        </tr><tr>
+          <th>C02</th>
+          <td><span class="pill" style="--c:#2764d8; --bg:#eaf1ff">Continuous</span></td>
+          <td class="num" style="background:hsl(93.2 68% 91%);" title="C02 Pre: 12">12</td><td class="num" style="background:hsl(36.400000000000006 68% 91%);" title="C02 Pre-know: 2">2</td><td class="num" style="background:hsl(121.60000000000001 68% 91%);" title="C02 Post: 16">16</td><td class="num" style="background:hsl(55.33333333333333 68% 91%);" title="C02 Gain: +4">+4</td><td class="num" style="background:hsl(79 68% 91%);" title="C02 Norm: 0.50">0.50</td><td class="num" style="background:hsl(93.2 68% 91%);" title="C02 UES: 3.0">3.0</td><td class="num" style="background:hsl(121.60000000000001 68% 91%);" title="C02 Control: 4.0">4.0</td><td class="num" style="background:hsl(36.39999999999999 68% 91%);" title="C02 Distract: 4.0">4.0</td><td class="num" style="background:hsl(59.361702127659576 68% 91%);" title="C02 AI uptake: 17">17</td><td class="num" style="background:hsl(38.42857142857143 68% 91%);" title="C02 AI shown: 9">9</td><td class="num" style="background:hsl(26.257142857142856 68% 91%);" title="C02 Activity: 9">9</td>
+        </tr><tr>
+          <th>C03</th>
+          <td><span class="pill" style="--c:#2764d8; --bg:#eaf1ff">Continuous</span></td>
+          <td class="num" style="background:hsl(79 68% 91%);" title="C03 Pre: 10">10</td><td class="num" style="background:hsl(79 68% 91%);" title="C03 Pre-know: 5">5</td><td class="num" style="background:hsl(107.39999999999999 68% 91%);" title="C03 Post: 14">14</td><td class="num" style="background:hsl(55.33333333333333 68% 91%);" title="C03 Gain: +4">+4</td><td class="num" style="background:hsl(64.80000000000001 68% 91%);" title="C03 Norm: 0.40">0.40</td><td class="num" style="background:hsl(109.76666666666667 68% 91%);" title="C03 UES: 3.6">3.6</td><td class="num" style="background:hsl(64.80000000000001 68% 91%);" title="C03 Control: 2.0">2.0</td><td class="num" style="background:hsl(36.39999999999999 68% 91%);" title="C03 Distract: 4.0">4.0</td><td class="num" style="background:hsl(29.148936170212764 68% 91%);" title="C03 AI uptake: 7">7</td><td class="num" style="background:hsl(35.04761904761905 68% 91%);" title="C03 AI shown: 8">8</td><td class="num" style="background:hsl(24.228571428571428 68% 91%);" title="C03 Activity: 8">8</td>
+        </tr><tr>
+          <th>C04</th>
+          <td><span class="pill" style="--c:#2764d8; --bg:#eaf1ff">Continuous</span></td>
+          <td class="num" style="background:hsl(121.60000000000001 68% 91%);" title="C04 Pre: 16">16</td><td class="num" style="background:hsl(64.80000000000001 68% 91%);" title="C04 Pre-know: 4">4</td><td class="num" style="background:hsl(150 68% 91%);" title="C04 Post: 20">20</td><td class="num" style="background:hsl(55.33333333333333 68% 91%);" title="C04 Gain: +4">+4</td><td class="num" style="background:hsl(150 68% 91%);" title="C04 Norm: 1.00">1.00</td><td class="num" style="background:hsl(138.16666666666666 68% 91%);" title="C04 UES: 4.6">4.6</td><td class="num" style="background:hsl(150 68% 91%);" title="C04 Control: 5.0">5.0</td><td class="num" style="background:hsl(121.60000000000001 68% 91%);" title="C04 Distract: 1.0">1.0</td><td class="num" style="background:hsl(150 68% 91%);" title="C04 AI uptake: 47">47</td><td class="num" style="background:hsl(51.952380952380956 68% 91%);" title="C04 AI shown: 13">13</td><td class="num" style="background:hsl(34.371428571428574 68% 91%);" title="C04 Activity: 13">13</td>
+        </tr><tr>
+          <th>C05</th>
+          <td><span class="pill" style="--c:#2764d8; --bg:#eaf1ff">Continuous</span></td>
+          <td class="num" style="background:hsl(36.400000000000006 68% 91%);" title="C05 Pre: 4">4</td><td class="num" style="background:hsl(22.200000000000003 68% 91%);" title="C05 Pre-know: 1">1</td><td class="num" style="background:hsl(64.80000000000001 68% 91%);" title="C05 Post: 8">8</td><td class="num" style="background:hsl(55.33333333333333 68% 91%);" title="C05 Gain: +4">+4</td><td class="num" style="background:hsl(43.5 68% 91%);" title="C05 Norm: 0.25">0.25</td><td class="num" style="background:hsl(102.66666666666667 68% 91%);" title="C05 UES: 3.3">3.3</td><td class="num" style="background:hsl(93.2 68% 91%);" title="C05 Control: 3.0">3.0</td><td class="num" style="background:hsl(36.39999999999999 68% 91%);" title="C05 Distract: 4.0">4.0</td><td class="num" style="background:hsl(83.53191489361701 68% 91%);" title="C05 AI uptake: 25">25</td><td class="num" style="background:hsl(45.19047619047619 68% 91%);" title="C05 AI shown: 11">11</td><td class="num" style="background:hsl(30.314285714285713 68% 91%);" title="C05 Activity: 11">11</td>
+        </tr><tr>
+          <th>C06</th>
+          <td><span class="pill" style="--c:#2764d8; --bg:#eaf1ff">Continuous</span></td>
+          <td class="num" style="background:hsl(64.80000000000001 68% 91%);" title="C06 Pre: 8">8</td><td class="num" style="background:hsl(36.400000000000006 68% 91%);" title="C06 Pre-know: 2">2</td><td class="num" style="background:hsl(50.6 68% 91%);" title="C06 Post: 6">6</td><td class="num" style="background:hsl(8 68% 91%);" title="C06 Gain: -2">-2</td><td class="num" style="background:hsl(8 68% 91%);" title="C06 Norm: -0.17">-0.17</td><td class="num" style="background:hsl(121.60000000000001 68% 91%);" title="C06 UES: 4.0">4.0</td><td class="num" style="background:hsl(121.60000000000001 68% 91%);" title="C06 Control: 4.0">4.0</td><td class="num" style="background:hsl(93.2 68% 91%);" title="C06 Distract: 2.0">2.0</td><td class="num" style="background:hsl(14.042553191489361 68% 91%);" title="C06 AI uptake: 2">2</td><td class="num" style="background:hsl(41.80952380952381 68% 91%);" title="C06 AI shown: 10">10</td><td class="num" style="background:hsl(30.314285714285713 68% 91%);" title="C06 Activity: 11">11</td>
+        </tr><tr>
+          <th>C07</th>
+          <td><span class="pill" style="--c:#2764d8; --bg:#eaf1ff">Continuous</span></td>
+          <td class="num" style="background:hsl(64.80000000000001 68% 91%);" title="C07 Pre: 8">8</td><td class="num" style="background:hsl(79 68% 91%);" title="C07 Pre-know: 5">5</td><td class="num" style="background:hsl(150 68% 91%);" title="C07 Post: 20">20</td><td class="num" style="background:hsl(150 68% 91%);" title="C07 Gain: +12">+12</td><td class="num" style="background:hsl(150 68% 91%);" title="C07 Norm: 1.00">1.00</td><td class="num" style="background:hsl(114.5 68% 91%);" title="C07 UES: 3.8">3.8</td><td class="num" style="background:hsl(121.60000000000001 68% 91%);" title="C07 Control: 4.0">4.0</td><td class="num" style="background:hsl(64.80000000000001 68% 91%);" title="C07 Distract: 3.0">3.0</td><td class="num" style="background:hsl(71.44680851063829 68% 91%);" title="C07 AI uptake: 21">21</td><td class="num" style="background:hsl(45.19047619047619 68% 91%);" title="C07 AI shown: 11">11</td><td class="num" style="background:hsl(30.314285714285713 68% 91%);" title="C07 Activity: 11">11</td>
+        </tr><tr>
+          <th>I01</th>
+          <td><span class="pill" style="--c:#b89214; --bg:#fff5cf">Intermittent</span></td>
+          <td class="num" style="background:hsl(22.200000000000003 68% 91%);" title="I01 Pre: 2">2</td><td class="num" style="background:hsl(8 68% 91%);" title="I01 Pre-know: 0">0</td><td class="num" style="background:hsl(64.80000000000001 68% 91%);" title="I01 Post: 8">8</td><td class="num" style="background:hsl(79 68% 91%);" title="I01 Gain: +6">+6</td><td class="num" style="background:hsl(55.33333333333333 68% 91%);" title="I01 Norm: 0.33">0.33</td><td class="num" style="background:hsl(128.7 68% 91%);" title="I01 UES: 4.3">4.3</td><td class="num" style="background:hsl(150 68% 91%);" title="I01 Control: 5.0">5.0</td><td class="num" style="background:hsl(121.60000000000001 68% 91%);" title="I01 Distract: 1.0">1.0</td><td class="num" style="background:hsl(35.191489361702125 68% 91%);" title="I01 AI uptake: 9">9</td><td class="num" style="background:hsl(14.761904761904763 68% 91%);" title="I01 AI shown: 2">2</td><td class="num" style="background:hsl(14.085714285714285 68% 91%);" title="I01 Activity: 3">3</td>
+        </tr><tr>
+          <th>I02</th>
+          <td><span class="pill" style="--c:#b89214; --bg:#fff5cf">Intermittent</span></td>
+          <td class="num" style="background:hsl(64.80000000000001 68% 91%);" title="I02 Pre: 8">8</td><td class="num" style="background:hsl(64.80000000000001 68% 91%);" title="I02 Pre-know: 4">4</td><td class="num" style="background:hsl(121.60000000000001 68% 91%);" title="I02 Post: 16">16</td><td class="num" style="background:hsl(102.66666666666666 68% 91%);" title="I02 Gain: +8">+8</td><td class="num" style="background:hsl(102.66666666666666 68% 91%);" title="I02 Norm: 0.67">0.67</td><td class="num" style="background:hsl(131.06666666666666 68% 91%);" title="I02 UES: 4.3">4.3</td><td class="num" style="background:hsl(121.60000000000001 68% 91%);" title="I02 Control: 4.0">4.0</td><td class="num" style="background:hsl(121.60000000000001 68% 91%);" title="I02 Distract: 1.0">1.0</td><td class="num" style="background:hsl(14.042553191489361 68% 91%);" title="I02 AI uptake: 2">2</td><td class="num" style="background:hsl(8 68% 91%);" title="I02 AI shown: 0">0</td><td class="num" style="background:hsl(10.028571428571428 68% 91%);" title="I02 Activity: 1">1</td>
+        </tr><tr>
+          <th>I03</th>
+          <td><span class="pill" style="--c:#b89214; --bg:#fff5cf">Intermittent</span></td>
+          <td class="num" style="background:hsl(64.80000000000001 68% 91%);" title="I03 Pre: 8">8</td><td class="num" style="background:hsl(64.80000000000001 68% 91%);" title="I03 Pre-know: 4">4</td><td class="num" style="background:hsl(93.2 68% 91%);" title="I03 Post: 12">12</td><td class="num" style="background:hsl(55.33333333333333 68% 91%);" title="I03 Gain: +4">+4</td><td class="num" style="background:hsl(55.33333333333333 68% 91%);" title="I03 Norm: 0.33">0.33</td><td class="num" style="background:hsl(114.5 68% 91%);" title="I03 UES: 3.8">3.8</td><td class="num" style="background:hsl(150 68% 91%);" title="I03 Control: 5.0">5.0</td><td class="num" style="background:hsl(93.2 68% 91%);" title="I03 Distract: 2.0">2.0</td><td class="num" style="background:hsl(56.340425531914896 68% 91%);" title="I03 AI uptake: 16">16</td><td class="num" style="background:hsl(18.142857142857142 68% 91%);" title="I03 AI shown: 3">3</td><td class="num" style="background:hsl(14.085714285714285 68% 91%);" title="I03 Activity: 3">3</td>
+        </tr><tr>
+          <th>I04</th>
+          <td><span class="pill" style="--c:#b89214; --bg:#fff5cf">Intermittent</span></td>
+          <td class="num" style="background:hsl(121.60000000000001 68% 91%);" title="I04 Pre: 16">16</td><td class="num" style="background:hsl(79 68% 91%);" title="I04 Pre-know: 5">5</td><td class="num" style="background:hsl(93.2 68% 91%);" title="I04 Post: 12">12</td><td class="num" style="background:hsl(8 68% 91%);" title="I04 Gain: -4">-4</td><td class="num" style="background:hsl(8 68% 91%);" title="I04 Norm: -1.00">-1.00</td><td class="num" style="background:hsl(105.03333333333333 68% 91%);" title="I04 UES: 3.4">3.4</td><td class="num" style="background:hsl(150 68% 91%);" title="I04 Control: 5.0">5.0</td><td class="num" style="background:hsl(93.2 68% 91%);" title="I04 Distract: 2.0">2.0</td><td class="num" style="background:hsl(32.170212765957444 68% 91%);" title="I04 AI uptake: 8">8</td><td class="num" style="background:hsl(11.380952380952381 68% 91%);" title="I04 AI shown: 1">1</td><td class="num" style="background:hsl(8 68% 91%);" title="I04 Activity: 0">0</td>
+        </tr><tr>
+          <th>I05</th>
+          <td><span class="pill" style="--c:#b89214; --bg:#fff5cf">Intermittent</span></td>
+          <td class="num" style="background:hsl(93.2 68% 91%);" title="I05 Pre: 12">12</td><td class="num" style="background:hsl(64.80000000000001 68% 91%);" title="I05 Pre-know: 4">4</td><td class="num" style="background:hsl(93.2 68% 91%);" title="I05 Post: 12">12</td><td class="num" style="background:hsl(8 68% 91%);" title="I05 Gain: 0">0</td><td class="num" style="background:hsl(8 68% 91%);" title="I05 Norm: 0.00">0.00</td><td class="num" style="background:hsl(126.33333333333334 68% 91%);" title="I05 UES: 4.2">4.2</td><td class="num" style="background:hsl(150 68% 91%);" title="I05 Control: 5.0">5.0</td><td class="num" style="background:hsl(121.60000000000001 68% 91%);" title="I05 Distract: 1.0">1.0</td><td class="num" style="background:hsl(32.170212765957444 68% 91%);" title="I05 AI uptake: 8">8</td><td class="num" style="background:hsl(14.761904761904763 68% 91%);" title="I05 AI shown: 2">2</td><td class="num" style="background:hsl(8 68% 91%);" title="I05 Activity: 0">0</td>
+        </tr><tr>
+          <th>I06</th>
+          <td><span class="pill" style="--c:#b89214; --bg:#fff5cf">Intermittent</span></td>
+          <td class="num" style="background:hsl(8 68% 91%);" title="I06 Pre: 0">0</td><td class="num" style="background:hsl(8 68% 91%);" title="I06 Pre-know: 0">0</td><td class="num" style="background:hsl(79 68% 91%);" title="I06 Post: 10">10</td><td class="num" style="background:hsl(126.33333333333334 68% 91%);" title="I06 Gain: +10">+10</td><td class="num" style="background:hsl(79 68% 91%);" title="I06 Norm: 0.50">0.50</td><td class="num" style="background:hsl(131.06666666666666 68% 91%);" title="I06 UES: 4.3">4.3</td><td class="num" style="background:hsl(93.2 68% 91%);" title="I06 Control: 3.0">3.0</td><td class="num" style="background:hsl(121.60000000000001 68% 91%);" title="I06 Distract: 1.0">1.0</td><td class="num" style="background:hsl(29.148936170212764 68% 91%);" title="I06 AI uptake: 7">7</td><td class="num" style="background:hsl(24.904761904761905 68% 91%);" title="I06 AI shown: 5">5</td><td class="num" style="background:hsl(10.028571428571428 68% 91%);" title="I06 Activity: 1">1</td>
+        </tr><tr>
+          <th>I07</th>
+          <td><span class="pill" style="--c:#b89214; --bg:#fff5cf">Intermittent</span></td>
+          <td class="num" style="background:hsl(93.2 68% 91%);" title="I07 Pre: 12">12</td><td class="num" style="background:hsl(93.2 68% 91%);" title="I07 Pre-know: 6">6</td><td class="num" style="background:hsl(93.2 68% 91%);" title="I07 Post: 12">12</td><td class="num" style="background:hsl(8 68% 91%);" title="I07 Gain: 0">0</td><td class="num" style="background:hsl(8 68% 91%);" title="I07 Norm: 0.00">0.00</td><td class="num" style="background:hsl(123.96666666666667 68% 91%);" title="I07 UES: 4.1">4.1</td><td class="num" style="background:hsl(150 68% 91%);" title="I07 Control: 5.0">5.0</td><td class="num" style="background:hsl(121.60000000000001 68% 91%);" title="I07 Distract: 1.0">1.0</td><td class="num" style="background:hsl(44.25531914893617 68% 91%);" title="I07 AI uptake: 12">12</td><td class="num" style="background:hsl(14.761904761904763 68% 91%);" title="I07 AI shown: 2">2</td><td class="num" style="background:hsl(14.085714285714285 68% 91%);" title="I07 Activity: 3">3</td>
+        </tr><tr>
+          <th>P01</th>
+          <td><span class="pill" style="--c:#d83a5d; --bg:#ffe7ed">Proactive</span></td>
+          <td class="num" style="background:hsl(64.80000000000001 68% 91%);" title="P01 Pre: 8">8</td><td class="num" style="background:hsl(36.400000000000006 68% 91%);" title="P01 Pre-know: 2">2</td><td class="num" style="background:hsl(121.60000000000001 68% 91%);" title="P01 Post: 16">16</td><td class="num" style="background:hsl(102.66666666666666 68% 91%);" title="P01 Gain: +8">+8</td><td class="num" style="background:hsl(102.66666666666666 68% 91%);" title="P01 Norm: 0.67">0.67</td><td class="num" style="background:hsl(109.76666666666667 68% 91%);" title="P01 UES: 3.6">3.6</td><td class="num" style="background:hsl(121.60000000000001 68% 91%);" title="P01 Control: 4.0">4.0</td><td class="num" style="background:hsl(64.80000000000001 68% 91%);" title="P01 Distract: 3.0">3.0</td><td class="num" style="background:hsl(47.276595744680854 68% 91%);" title="P01 AI uptake: 13">13</td><td class="num" style="background:hsl(136.47619047619048 68% 91%);" title="P01 AI shown: 38">38</td><td class="num" style="background:hsl(131.74285714285713 68% 91%);" title="P01 Activity: 61">61</td>
+        </tr><tr>
+          <th>P02</th>
+          <td><span class="pill" style="--c:#d83a5d; --bg:#ffe7ed">Proactive</span></td>
+          <td class="num" style="background:hsl(64.80000000000001 68% 91%);" title="P02 Pre: 8">8</td><td class="num" style="background:hsl(22.200000000000003 68% 91%);" title="P02 Pre-know: 1">1</td><td class="num" style="background:hsl(150 68% 91%);" title="P02 Post: 20">20</td><td class="num" style="background:hsl(150 68% 91%);" title="P02 Gain: +12">+12</td><td class="num" style="background:hsl(150 68% 91%);" title="P02 Norm: 1.00">1.00</td><td class="num" style="background:hsl(107.39999999999999 68% 91%);" title="P02 UES: 3.5">3.5</td><td class="num" style="background:hsl(93.2 68% 91%);" title="P02 Control: 3.0">3.0</td><td class="num" style="background:hsl(36.39999999999999 68% 91%);" title="P02 Distract: 4.0">4.0</td><td class="num" style="background:hsl(20.085106382978722 68% 91%);" title="P02 AI uptake: 4">4</td><td class="num" style="background:hsl(116.19047619047619 68% 91%);" title="P02 AI shown: 32">32</td><td class="num" style="background:hsl(137.82857142857142 68% 91%);" title="P02 Activity: 64">64</td>
+        </tr><tr>
+          <th>P03</th>
+          <td><span class="pill" style="--c:#d83a5d; --bg:#ffe7ed">Proactive</span></td>
+          <td class="num" style="background:hsl(36.400000000000006 68% 91%);" title="P03 Pre: 4">4</td><td class="num" style="background:hsl(36.400000000000006 68% 91%);" title="P03 Pre-know: 2">2</td><td class="num" style="background:hsl(64.80000000000001 68% 91%);" title="P03 Post: 8">8</td><td class="num" style="background:hsl(55.33333333333333 68% 91%);" title="P03 Gain: +4">+4</td><td class="num" style="background:hsl(43.5 68% 91%);" title="P03 Norm: 0.25">0.25</td><td class="num" style="background:hsl(123.96666666666667 68% 91%);" title="P03 UES: 4.1">4.1</td><td class="num" style="background:hsl(36.400000000000006 68% 91%);" title="P03 Control: 1.0">1.0</td><td class="num" style="background:hsl(36.39999999999999 68% 91%);" title="P03 Distract: 4.0">4.0</td><td class="num" style="background:hsl(68.42553191489361 68% 91%);" title="P03 AI uptake: 20">20</td><td class="num" style="background:hsl(119.57142857142857 68% 91%);" title="P03 AI shown: 33">33</td><td class="num" style="background:hsl(109.42857142857143 68% 91%);" title="P03 Activity: 50">50</td>
+        </tr><tr>
+          <th>P04</th>
+          <td><span class="pill" style="--c:#d83a5d; --bg:#ffe7ed">Proactive</span></td>
+          <td class="num" style="background:hsl(93.2 68% 91%);" title="P04 Pre: 12">12</td><td class="num" style="background:hsl(8 68% 91%);" title="P04 Pre-know: 0">0</td><td class="num" style="background:hsl(79 68% 91%);" title="P04 Post: 10">10</td><td class="num" style="background:hsl(8 68% 91%);" title="P04 Gain: -2">-2</td><td class="num" style="background:hsl(8 68% 91%);" title="P04 Norm: -0.25">-0.25</td><td class="num" style="background:hsl(123.96666666666667 68% 91%);" title="P04 UES: 4.1">4.1</td><td class="num" style="background:hsl(121.60000000000001 68% 91%);" title="P04 Control: 4.0">4.0</td><td class="num" style="background:hsl(64.80000000000001 68% 91%);" title="P04 Distract: 3.0">3.0</td><td class="num" style="background:hsl(50.29787234042553 68% 91%);" title="P04 AI uptake: 14">14</td><td class="num" style="background:hsl(129.71428571428572 68% 91%);" title="P04 AI shown: 36">36</td><td class="num" style="background:hsl(131.74285714285713 68% 91%);" title="P04 Activity: 61">61</td>
+        </tr><tr>
+          <th>P05</th>
+          <td><span class="pill" style="--c:#d83a5d; --bg:#ffe7ed">Proactive</span></td>
+          <td class="num" style="background:hsl(36.400000000000006 68% 91%);" title="P05 Pre: 4">4</td><td class="num" style="background:hsl(8 68% 91%);" title="P05 Pre-know: 0">0</td><td class="num" style="background:hsl(64.80000000000001 68% 91%);" title="P05 Post: 8">8</td><td class="num" style="background:hsl(55.33333333333333 68% 91%);" title="P05 Gain: +4">+4</td><td class="num" style="background:hsl(43.5 68% 91%);" title="P05 Norm: 0.25">0.25</td><td class="num" style="background:hsl(112.13333333333333 68% 91%);" title="P05 UES: 3.7">3.7</td><td class="num" style="background:hsl(121.60000000000001 68% 91%);" title="P05 Control: 4.0">4.0</td><td class="num" style="background:hsl(121.60000000000001 68% 91%);" title="P05 Distract: 1.0">1.0</td><td class="num" style="background:hsl(68.42553191489361 68% 91%);" title="P05 AI uptake: 20">20</td><td class="num" style="background:hsl(150 68% 91%);" title="P05 AI shown: 42">42</td><td class="num" style="background:hsl(145.94285714285715 68% 91%);" title="P05 Activity: 68">68</td>
+        </tr><tr>
+          <th>P06</th>
+          <td><span class="pill" style="--c:#d83a5d; --bg:#ffe7ed">Proactive</span></td>
+          <td class="num" style="background:hsl(50.6 68% 91%);" title="P06 Pre: 6">6</td><td class="num" style="background:hsl(36.400000000000006 68% 91%);" title="P06 Pre-know: 2">2</td><td class="num" style="background:hsl(121.60000000000001 68% 91%);" title="P06 Post: 16">16</td><td class="num" style="background:hsl(126.33333333333334 68% 91%);" title="P06 Gain: +10">+10</td><td class="num" style="background:hsl(109.42857142857143 68% 91%);" title="P06 Norm: 0.71">0.71</td><td class="num" style="background:hsl(112.13333333333333 68% 91%);" title="P06 UES: 3.7">3.7</td><td class="num" style="background:hsl(121.60000000000001 68% 91%);" title="P06 Control: 4.0">4.0</td><td class="num" style="background:hsl(121.60000000000001 68% 91%);" title="P06 Distract: 1.0">1.0</td><td class="num" style="background:hsl(56.340425531914896 68% 91%);" title="P06 AI uptake: 16">16</td><td class="num" style="background:hsl(119.57142857142857 68% 91%);" title="P06 AI shown: 33">33</td><td class="num" style="background:hsl(117.54285714285714 68% 91%);" title="P06 Activity: 54">54</td>
+        </tr><tr>
+          <th>P07</th>
+          <td><span class="pill" style="--c:#d83a5d; --bg:#ffe7ed">Proactive</span></td>
+          <td class="num" style="background:hsl(50.6 68% 91%);" title="P07 Pre: 6">6</td><td class="num" style="background:hsl(50.6 68% 91%);" title="P07 Pre-know: 3">3</td><td class="num" style="background:hsl(79 68% 91%);" title="P07 Post: 10">10</td><td class="num" style="background:hsl(55.33333333333333 68% 91%);" title="P07 Gain: +4">+4</td><td class="num" style="background:hsl(48.57142857142857 68% 91%);" title="P07 Norm: 0.29">0.29</td><td class="num" style="background:hsl(90.83333333333333 68% 91%);" title="P07 UES: 2.9">2.9</td><td class="num" style="background:hsl(64.80000000000001 68% 91%);" title="P07 Control: 2.0">2.0</td><td class="num" style="background:hsl(36.39999999999999 68% 91%);" title="P07 Distract: 4.0">4.0</td><td class="num" style="background:hsl(50.29787234042553 68% 91%);" title="P07 AI uptake: 14">14</td><td class="num" style="background:hsl(102.66666666666666 68% 91%);" title="P07 AI shown: 28">28</td><td class="num" style="background:hsl(101.31428571428572 68% 91%);" title="P07 Activity: 46">46</td>
+        </tr></tbody>
+  </table></div>
+  </section>
+
+  <section id="interviews" class="band">
+    <div class="section-head">
+      <div>
+        <h2>Interview triangulation</h2>
+        <p>The interviews explain the quantitative patterns. They are not treated as a separate research question.</p>
+      </div>
+      <p class="note">These themes combine the interview notes PDF with supplementary author notes, not full transcript coding: proactive quizzes were liked, keyword popups were not, glossary helped both clarification and revision, and context loss felt like detachment from the video flow.</p>
+    </div>
+    <div class="panel table-wrap"><table>
+  <thead><tr><th>Condition</th><th>Theme</th><th>Interview-note pattern</th><th>How it explains the data</th></tr></thead>
+  <tbody><tr>
+        <th>Intermittent</th>
+        <td>Learner-controlled help</td>
+        <td>Interview notes indicate that chat support was useful and Snap-to-ask was handy because learners did not need to type visual/text details.</td>
+        <td>This explains high control and low distraction, but also why support depends on learner initiative.</td>
+      </tr><tr>
+        <th>Intermittent</th>
+        <td>Delayed use</td>
+        <td>Interview notes indicate that some participants waited until the video ended and then took the in-video quiz all at once.</td>
+        <td>Intermittent support can become revision-like rather than moment-by-moment support.</td>
+      </tr><tr>
+        <th>Continuous</th>
+        <td>Ambient engagement</td>
+        <td>Interview notes indicate that live feed questions kept participants engaged; when they could not answer, they rewatched or asked AI.</td>
+        <td>The feed question layer supports constructive engagement without forcing interruption.</td>
+      </tr><tr>
+        <th>Continuous</th>
+        <td>Glossary as clarification and revision</td>
+        <td>Interview notes indicate that the keyword glossary was useful, including for clarification and revision; one participant wanted to download it.</td>
+        <td>The glossary worked both as in-the-moment explanation and as a revision artifact.</td>
+      </tr><tr>
+        <th>Continuous</th>
+        <td>Visual density</td>
+        <td>Interview notes indicate that some participants felt a lot was going on; one wanted feature tabs to collapse.</td>
+        <td>Ambient support must be visually manageable to avoid becoming distracting.</td>
+      </tr><tr>
+        <th>Proactive</th>
+        <td>Structured proactivity succeeds</td>
+        <td>Interview notes and supplementary clarifications indicate that most participants liked the quiz popups and the overall quiz feature; frequency controls were appreciated.</td>
+        <td>System initiative was accepted when it created clear, controllable learning checkpoints.</td>
+      </tr><tr>
+        <th>Proactive</th>
+        <td>Keyword popups failed as uncontrolled initiative</td>
+        <td>Interview notes and supplementary clarifications indicate that keyword popups were distracting; nobody explicitly claimed they helped learning.</td>
+        <td>Proactive prompts need suppression, pacing, and stronger timing/context logic.</td>
+      </tr><tr>
+        <th>Across conditions</th>
+        <td>Pacing and context continuity</td>
+        <td>Interview notes indicate that some increased playback speed because the video felt slow or they wanted to finish faster; some felt AI support became detached from the video.</td>
+        <td>Speed and context-loss feedback should be treated as session-flow issues, not direct learning indicators.</td>
+      </tr></tbody>
+</table></div>
+  </section>
+
+  <section id="findings" class="band">
+    <div class="section-head">
+      <div>
+        <h2>Final findings story</h2>
+        <p>These are the claims the data can support without overstating the sample.</p>
+      </div>
+    </div>
+    <div class="stats-callout" style="margin-bottom:18px;">Avoid claiming that Proactive is statistically best for learning, that keyword popups improved learning, or that higher interaction count caused higher gain. The safer claim is a trade-off between initiative, engagement, and control.</div>
+    <div class="panel"><div class="finding-group">
+        <h3 class="finding-group-title">RQ1: Knowledge gain</h3>
+        <article class="finding">
+              <div class="finding-num">1</div>
+              <div><h3>Learning improved for the majority, not everyone.</h3><p>Across all participants, mean gain was +4.48; 16 improved, 2 had no gain, and 3 declined.</p></div>
+            </article><article class="finding">
+              <div class="finding-num">2</div>
+              <div><h3>Learning differences between paradigms are descriptive.</h3><p>Gain-by-condition was not statistically secure (p = 0.7021), and Proactive began with the lowest pre-knowledge mean (1.43/10), so the learning outcome should not be used to claim the superiority of any one condition.</p></div>
+            </article>
+      </div><div class="finding-group">
+        <h3 class="finding-group-title">RQ2: Engagement behaviour</h3>
+        <article class="finding">
+              <div class="finding-num">3</div>
+              <div><h3>The behaviour manipulation worked strongly.</h3><p>The exported feature-activity metric showed non-overlapping distributions across conditions in this dataset (Cliff's delta = 1.00, 1.00, 1.00), but AI-engagement comparisons use positive uptake only.</p></div>
+            </article><article class="finding">
+              <div class="finding-num">4</div>
+              <div><h3>Delivery style changed uptake quality.</h3><p>Continuous produced 43% more explicit positive uptake than Proactive (20.57 vs 14.43 per participant), despite Proactive producing much more raw activity/exposure.</p></div>
+            </article><article class="finding">
+              <div class="finding-num">5</div>
+              <div><h3>Intermittent creates an engagement paradox.</h3><p>It had the fewest explicit AI uptake actions but the highest overall UES (4.05/5), highest control (4.57/5), and lowest distraction (1.29/5).</p></div>
+            </article>
+      </div><div class="finding-group">
+        <h3 class="finding-group-title">RQ3: Initiative-control trade-off</h3>
+        <article class="finding">
+              <div class="finding-num">6</div>
+              <div><h3>Distraction has two different mechanisms.</h3><p>Continuous was slightly higher on the distraction scale than Proactive (3.00 vs 2.86), while interviews point to visual density for Continuous and keyword timing/control for Proactive.</p></div>
+            </article><article class="finding">
+              <div class="finding-num">7</div>
+              <div><h3>Proactivity needs structure and control.</h3><p>Participants liked proactive quizzes and frequency controls, but not keyword popups. Keyword logs undercount passive reading, but explicit uptake was low and nobody explicitly claimed the keyword popups helped learning.</p></div>
+            </article><article class="finding">
+              <div class="finding-num">8</div>
+              <div><h3>The best future direction is selective proactivity.</h3><p>Use system-initiated support for meaningful checkpoints, while giving learners control over frequency, visibility, and persistence of secondary prompts.</p></div>
+            </article>
+      </div></div>
+  </section>
+
+  <section class="band">
+    <div class="section-head">
+      <div>
+        <h2>Recommended written conclusion</h2>
+        <p>The text below can be adapted into the report's data-analysis or findings section.</p>
+      </div>
+    </div>
+    <div class="panel">
+      <p><strong>Conclusion:</strong> The study shows that AI-supported video learning is shaped not only by the availability of AI assistance, but also by the interaction paradigm through which assistance is delivered. Participants improved on average from pre-test to post-test, but this improvement was not universal, and condition-level learning differences should be interpreted descriptively rather than as statistically conclusive.</p>
+      <p style="margin-top:12px;">Intermittent support offered the greatest learner control, lowest distraction and highest subjective engagement, despite producing the fewest explicit AI uptake actions. Continuous support created a useful ambient layer for clarification and revision, but also showed the highest mean distraction score, likely due to visual density and the simultaneous presence of multiple support elements. Proactive support generated the most AI exposure and activity, especially through quizzes; however, proactive initiative was effective mainly when structured as a clear and controllable checkpoint, while frequent keyword popups had low explicit uptake and were often experienced as distracting or contextually detached.</p>
+      <p style="margin-top:12px;">These findings suggest that future AI-supported video learning systems should use selective proactivity: initiating support at meaningful learning checkpoints while preserving learner control over frequency, visibility and persistence of secondary prompts.</p>
+    </div>
+  </section>
+
+  <section class="band">
+    <div class="section-head">
+      <div>
+        <h2>Data-quality notes</h2>
+        <p>These caveats should remain in the report because they affect how strongly the results can be claimed.</p>
+      </div>
+    </div>
+    <div class="grid three">
+      <div class="panel"><h3>Small sample</h3><p>There are 7 participants per condition, so inferential tests are exploratory and effect sizes/descriptive patterns matter.</p></div>
+      <div class="panel"><h3>Export limitations</h3><p>Proactive active-video seconds and pauses appear unreliable, video-completion fields are blank, and Proactive quiz sheet rows are incomplete. Event/comparable counts are used instead; playback-second temporal analysis is treated as exploratory rather than a main finding.</p></div>
+      <div class="panel"><h3>Uptake ambiguity</h3><p>Ignored or dismissed prompts may still have been read. Interview notes help interpret this, but full transcript coding would be needed for stronger qualitative claims.</p></div>
+    </div>
+  </section>
+
+  <footer>
+    Generated on 2026-05-12 from <code>src/P3 Data</code>, <code>Feedback Interviews.pdf</code> notes, and the final RQ plan. Build script: <code>report/combined/build-p3-final-study-analysis.mjs</code>. This page is standalone and uses inline SVG, not external chart libraries.
+  </footer>
+</body>
+</html>

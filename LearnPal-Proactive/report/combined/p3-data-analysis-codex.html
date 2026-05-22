@@ -1,0 +1,1054 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>LearnPal P3 Study - Codex Evidence Dashboard</title>
+  <link rel="icon" href="../../src/assets/LearnPal-Favicon.svg" type="image/svg+xml">
+  <style>
+    :root {
+      --bg: #f7f7f2;
+      --ink: #191a1d;
+      --muted: #666b76;
+      --line: #dddcd2;
+      --panel: #ffffff;
+      --panel-soft: #fbfbf6;
+      --gold: #b89214;
+      --blue: #2563eb;
+      --rose: #dc345d;
+      --green: #149c68;
+      --purple: #5b21b6;
+      --shadow: 0 1px 2px rgba(20,20,20,0.05);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.55;
+    }
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      border-bottom: 1px solid var(--line);
+      background: rgba(247,247,242,0.94);
+      backdrop-filter: blur(10px);
+    }
+    .topbar-inner {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 12px 28px;
+      display: flex;
+      gap: 18px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .brand {
+      font-weight: 760;
+      letter-spacing: 0;
+    }
+    nav {
+      margin-left: auto;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      font-size: 0.88rem;
+    }
+    nav a {
+      color: var(--muted);
+      text-decoration: none;
+      padding: 6px 8px;
+      border-radius: 6px;
+    }
+    nav a:hover { background: #ecebe2; color: var(--ink); }
+    header, section, footer {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 42px 28px;
+    }
+    header {
+      padding-top: 58px;
+      padding-bottom: 28px;
+    }
+    .kicker {
+      color: var(--muted);
+      font-size: 0.88rem;
+      font-weight: 680;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    h1 {
+      max-width: 960px;
+      margin: 12px 0 14px;
+      font-size: clamp(2.2rem, 5vw, 5.2rem);
+      line-height: 0.98;
+      letter-spacing: 0;
+    }
+    h2 {
+      margin: 0 0 14px;
+      font-size: clamp(1.55rem, 2.4vw, 2.3rem);
+      line-height: 1.12;
+      letter-spacing: 0;
+    }
+    h3 {
+      margin: 0 0 7px;
+      font-size: 1rem;
+      line-height: 1.25;
+      letter-spacing: 0;
+    }
+    p {
+      margin: 0;
+      color: #30343b;
+    }
+    .lede {
+      max-width: 880px;
+      font-size: 1.12rem;
+      color: #343840;
+    }
+    .thesis {
+      margin-top: 26px;
+      max-width: 980px;
+      padding: 18px 0 0;
+      border-top: 2px solid var(--ink);
+      font-size: clamp(1.25rem, 2vw, 1.7rem);
+      line-height: 1.28;
+      font-weight: 680;
+    }
+    .band {
+      border-top: 1px solid var(--line);
+    }
+    .grid {
+      display: grid;
+      gap: 18px;
+    }
+    .grid.two { grid-template-columns: 1fr 1fr; }
+    .grid.three { grid-template-columns: repeat(3, 1fr); }
+    .grid.four { grid-template-columns: repeat(4, 1fr); }
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      padding: 20px;
+    }
+    .panel.flush { padding: 0; overflow: hidden; }
+    .section-head {
+      display: grid;
+      grid-template-columns: minmax(0, 0.85fr) minmax(280px, 0.55fr);
+      gap: 28px;
+      align-items: end;
+      margin-bottom: 24px;
+    }
+    .note {
+      font-size: 0.92rem;
+      color: var(--muted);
+    }
+    .metric-strip {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+      margin-top: 28px;
+    }
+    .metric {
+      border-top: 3px solid var(--line);
+      background: var(--panel);
+      border-radius: 8px;
+      padding: 18px;
+      box-shadow: var(--shadow);
+    }
+    .metric strong {
+      display: block;
+      font-size: 2rem;
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+      margin-bottom: 8px;
+    }
+    .metric span {
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+    .evidence-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 160px 210px;
+      gap: 18px;
+      align-items: center;
+      padding: 16px 0;
+      border-bottom: 1px solid var(--line);
+    }
+    .evidence-row:last-child { border-bottom: 0; }
+    .evidence-row p, .prototype-block p, .corr-card p { font-size: 0.92rem; color: var(--muted); }
+    .evidence-stat {
+      font-weight: 730;
+      font-variant-numeric: tabular-nums;
+      text-align: right;
+    }
+    .strength {
+      height: 10px;
+      background: #ecebe2;
+      border-radius: 999px;
+      overflow: hidden;
+    }
+    .strength span { display: block; height: 100%; border-radius: inherit; }
+    svg {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+    .grid-line { stroke: #e3e2d8; stroke-width: 1; }
+    .axis-label, .small-label, .legend-text, .bar-label, .bar-value {
+      font-size: 12px;
+      fill: var(--muted);
+      font-variant-numeric: tabular-nums;
+    }
+    .axis-title {
+      font-size: 13px;
+      fill: #3b3f46;
+      font-weight: 720;
+    }
+    .vertical {
+      transform: rotate(-90deg);
+      transform-origin: 20px center;
+    }
+    .slope-line { stroke-width: 2; opacity: 0.58; }
+    .dot { stroke: #fff; stroke-width: 1.5; }
+    .bar-track { fill: #eeede4; }
+    .bubble { opacity: 0.82; stroke: #fff; stroke-width: 2; }
+    .bubble-label {
+      font-size: 13px;
+      fill: #20242a;
+      font-weight: 720;
+    }
+    .prototype-block {
+      border-left: 5px solid var(--line);
+      background: var(--panel);
+      border-radius: 8px;
+      padding: 18px;
+      box-shadow: var(--shadow);
+    }
+    .prototype-block:nth-child(1) { border-left-color: var(--gold); }
+    .prototype-block:nth-child(2) { border-left-color: var(--blue); }
+    .prototype-block:nth-child(3) { border-left-color: var(--rose); }
+    .mini-bar { margin-top: 14px; }
+    .mini-label {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      font-size: 0.9rem;
+      margin-bottom: 5px;
+    }
+    .mini-label strong { font-variant-numeric: tabular-nums; }
+    .mini-track {
+      height: 8px;
+      background: #ecebe2;
+      border-radius: 999px;
+      overflow: hidden;
+    }
+    .mini-track span { display: block; height: 100%; border-radius: inherit; }
+    .corr-card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 18px;
+      box-shadow: var(--shadow);
+    }
+    .rho {
+      font-size: 2rem;
+      line-height: 1;
+      font-weight: 780;
+      font-variant-numeric: tabular-nums;
+      margin-bottom: 12px;
+    }
+    .rho.negative { color: var(--rose); }
+    .rho.positive { color: var(--blue); }
+    .table-wrap { overflow-x: auto; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 820px;
+      background: var(--panel);
+    }
+    th, td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      font-size: 0.9rem;
+    }
+    th {
+      color: var(--muted);
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    td.num { text-align: right; font-variant-numeric: tabular-nums; }
+    .condition-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 4px 8px;
+      border-radius: 999px;
+      color: #16181c;
+      background: var(--pill-bg);
+      white-space: nowrap;
+    }
+    .condition-pill::before {
+      content: '';
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--pill);
+    }
+    .insight-list {
+      display: grid;
+      gap: 12px;
+      counter-reset: insight;
+    }
+    .insight {
+      counter-increment: insight;
+      display: grid;
+      grid-template-columns: 48px 1fr;
+      gap: 14px;
+      align-items: start;
+      padding: 16px 0;
+      border-bottom: 1px solid var(--line);
+    }
+    .insight::before {
+      content: counter(insight);
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: var(--ink);
+      color: #fff;
+      display: grid;
+      place-items: center;
+      font-weight: 780;
+    }
+    footer {
+      color: var(--muted);
+      font-size: 0.9rem;
+      padding-bottom: 70px;
+    }
+    @media (max-width: 900px) {
+      .grid.two, .grid.three, .grid.four, .section-head, .metric-strip {
+        grid-template-columns: 1fr;
+      }
+      nav { margin-left: 0; }
+      .evidence-row {
+        grid-template-columns: 1fr;
+        gap: 8px;
+      }
+      .evidence-stat { text-align: left; }
+      header, section, footer { padding-left: 18px; padding-right: 18px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">LearnPal P3 Evidence Dashboard</div>
+      <nav aria-label="Page sections">
+        <a href="#evidence">Evidence</a>
+        <a href="#learning">Learning</a>
+        <a href="#experience">Experience</a>
+        <a href="#behavior">Behavior</a>
+        <a href="#participants">Participants</a>
+        <a href="#takeaways">Takeaways</a>
+      </nav>
+    </div>
+  </div>
+
+  <header>
+    <div class="kicker">21 participants · 3 prototype conditions · exploratory analysis</div>
+    <h1>AI initiative changed the experience more clearly than it changed test scores.</h1>
+    <p class="lede">This page reads the P3 data as an evidence map: learning outcomes, perceived control, distraction, and logged interaction behavior are shown together so the trade-off between learner agency and AI initiative is visible.</p>
+    <div class="thesis">The strongest defensible claim is not that one prototype wins. The data supports a design trade-off: Intermittent preserves control, Continuous balances support and performance, and Proactive drives activity while increasing subjective cost.</div>
+    <div class="metric-strip">
+      <div class="metric" style="border-top-color:var(--green)"><strong>21</strong><span>participants, balanced across I/C/P conditions</span></div>
+      <div class="metric" style="border-top-color:var(--green)"><strong>+4.48</strong><span>mean pre-post gain across all participants</span></div>
+      <div class="metric" style="border-top-color:var(--blue)"><strong>13.71</strong><span>highest mean post-test score, Continuous</span></div>
+      <div class="metric" style="border-top-color:var(--rose)"><strong>+5.71</strong><span>largest raw gain, Proactive, from lowest baseline</span></div>
+    </div>
+  </header>
+
+  <section id="evidence" class="band">
+    <div class="section-head">
+      <div>
+        <h2>What survives statistical checking?</h2>
+        <p>The sample is small, so the page emphasizes effect direction, behavioral separation, and triangulation. Learning gains are real overall; condition-level learning differences remain underpowered.</p>
+      </div>
+      <p class="note">Tests are exploratory: exact Wilcoxon for pre-post change and permutation Kruskal-Wallis for condition differences. P-values are evidence-strength markers, not final claims.</p>
+    </div>
+    <div class="panel"><article class="evidence-row">
+        <div>
+          <h3>Learning improved overall</h3>
+          <p>The full sample moved upward from pre-test to post-test.</p>
+        </div>
+        <div class="evidence-stat">Wilcoxon p = 0.0002</div>
+        <div class="strength" aria-hidden="true">
+          <span style="width:92%; background:#149c68;"></span>
+        </div>
+      </article><article class="evidence-row">
+        <div>
+          <h3>Learning differs by condition</h3>
+          <p>Condition-level learning differences are descriptive, not inferential.</p>
+        </div>
+        <div class="evidence-stat">KW p = 0.7021</div>
+        <div class="strength" aria-hidden="true">
+          <span style="width:18%; background:#9a7b12;"></span>
+        </div>
+      </article><article class="evidence-row">
+        <div>
+          <h3>Control differs by condition</h3>
+          <p>Learner agency changes measurably across prototypes.</p>
+        </div>
+        <div class="evidence-stat">KW p = 0.0425</div>
+        <div class="strength" aria-hidden="true">
+          <span style="width:72%; background:#2563eb;"></span>
+        </div>
+      </article><article class="evidence-row">
+        <div>
+          <h3>Distraction differs by condition</h3>
+          <p>The initiative trade-off is visible in burden ratings.</p>
+        </div>
+        <div class="evidence-stat">KW p = 0.0221</div>
+        <div class="strength" aria-hidden="true">
+          <span style="width:78%; background:#dc345d;"></span>
+        </div>
+      </article><article class="evidence-row">
+        <div>
+          <h3>Behavior differs by condition</h3>
+          <p>The prototypes clearly changed what participants did.</p>
+        </div>
+        <div class="evidence-stat">KW p < 0.0001</div>
+        <div class="strength" aria-hidden="true">
+          <span style="width:98%; background:#5b21b6;"></span>
+        </div>
+      </article></div>
+  </section>
+
+  <section id="learning" class="band">
+    <div class="section-head">
+      <div>
+        <h2>Learning: improvement is real, but the condition winner is not settled.</h2>
+        <p>Every condition improved descriptively. Proactive shows the largest raw gain, while Continuous has the highest final score and normalized gain.</p>
+      </div>
+      <p class="note">Baseline matters: Spearman rho between pre-test score and raw gain is -0.52. Lower starting scores had more room to improve.</p>
+    </div>
+    <div class="grid two">
+      <div class="panel">
+        <h3>Participant-level pre to post movement</h3>
+        <svg viewBox="0 0 780 430" role="img" aria-label="Participant pre-test to post-test slope chart">
+    <line x1="110" y1="358" x2="670" y2="358" class="grid-line"/><text x="96" y="362" class="axis-label" text-anchor="end">0</text><line x1="110" y1="278" x2="670" y2="278" class="grid-line"/><text x="96" y="282" class="axis-label" text-anchor="end">5</text><line x1="110" y1="198" x2="670" y2="198" class="grid-line"/><text x="96" y="202" class="axis-label" text-anchor="end">10</text><line x1="110" y1="118" x2="670" y2="118" class="grid-line"/><text x="96" y="122" class="axis-label" text-anchor="end">15</text><line x1="110" y1="38" x2="670" y2="38" class="grid-line"/><text x="96" y="42" class="axis-label" text-anchor="end">20</text>
+    <text x="130" y="22" class="axis-title" text-anchor="middle">Pre-test</text>
+    <text x="650" y="22" class="axis-title" text-anchor="middle">Post-test</text>
+    <g class="point-row">
+        <line x1="130" y1="230" x2="650" y2="166" stroke="#2563eb" class="slope-line"/>
+        <circle cx="130" cy="230" r="5.2" fill="#2563eb" class="dot"/>
+        <circle cx="650" cy="166" r="5.2" fill="#2563eb" class="dot"/>
+        <text x="118" y="234" class="small-label" text-anchor="end">C01 8</text>
+        <text x="662" y="170" class="small-label">12 C01</text>
+        <title>C01: 8 to 12, gain +4</title>
+      </g><g class="point-row">
+        <line x1="130" y1="166" x2="650" y2="102" stroke="#2563eb" class="slope-line"/>
+        <circle cx="130" cy="166" r="5.2" fill="#2563eb" class="dot"/>
+        <circle cx="650" cy="102" r="5.2" fill="#2563eb" class="dot"/>
+        <text x="118" y="170" class="small-label" text-anchor="end">C02 12</text>
+        <text x="662" y="106" class="small-label">16 C02</text>
+        <title>C02: 12 to 16, gain +4</title>
+      </g><g class="point-row">
+        <line x1="130" y1="198" x2="650" y2="134" stroke="#2563eb" class="slope-line"/>
+        <circle cx="130" cy="198" r="5.2" fill="#2563eb" class="dot"/>
+        <circle cx="650" cy="134" r="5.2" fill="#2563eb" class="dot"/>
+        <text x="118" y="202" class="small-label" text-anchor="end">C03 10</text>
+        <text x="662" y="138" class="small-label">14 C03</text>
+        <title>C03: 10 to 14, gain +4</title>
+      </g><g class="point-row">
+        <line x1="130" y1="102" x2="650" y2="38" stroke="#2563eb" class="slope-line"/>
+        <circle cx="130" cy="102" r="5.2" fill="#2563eb" class="dot"/>
+        <circle cx="650" cy="38" r="5.2" fill="#2563eb" class="dot"/>
+        <text x="118" y="106" class="small-label" text-anchor="end">C04 16</text>
+        <text x="662" y="42" class="small-label">20 C04</text>
+        <title>C04: 16 to 20, gain +4</title>
+      </g><g class="point-row">
+        <line x1="130" y1="294" x2="650" y2="230" stroke="#2563eb" class="slope-line"/>
+        <circle cx="130" cy="294" r="5.2" fill="#2563eb" class="dot"/>
+        <circle cx="650" cy="230" r="5.2" fill="#2563eb" class="dot"/>
+        <text x="118" y="298" class="small-label" text-anchor="end">C05 4</text>
+        <text x="662" y="234" class="small-label">8 C05</text>
+        <title>C05: 4 to 8, gain +4</title>
+      </g><g class="point-row">
+        <line x1="130" y1="230" x2="650" y2="262" stroke="#2563eb" class="slope-line"/>
+        <circle cx="130" cy="230" r="5.2" fill="#2563eb" class="dot"/>
+        <circle cx="650" cy="262" r="5.2" fill="#2563eb" class="dot"/>
+        <text x="118" y="234" class="small-label" text-anchor="end">C06 8</text>
+        <text x="662" y="266" class="small-label">6 C06</text>
+        <title>C06: 8 to 6, gain -2</title>
+      </g><g class="point-row">
+        <line x1="130" y1="230" x2="650" y2="38" stroke="#2563eb" class="slope-line"/>
+        <circle cx="130" cy="230" r="5.2" fill="#2563eb" class="dot"/>
+        <circle cx="650" cy="38" r="5.2" fill="#2563eb" class="dot"/>
+        <text x="118" y="234" class="small-label" text-anchor="end">C07 8</text>
+        <text x="662" y="42" class="small-label">20 C07</text>
+        <title>C07: 8 to 20, gain +12</title>
+      </g><g class="point-row">
+        <line x1="130" y1="326" x2="650" y2="230" stroke="#b89214" class="slope-line"/>
+        <circle cx="130" cy="326" r="5.2" fill="#b89214" class="dot"/>
+        <circle cx="650" cy="230" r="5.2" fill="#b89214" class="dot"/>
+        <text x="118" y="330" class="small-label" text-anchor="end">I01 2</text>
+        <text x="662" y="234" class="small-label">8 I01</text>
+        <title>I01: 2 to 8, gain +6</title>
+      </g><g class="point-row">
+        <line x1="130" y1="230" x2="650" y2="102" stroke="#b89214" class="slope-line"/>
+        <circle cx="130" cy="230" r="5.2" fill="#b89214" class="dot"/>
+        <circle cx="650" cy="102" r="5.2" fill="#b89214" class="dot"/>
+        <text x="118" y="234" class="small-label" text-anchor="end">I02 8</text>
+        <text x="662" y="106" class="small-label">16 I02</text>
+        <title>I02: 8 to 16, gain +8</title>
+      </g><g class="point-row">
+        <line x1="130" y1="230" x2="650" y2="166" stroke="#b89214" class="slope-line"/>
+        <circle cx="130" cy="230" r="5.2" fill="#b89214" class="dot"/>
+        <circle cx="650" cy="166" r="5.2" fill="#b89214" class="dot"/>
+        <text x="118" y="234" class="small-label" text-anchor="end">I03 8</text>
+        <text x="662" y="170" class="small-label">12 I03</text>
+        <title>I03: 8 to 12, gain +4</title>
+      </g><g class="point-row">
+        <line x1="130" y1="102" x2="650" y2="166" stroke="#b89214" class="slope-line"/>
+        <circle cx="130" cy="102" r="5.2" fill="#b89214" class="dot"/>
+        <circle cx="650" cy="166" r="5.2" fill="#b89214" class="dot"/>
+        <text x="118" y="106" class="small-label" text-anchor="end">I04 16</text>
+        <text x="662" y="170" class="small-label">12 I04</text>
+        <title>I04: 16 to 12, gain -4</title>
+      </g><g class="point-row">
+        <line x1="130" y1="166" x2="650" y2="166" stroke="#b89214" class="slope-line"/>
+        <circle cx="130" cy="166" r="5.2" fill="#b89214" class="dot"/>
+        <circle cx="650" cy="166" r="5.2" fill="#b89214" class="dot"/>
+        <text x="118" y="170" class="small-label" text-anchor="end">I05 12</text>
+        <text x="662" y="170" class="small-label">12 I05</text>
+        <title>I05: 12 to 12, gain 0</title>
+      </g><g class="point-row">
+        <line x1="130" y1="358" x2="650" y2="198" stroke="#b89214" class="slope-line"/>
+        <circle cx="130" cy="358" r="5.2" fill="#b89214" class="dot"/>
+        <circle cx="650" cy="198" r="5.2" fill="#b89214" class="dot"/>
+        <text x="118" y="362" class="small-label" text-anchor="end">I06 0</text>
+        <text x="662" y="202" class="small-label">10 I06</text>
+        <title>I06: 0 to 10, gain +10</title>
+      </g><g class="point-row">
+        <line x1="130" y1="166" x2="650" y2="166" stroke="#b89214" class="slope-line"/>
+        <circle cx="130" cy="166" r="5.2" fill="#b89214" class="dot"/>
+        <circle cx="650" cy="166" r="5.2" fill="#b89214" class="dot"/>
+        <text x="118" y="170" class="small-label" text-anchor="end">I07 12</text>
+        <text x="662" y="170" class="small-label">12 I07</text>
+        <title>I07: 12 to 12, gain 0</title>
+      </g><g class="point-row">
+        <line x1="130" y1="230" x2="650" y2="102" stroke="#dc345d" class="slope-line"/>
+        <circle cx="130" cy="230" r="5.2" fill="#dc345d" class="dot"/>
+        <circle cx="650" cy="102" r="5.2" fill="#dc345d" class="dot"/>
+        <text x="118" y="234" class="small-label" text-anchor="end">P01 8</text>
+        <text x="662" y="106" class="small-label">16 P01</text>
+        <title>P01: 8 to 16, gain +8</title>
+      </g><g class="point-row">
+        <line x1="130" y1="230" x2="650" y2="38" stroke="#dc345d" class="slope-line"/>
+        <circle cx="130" cy="230" r="5.2" fill="#dc345d" class="dot"/>
+        <circle cx="650" cy="38" r="5.2" fill="#dc345d" class="dot"/>
+        <text x="118" y="234" class="small-label" text-anchor="end">P02 8</text>
+        <text x="662" y="42" class="small-label">20 P02</text>
+        <title>P02: 8 to 20, gain +12</title>
+      </g><g class="point-row">
+        <line x1="130" y1="294" x2="650" y2="230" stroke="#dc345d" class="slope-line"/>
+        <circle cx="130" cy="294" r="5.2" fill="#dc345d" class="dot"/>
+        <circle cx="650" cy="230" r="5.2" fill="#dc345d" class="dot"/>
+        <text x="118" y="298" class="small-label" text-anchor="end">P03 4</text>
+        <text x="662" y="234" class="small-label">8 P03</text>
+        <title>P03: 4 to 8, gain +4</title>
+      </g><g class="point-row">
+        <line x1="130" y1="166" x2="650" y2="198" stroke="#dc345d" class="slope-line"/>
+        <circle cx="130" cy="166" r="5.2" fill="#dc345d" class="dot"/>
+        <circle cx="650" cy="198" r="5.2" fill="#dc345d" class="dot"/>
+        <text x="118" y="170" class="small-label" text-anchor="end">P04 12</text>
+        <text x="662" y="202" class="small-label">10 P04</text>
+        <title>P04: 12 to 10, gain -2</title>
+      </g><g class="point-row">
+        <line x1="130" y1="294" x2="650" y2="230" stroke="#dc345d" class="slope-line"/>
+        <circle cx="130" cy="294" r="5.2" fill="#dc345d" class="dot"/>
+        <circle cx="650" cy="230" r="5.2" fill="#dc345d" class="dot"/>
+        <text x="118" y="298" class="small-label" text-anchor="end">P05 4</text>
+        <text x="662" y="234" class="small-label">8 P05</text>
+        <title>P05: 4 to 8, gain +4</title>
+      </g><g class="point-row">
+        <line x1="130" y1="262" x2="650" y2="102" stroke="#dc345d" class="slope-line"/>
+        <circle cx="130" cy="262" r="5.2" fill="#dc345d" class="dot"/>
+        <circle cx="650" cy="102" r="5.2" fill="#dc345d" class="dot"/>
+        <text x="118" y="266" class="small-label" text-anchor="end">P06 6</text>
+        <text x="662" y="106" class="small-label">16 P06</text>
+        <title>P06: 6 to 16, gain +10</title>
+      </g><g class="point-row">
+        <line x1="130" y1="262" x2="650" y2="198" stroke="#dc345d" class="slope-line"/>
+        <circle cx="130" cy="262" r="5.2" fill="#dc345d" class="dot"/>
+        <circle cx="650" cy="198" r="5.2" fill="#dc345d" class="dot"/>
+        <text x="118" y="266" class="small-label" text-anchor="end">P07 6</text>
+        <text x="662" y="202" class="small-label">10 P07</text>
+        <title>P07: 6 to 10, gain +4</title>
+      </g>
+  </svg>
+      </div>
+      <div class="panel">
+        <h3>Group comparison, scaled by metric</h3>
+        <svg viewBox="0 0 820 340" role="img" aria-label="Grouped condition comparison">
+    <text x="148.8" y="309" class="axis-label" text-anchor="middle">Gain</text><text x="290.4" y="309" class="axis-label" text-anchor="middle">Norm. gain</text><text x="432" y="309" class="axis-label" text-anchor="middle">UES</text><text x="573.5999999999999" y="309" class="axis-label" text-anchor="middle">Control</text><text x="715.1999999999999" y="309" class="axis-label" text-anchor="middle">Distract</text>
+    <g>
+            <rect x="112.80000000000001" y="133.85714285714286" width="18" height="141.14285714285714" fill="#b89214" rx="4"/>
+            <title>Intermittent Gain: 3.43</title>
+          </g><g>
+            <rect x="136.8" y="98.57142857142856" width="18" height="176.42857142857144" fill="#2563eb" rx="4"/>
+            <title>Continuous Gain: 4.29</title>
+          </g><g>
+            <rect x="160.8" y="39.76190476190476" width="18" height="235.23809523809524" fill="#dc345d" rx="4"/>
+            <title>Proactive Gain: 5.71</title>
+          </g><g>
+            <rect x="254.39999999999998" y="216.1904761904762" width="18" height="58.8095238095238" fill="#b89214" rx="4"/>
+            <title>Intermittent Norm. gain: 0.12</title>
+          </g><g>
+            <rect x="278.4" y="40.93809523809523" width="18" height="234.06190476190477" fill="#2563eb" rx="4"/>
+            <title>Continuous Norm. gain: 0.47</title>
+          </g><g>
+            <rect x="302.4" y="69.16666666666669" width="18" height="205.83333333333331" fill="#dc345d" rx="4"/>
+            <title>Proactive Norm. gain: 0.42</title>
+          </g><g>
+            <rect x="396" y="36.9614512471656" width="18" height="238.0385487528344" fill="#b89214" rx="4"/>
+            <title>Intermittent UES: 4.05</title>
+          </g><g>
+            <rect x="420" y="64.26587301587301" width="18" height="210.734126984127" fill="#2563eb" rx="4"/>
+            <title>Continuous UES: 3.58</title>
+          </g><g>
+            <rect x="444" y="60.76530612244895" width="18" height="214.23469387755105" fill="#dc345d" rx="4"/>
+            <title>Proactive UES: 3.64</title>
+          </g><g>
+            <rect x="537.5999999999999" y="49.17142857142858" width="18" height="225.82857142857142" fill="#b89214" rx="4"/>
+            <title>Intermittent Control: 4.57</title>
+          </g><g>
+            <rect x="561.5999999999999" y="84.45714285714286" width="18" height="190.54285714285714" fill="#2563eb" rx="4"/>
+            <title>Continuous Control: 3.86</title>
+          </g><g>
+            <rect x="585.5999999999999" y="119.74285714285713" width="18" height="155.25714285714287" fill="#dc345d" rx="4"/>
+            <title>Proactive Control: 3.14</title>
+          </g><g>
+            <rect x="679.1999999999999" y="211.48571428571427" width="18" height="63.51428571428572" fill="#b89214" rx="4"/>
+            <title>Intermittent Distract: 1.29</title>
+          </g><g>
+            <rect x="703.1999999999999" y="126.80000000000001" width="18" height="148.2" fill="#2563eb" rx="4"/>
+            <title>Continuous Distract: 3.00</title>
+          </g><g>
+            <rect x="727.1999999999999" y="133.85714285714286" width="18" height="141.14285714285714" fill="#dc345d" rx="4"/>
+            <title>Proactive Distract: 2.86</title>
+          </g>
+    <line x1="68" y1="275" x2="786" y2="275" class="grid-line"/><line x1="68" y1="213.25" x2="786" y2="213.25" class="grid-line"/><line x1="68" y1="151.5" x2="786" y2="151.5" class="grid-line"/><line x1="68" y1="89.75" x2="786" y2="89.75" class="grid-line"/><line x1="68" y1="28" x2="786" y2="28" class="grid-line"/>
+    <circle cx="78" cy="318" r="6" fill="#b89214"/><text x="90" y="322" class="legend-text">Intermittent</text><circle cx="223" cy="318" r="6" fill="#2563eb"/><text x="235" y="322" class="legend-text">Continuous</text><circle cx="368" cy="318" r="6" fill="#dc345d"/><text x="380" y="322" class="legend-text">Proactive</text>
+  </svg>
+      </div>
+    </div>
+  </section>
+
+  <section id="experience" class="band">
+    <div class="section-head">
+      <div>
+        <h2>Experience: the agency cost is the clearest condition-level signal.</h2>
+        <p>Intermittent sits in the high-control, low-distraction region. Proactive creates more AI-mediated moments but moves leftward on control and upward on distraction.</p>
+      </div>
+      <p class="note">Condition checks: control p = 0.0425, distraction p = 0.0221. UES relates strongly to distraction: rho = -0.67.</p>
+    </div>
+    <div class="grid two">
+      <div class="panel">
+        <h3>Control vs distraction, bubble size = raw gain</h3>
+        <svg viewBox="0 0 760 420" role="img" aria-label="AI control and distraction trade-off map">
+    <line x1="72" y1="42" x2="72" y2="346" class="grid-line"/><line x1="72" y1="346" x2="705" y2="346" class="grid-line"/><text x="72" y="370" class="axis-label" text-anchor="middle">1</text><text x="50" y="350" class="axis-label" text-anchor="end">1</text><line x1="230.25" y1="42" x2="230.25" y2="346" class="grid-line"/><line x1="72" y1="270" x2="705" y2="270" class="grid-line"/><text x="230.25" y="370" class="axis-label" text-anchor="middle">2</text><text x="50" y="274" class="axis-label" text-anchor="end">2</text><line x1="388.5" y1="42" x2="388.5" y2="346" class="grid-line"/><line x1="72" y1="194" x2="705" y2="194" class="grid-line"/><text x="388.5" y="370" class="axis-label" text-anchor="middle">3</text><text x="50" y="198" class="axis-label" text-anchor="end">3</text><line x1="546.75" y1="42" x2="546.75" y2="346" class="grid-line"/><line x1="72" y1="118" x2="705" y2="118" class="grid-line"/><text x="546.75" y="370" class="axis-label" text-anchor="middle">4</text><text x="50" y="122" class="axis-label" text-anchor="end">4</text><line x1="705" y1="42" x2="705" y2="346" class="grid-line"/><line x1="72" y1="42" x2="705" y2="42" class="grid-line"/><text x="705" y="370" class="axis-label" text-anchor="middle">5</text><text x="50" y="46" class="axis-label" text-anchor="end">5</text>
+    <text x="388.5" y="395" class="axis-title" text-anchor="middle">Felt in control of AI support</text>
+    <text x="20" y="194" class="axis-title vertical" text-anchor="middle">AI distraction</text>
+    <g>
+          <circle cx="637.1785714285714" cy="324.2857142857143" r="20.228571428571428" fill="#b89214" class="bubble"/>
+          <text x="637.1785714285714" y="362.51428571428573" class="bubble-label" text-anchor="middle">Intermittent</text>
+          <title>Intermittent: control 4.57, distraction 1.29, gain 3.43</title>
+        </g><g>
+          <circle cx="524.1428571428571" cy="194" r="22.285714285714285" fill="#2563eb" class="bubble"/>
+          <text x="524.1428571428571" y="234.28571428571428" class="bubble-label" text-anchor="middle">Continuous</text>
+          <title>Continuous: control 3.86, distraction 3.00, gain 4.29</title>
+        </g><g>
+          <circle cx="411.10714285714283" cy="204.85714285714286" r="25.714285714285715" fill="#dc345d" class="bubble"/>
+          <text x="411.10714285714283" y="248.57142857142858" class="bubble-label" text-anchor="middle">Proactive</text>
+          <title>Proactive: control 3.14, distraction 2.86, gain 5.71</title>
+        </g>
+  </svg>
+      </div>
+      <div class="grid">
+        <div class="panel">
+          <h3>Condition means</h3>
+          <svg viewBox="0 0 760 260" role="img" aria-label="UES and control means">
+    <g>
+          <text x="178" y="45" class="bar-label" text-anchor="end">Intermittent UES</text>
+          <rect x="190" y="28" width="522" height="18" class="bar-track" rx="4"/>
+          <rect x="190" y="28" width="422.57142857142844" height="18" fill="#b89214" rx="4"/>
+          <text x="620.5714285714284" y="42" class="bar-value">4.05</text>
+        </g><g>
+          <text x="178" y="79" class="bar-label" text-anchor="end">Continuous UES</text>
+          <rect x="190" y="62" width="522" height="18" class="bar-track" rx="4"/>
+          <rect x="190" y="62" width="374.1" height="18" fill="#2563eb" rx="4"/>
+          <text x="572.1" y="76" class="bar-value">3.58</text>
+        </g><g>
+          <text x="178" y="113" class="bar-label" text-anchor="end">Proactive UES</text>
+          <rect x="190" y="96" width="522" height="18" class="bar-track" rx="4"/>
+          <rect x="190" y="96" width="380.3142857142857" height="18" fill="#dc345d" rx="4"/>
+          <text x="578.3142857142857" y="110" class="bar-value">3.64</text>
+        </g><g>
+          <text x="178" y="147" class="bar-label" text-anchor="end">Intermittent control</text>
+          <rect x="190" y="130" width="522" height="18" class="bar-track" rx="4"/>
+          <rect x="190" y="130" width="477.25714285714287" height="18" fill="#b89214" rx="4"/>
+          <text x="675.2571428571429" y="144" class="bar-value">4.57</text>
+        </g><g>
+          <text x="178" y="181" class="bar-label" text-anchor="end">Continuous control</text>
+          <rect x="190" y="164" width="522" height="18" class="bar-track" rx="4"/>
+          <rect x="190" y="164" width="402.6857142857143" height="18" fill="#2563eb" rx="4"/>
+          <text x="600.6857142857143" y="178" class="bar-value">3.86</text>
+        </g><g>
+          <text x="178" y="215" class="bar-label" text-anchor="end">Proactive control</text>
+          <rect x="190" y="198" width="522" height="18" class="bar-track" rx="4"/>
+          <rect x="190" y="198" width="328.11428571428564" height="18" fill="#dc345d" rx="4"/>
+          <text x="526.1142857142856" y="212" class="bar-value">3.14</text>
+        </g>
+  </svg>
+        </div>
+        <div class="panel">
+          <h3>Correlation checks</h3>
+          <div class="grid two"><article class="corr-card">
+        <div class="rho negative">-0.52</div>
+        <h3>Baseline pre-test -> raw gain</h3>
+        <p>Room-to-improve effect</p>
+      </article><article class="corr-card">
+        <div class="rho positive">+0.23</div>
+        <h3>Feature volume -> raw gain</h3>
+        <p>More UI activity was not enough by itself</p>
+      </article><article class="corr-card">
+        <div class="rho negative">-0.67</div>
+        <h3>AI distraction -> UES</h3>
+        <p>Distraction is the strongest experience penalty</p>
+      </article><article class="corr-card">
+        <div class="rho negative">-0.61</div>
+        <h3>AI control -> AI distraction</h3>
+        <p>Lower control travels with higher distraction</p>
+      </article></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="behavior" class="band">
+    <div class="section-head">
+      <div>
+        <h2>Behavior: the manipulation worked.</h2>
+        <p>The clearest behavioral result is not subtle: the prototypes produced very different forms of interaction. Feature-engagement differences are large and statistically visible even with the small sample.</p>
+      </div>
+      <p class="note">Feature engagements: Intermittent 1.6, Continuous 10.4, Proactive 57.7 per participant on average; KW p &lt; 0.0001.</p>
+    </div>
+    <div class="grid three"><article class="prototype-block">
+        <h3>Intermittent</h3>
+        <p>Deliberate learner-initiated actions</p>
+        <div class="mini-bar">
+              <div class="mini-label"><span>Chat messages</span><strong>17</strong></div>
+              <div class="mini-track"><span style="width:28.333333333333332%; background:#b89214;"></span></div>
+            </div><div class="mini-bar">
+              <div class="mini-label"><span>Quiz attempts</span><strong>34</strong></div>
+              <div class="mini-track"><span style="width:56.666666666666664%; background:#b89214;"></span></div>
+            </div><div class="mini-bar">
+              <div class="mini-label"><span>Completed snaps</span><strong>9</strong></div>
+              <div class="mini-track"><span style="width:15%; background:#b89214;"></span></div>
+            </div><div class="mini-bar">
+              <div class="mini-label"><span>Self-initiated total</span><strong>60</strong></div>
+              <div class="mini-track"><span style="width:100%; background:#b89214;"></span></div>
+            </div>
+      </article><article class="prototype-block">
+        <h3>Continuous</h3>
+        <p>Ambient feed uptake</p>
+        <div class="mini-bar">
+              <div class="mini-label"><span>Feed questions unlocked</span><strong>66</strong></div>
+              <div class="mini-track"><span style="width:100%; background:#2563eb;"></span></div>
+            </div><div class="mini-bar">
+              <div class="mini-label"><span>Feed questions answered</span><strong>48</strong></div>
+              <div class="mini-track"><span style="width:72.72727272727273%; background:#2563eb;"></span></div>
+            </div><div class="mini-bar">
+              <div class="mini-label"><span>Feed question jumps</span><strong>40</strong></div>
+              <div class="mini-track"><span style="width:60.60606060606061%; background:#2563eb;"></span></div>
+            </div><div class="mini-bar">
+              <div class="mini-label"><span>Answer rate</span><strong>73%</strong></div>
+              <div class="mini-track"><span style="width:72.72727272727273%; background:#2563eb;"></span></div>
+            </div>
+      </article><article class="prototype-block">
+        <h3>Proactive</h3>
+        <p>Prompt exposure vs explicit uptake</p>
+        <div class="mini-bar">
+              <div class="mini-label"><span>Keywords shown</span><strong>154</strong></div>
+              <div class="mini-track"><span style="width:100%; background:#dc345d;"></span></div>
+            </div><div class="mini-bar">
+              <div class="mini-label"><span>Keyword positive actions</span><strong>21</strong></div>
+              <div class="mini-track"><span style="width:13.636363636363635%; background:#dc345d;"></span></div>
+            </div><div class="mini-bar">
+              <div class="mini-label"><span>Ignored or dismissed</span><strong>133</strong></div>
+              <div class="mini-track"><span style="width:86.36363636363636%; background:#dc345d;"></span></div>
+            </div><div class="mini-bar">
+              <div class="mini-label"><span>Quiz answered / triggered</span><strong>76%</strong></div>
+              <div class="mini-track"><span style="width:76%; background:#dc345d;"></span></div>
+            </div>
+      </article></div>
+    <div class="grid two" style="margin-top:18px;">
+      <div class="panel">
+        <h3>Mean behavior counts per participant</h3>
+        <svg viewBox="0 0 760 326" role="img" aria-label="Mean behavior counts">
+    <g>
+          <text x="178" y="45" class="bar-label" text-anchor="end">Intermittent quizzes</text>
+          <rect x="190" y="28" width="522" height="18" class="bar-track" rx="4"/>
+          <rect x="190" y="28" width="42.25714285714287" height="18" fill="#b89214" rx="4"/>
+          <text x="240.25714285714287" y="42" class="bar-value">4.86</text>
+        </g><g>
+          <text x="178" y="75" class="bar-label" text-anchor="end">Intermittent chats</text>
+          <rect x="190" y="58" width="522" height="18" class="bar-track" rx="4"/>
+          <rect x="190" y="58" width="21.128571428571433" height="18" fill="#b89214" rx="4"/>
+          <text x="219.12857142857143" y="72" class="bar-value">2.43</text>
+        </g><g>
+          <text x="178" y="105" class="bar-label" text-anchor="end">Intermittent features</text>
+          <rect x="190" y="88" width="522" height="18" class="bar-track" rx="4"/>
+          <rect x="190" y="88" width="13.671428571428578" height="18" fill="#b89214" rx="4"/>
+          <text x="211.67142857142858" y="102" class="bar-value">1.57</text>
+        </g><g>
+          <text x="178" y="135" class="bar-label" text-anchor="end">Continuous quizzes</text>
+          <rect x="190" y="118" width="522" height="18" class="bar-track" rx="4"/>
+          <rect x="190" y="118" width="59.657142857142844" height="18" fill="#2563eb" rx="4"/>
+          <text x="257.65714285714284" y="132" class="bar-value">6.86</text>
+        </g><g>
+          <text x="178" y="165" class="bar-label" text-anchor="end">Continuous chats</text>
+          <rect x="190" y="148" width="522" height="18" class="bar-track" rx="4"/>
+          <rect x="190" y="148" width="27.342857142857156" height="18" fill="#2563eb" rx="4"/>
+          <text x="225.34285714285716" y="162" class="bar-value">3.14</text>
+        </g><g>
+          <text x="178" y="195" class="bar-label" text-anchor="end">Continuous features</text>
+          <rect x="190" y="178" width="522" height="18" class="bar-track" rx="4"/>
+          <rect x="190" y="178" width="90.7285714285714" height="18" fill="#2563eb" rx="4"/>
+          <text x="288.7285714285714" y="192" class="bar-value">10.43</text>
+        </g><g>
+          <text x="178" y="225" class="bar-label" text-anchor="end">Proactive quizzes</text>
+          <rect x="190" y="208" width="522" height="18" class="bar-track" rx="4"/>
+          <rect x="190" y="208" width="75.81428571428569" height="18" fill="#dc345d" rx="4"/>
+          <text x="273.8142857142857" y="222" class="bar-value">8.71</text>
+        </g><g>
+          <text x="178" y="255" class="bar-label" text-anchor="end">Proactive chats</text>
+          <rect x="190" y="238" width="522" height="18" class="bar-track" rx="4"/>
+          <rect x="190" y="238" width="12.428571428571416" height="18" fill="#dc345d" rx="4"/>
+          <text x="210.42857142857142" y="252" class="bar-value">1.43</text>
+        </g><g>
+          <text x="178" y="285" class="bar-label" text-anchor="end">Proactive features</text>
+          <rect x="190" y="268" width="522" height="18" class="bar-track" rx="4"/>
+          <rect x="190" y="268" width="502.11428571428564" height="18" fill="#dc345d" rx="4"/>
+          <text x="700.1142857142856" y="282" class="bar-value">57.71</text>
+        </g>
+  </svg>
+      </div>
+      <div class="panel">
+        <h3>Chat sources across conditions</h3>
+        <svg viewBox="0 0 760 375" role="img" aria-label="Chat message sources">
+    <g>
+          <text x="178" y="45" class="bar-label" text-anchor="end">Intermittent · snap ask</text>
+          <rect x="190" y="28" width="522" height="18" class="bar-track" rx="4"/>
+          <rect x="190" y="28" width="335.57142857142867" height="18" fill="#b89214" rx="4"/>
+          <text x="533.5714285714287" y="42" class="bar-value">9.00</text>
+        </g><g>
+          <text x="178" y="74" class="bar-label" text-anchor="end">Intermittent · chat</text>
+          <rect x="190" y="57" width="522" height="18" class="bar-track" rx="4"/>
+          <rect x="190" y="57" width="261" height="18" fill="#b89214" rx="4"/>
+          <text x="459" y="71" class="bar-value">7.00</text>
+        </g><g>
+          <text x="178" y="103" class="bar-label" text-anchor="end">Intermittent · quiz explain</text>
+          <rect x="190" y="86" width="522" height="18" class="bar-track" rx="4"/>
+          <rect x="190" y="86" width="37.28571428571428" height="18" fill="#b89214" rx="4"/>
+          <text x="235.28571428571428" y="100" class="bar-value">1.00</text>
+        </g><g>
+          <text x="178" y="132" class="bar-label" text-anchor="end">Continuous · chat</text>
+          <rect x="190" y="115" width="522" height="18" class="bar-track" rx="4"/>
+          <rect x="190" y="115" width="261" height="18" fill="#2563eb" rx="4"/>
+          <text x="459" y="129" class="bar-value">7.00</text>
+        </g><g>
+          <text x="178" y="161" class="bar-label" text-anchor="end">Continuous · quiz explain</text>
+          <rect x="190" y="144" width="522" height="18" class="bar-track" rx="4"/>
+          <rect x="190" y="144" width="298.2857142857143" height="18" fill="#2563eb" rx="4"/>
+          <text x="496.2857142857143" y="158" class="bar-value">8.00</text>
+        </g><g>
+          <text x="178" y="190" class="bar-label" text-anchor="end">Continuous · highlight detail</text>
+          <rect x="190" y="173" width="522" height="18" class="bar-track" rx="4"/>
+          <rect x="190" y="173" width="223.71428571428567" height="18" fill="#2563eb" rx="4"/>
+          <text x="421.71428571428567" y="187" class="bar-value">6.00</text>
+        </g><g>
+          <text x="178" y="219" class="bar-label" text-anchor="end">Continuous · chat suggestion</text>
+          <rect x="190" y="202" width="522" height="18" class="bar-track" rx="4"/>
+          <rect x="190" y="202" width="37.28571428571428" height="18" fill="#2563eb" rx="4"/>
+          <text x="235.28571428571428" y="216" class="bar-value">1.00</text>
+        </g><g>
+          <text x="178" y="248" class="bar-label" text-anchor="end">Proactive · keyword detail</text>
+          <rect x="190" y="231" width="522" height="18" class="bar-track" rx="4"/>
+          <rect x="190" y="231" width="37.28571428571428" height="18" fill="#dc345d" rx="4"/>
+          <text x="235.28571428571428" y="245" class="bar-value">1.00</text>
+        </g><g>
+          <text x="178" y="277" class="bar-label" text-anchor="end">Proactive · visual detail</text>
+          <rect x="190" y="260" width="522" height="18" class="bar-track" rx="4"/>
+          <rect x="190" y="260" width="74.57142857142856" height="18" fill="#dc345d" rx="4"/>
+          <text x="272.57142857142856" y="274" class="bar-value">2.00</text>
+        </g><g>
+          <text x="178" y="306" class="bar-label" text-anchor="end">Proactive · chat</text>
+          <rect x="190" y="289" width="522" height="18" class="bar-track" rx="4"/>
+          <rect x="190" y="289" width="223.71428571428567" height="18" fill="#dc345d" rx="4"/>
+          <text x="421.71428571428567" y="303" class="bar-value">6.00</text>
+        </g><g>
+          <text x="178" y="335" class="bar-label" text-anchor="end">Proactive · chat suggestion</text>
+          <rect x="190" y="318" width="522" height="18" class="bar-track" rx="4"/>
+          <rect x="190" y="318" width="37.28571428571428" height="18" fill="#dc345d" rx="4"/>
+          <text x="235.28571428571428" y="332" class="bar-value">1.00</text>
+        </g>
+  </svg>
+      </div>
+    </div>
+  </section>
+
+  <section id="participants" class="band">
+    <div class="section-head">
+      <div>
+        <h2>Participant matrix: where the averages come from.</h2>
+        <p>The condition story is shaped by a few visible cases: C07 and P02 have very large gains, while I04, C06, and P04 move downward on the post-test.</p>
+      </div>
+      <p class="note">The feature column is intentionally not colored as "good" or "bad" in interpretation. High feature volume can mean support uptake, system pressure, or struggling behavior.</p>
+    </div>
+    <div class="table-wrap"><table class="matrix">
+    <thead>
+      <tr><th>Participant</th><th>Condition</th><th>Pre</th><th>Post</th><th>Gain</th><th>UES</th><th>Control</th><th>Distract</th><th>Features</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+            <th>C01</th>
+            <td><span class="condition-pill" style="--pill:#2563eb; --pill-bg:#e8f0ff">Continuous</span></td>
+            <td class="num" style="background:hsl(64.80000000000001 66% 90%); color:#171717;" title="C01 Pre: 8">8</td><td class="num" style="background:hsl(93.2 66% 90%); color:#171717;" title="C01 Post: 12">12</td><td class="num" style="background:hsl(55.33333333333333 66% 90%); color:#171717;" title="C01 Gain: +4">+4</td><td class="num" style="background:hsl(88.46666666666667 66% 90%); color:#171717;" title="C01 UES: 2.8">2.8</td><td class="num" style="background:hsl(150 66% 90%); color:#171717;" title="C01 Control: 5.0">5.0</td><td class="num" style="background:hsl(64.80000000000001 66% 90%); color:#171717;" title="C01 Distract: 3.0">3.0</td><td class="num" style="background:hsl(28.285714285714285 66% 90%); color:#171717;" title="C01 Features: 10">10</td>
+          </tr><tr>
+            <th>C02</th>
+            <td><span class="condition-pill" style="--pill:#2563eb; --pill-bg:#e8f0ff">Continuous</span></td>
+            <td class="num" style="background:hsl(93.2 66% 90%); color:#171717;" title="C02 Pre: 12">12</td><td class="num" style="background:hsl(121.60000000000001 66% 90%); color:#171717;" title="C02 Post: 16">16</td><td class="num" style="background:hsl(55.33333333333333 66% 90%); color:#171717;" title="C02 Gain: +4">+4</td><td class="num" style="background:hsl(93.2 66% 90%); color:#171717;" title="C02 UES: 3.0">3.0</td><td class="num" style="background:hsl(121.60000000000001 66% 90%); color:#171717;" title="C02 Control: 4.0">4.0</td><td class="num" style="background:hsl(36.39999999999999 66% 90%); color:#171717;" title="C02 Distract: 4.0">4.0</td><td class="num" style="background:hsl(26.257142857142856 66% 90%); color:#171717;" title="C02 Features: 9">9</td>
+          </tr><tr>
+            <th>C03</th>
+            <td><span class="condition-pill" style="--pill:#2563eb; --pill-bg:#e8f0ff">Continuous</span></td>
+            <td class="num" style="background:hsl(79 66% 90%); color:#171717;" title="C03 Pre: 10">10</td><td class="num" style="background:hsl(107.39999999999999 66% 90%); color:#171717;" title="C03 Post: 14">14</td><td class="num" style="background:hsl(55.33333333333333 66% 90%); color:#171717;" title="C03 Gain: +4">+4</td><td class="num" style="background:hsl(109.76666666666665 66% 90%); color:#171717;" title="C03 UES: 3.6">3.6</td><td class="num" style="background:hsl(64.80000000000001 66% 90%); color:#171717;" title="C03 Control: 2.0">2.0</td><td class="num" style="background:hsl(36.39999999999999 66% 90%); color:#171717;" title="C03 Distract: 4.0">4.0</td><td class="num" style="background:hsl(24.228571428571428 66% 90%); color:#171717;" title="C03 Features: 8">8</td>
+          </tr><tr>
+            <th>C04</th>
+            <td><span class="condition-pill" style="--pill:#2563eb; --pill-bg:#e8f0ff">Continuous</span></td>
+            <td class="num" style="background:hsl(121.60000000000001 66% 90%); color:#171717;" title="C04 Pre: 16">16</td><td class="num" style="background:hsl(150 66% 90%); color:#171717;" title="C04 Post: 20">20</td><td class="num" style="background:hsl(55.33333333333333 66% 90%); color:#171717;" title="C04 Gain: +4">+4</td><td class="num" style="background:hsl(138.16666666666669 66% 90%); color:#171717;" title="C04 UES: 4.6">4.6</td><td class="num" style="background:hsl(150 66% 90%); color:#171717;" title="C04 Control: 5.0">5.0</td><td class="num" style="background:hsl(121.60000000000001 66% 90%); color:#171717;" title="C04 Distract: 1.0">1.0</td><td class="num" style="background:hsl(34.371428571428574 66% 90%); color:#171717;" title="C04 Features: 13">13</td>
+          </tr><tr>
+            <th>C05</th>
+            <td><span class="condition-pill" style="--pill:#2563eb; --pill-bg:#e8f0ff">Continuous</span></td>
+            <td class="num" style="background:hsl(36.400000000000006 66% 90%); color:#171717;" title="C05 Pre: 4">4</td><td class="num" style="background:hsl(64.80000000000001 66% 90%); color:#171717;" title="C05 Post: 8">8</td><td class="num" style="background:hsl(55.33333333333333 66% 90%); color:#171717;" title="C05 Gain: +4">+4</td><td class="num" style="background:hsl(102.66666666666667 66% 90%); color:#171717;" title="C05 UES: 3.3">3.3</td><td class="num" style="background:hsl(93.2 66% 90%); color:#171717;" title="C05 Control: 3.0">3.0</td><td class="num" style="background:hsl(36.39999999999999 66% 90%); color:#171717;" title="C05 Distract: 4.0">4.0</td><td class="num" style="background:hsl(30.314285714285713 66% 90%); color:#171717;" title="C05 Features: 11">11</td>
+          </tr><tr>
+            <th>C06</th>
+            <td><span class="condition-pill" style="--pill:#2563eb; --pill-bg:#e8f0ff">Continuous</span></td>
+            <td class="num" style="background:hsl(64.80000000000001 66% 90%); color:#171717;" title="C06 Pre: 8">8</td><td class="num" style="background:hsl(50.6 66% 90%); color:#171717;" title="C06 Post: 6">6</td><td class="num" style="background:hsl(8 66% 90%); color:#171717;" title="C06 Gain: -2">-2</td><td class="num" style="background:hsl(121.60000000000001 66% 90%); color:#171717;" title="C06 UES: 4.0">4.0</td><td class="num" style="background:hsl(121.60000000000001 66% 90%); color:#171717;" title="C06 Control: 4.0">4.0</td><td class="num" style="background:hsl(93.2 66% 90%); color:#171717;" title="C06 Distract: 2.0">2.0</td><td class="num" style="background:hsl(30.314285714285713 66% 90%); color:#171717;" title="C06 Features: 11">11</td>
+          </tr><tr>
+            <th>C07</th>
+            <td><span class="condition-pill" style="--pill:#2563eb; --pill-bg:#e8f0ff">Continuous</span></td>
+            <td class="num" style="background:hsl(64.80000000000001 66% 90%); color:#171717;" title="C07 Pre: 8">8</td><td class="num" style="background:hsl(150 66% 90%); color:#171717;" title="C07 Post: 20">20</td><td class="num" style="background:hsl(150 66% 90%); color:#171717;" title="C07 Gain: +12">+12</td><td class="num" style="background:hsl(114.5 66% 90%); color:#171717;" title="C07 UES: 3.8">3.8</td><td class="num" style="background:hsl(121.60000000000001 66% 90%); color:#171717;" title="C07 Control: 4.0">4.0</td><td class="num" style="background:hsl(64.80000000000001 66% 90%); color:#171717;" title="C07 Distract: 3.0">3.0</td><td class="num" style="background:hsl(30.314285714285713 66% 90%); color:#171717;" title="C07 Features: 11">11</td>
+          </tr><tr>
+            <th>I01</th>
+            <td><span class="condition-pill" style="--pill:#b89214; --pill-bg:#fff4cc">Intermittent</span></td>
+            <td class="num" style="background:hsl(22.200000000000003 66% 90%); color:#171717;" title="I01 Pre: 2">2</td><td class="num" style="background:hsl(64.80000000000001 66% 90%); color:#171717;" title="I01 Post: 8">8</td><td class="num" style="background:hsl(79 66% 90%); color:#171717;" title="I01 Gain: +6">+6</td><td class="num" style="background:hsl(128.7 66% 90%); color:#171717;" title="I01 UES: 4.3">4.3</td><td class="num" style="background:hsl(150 66% 90%); color:#171717;" title="I01 Control: 5.0">5.0</td><td class="num" style="background:hsl(121.60000000000001 66% 90%); color:#171717;" title="I01 Distract: 1.0">1.0</td><td class="num" style="background:hsl(14.085714285714285 66% 90%); color:#171717;" title="I01 Features: 3">3</td>
+          </tr><tr>
+            <th>I02</th>
+            <td><span class="condition-pill" style="--pill:#b89214; --pill-bg:#fff4cc">Intermittent</span></td>
+            <td class="num" style="background:hsl(64.80000000000001 66% 90%); color:#171717;" title="I02 Pre: 8">8</td><td class="num" style="background:hsl(121.60000000000001 66% 90%); color:#171717;" title="I02 Post: 16">16</td><td class="num" style="background:hsl(102.66666666666666 66% 90%); color:#171717;" title="I02 Gain: +8">+8</td><td class="num" style="background:hsl(131.06666666666666 66% 90%); color:#171717;" title="I02 UES: 4.3">4.3</td><td class="num" style="background:hsl(121.60000000000001 66% 90%); color:#171717;" title="I02 Control: 4.0">4.0</td><td class="num" style="background:hsl(121.60000000000001 66% 90%); color:#171717;" title="I02 Distract: 1.0">1.0</td><td class="num" style="background:hsl(10.028571428571428 66% 90%); color:#171717;" title="I02 Features: 1">1</td>
+          </tr><tr>
+            <th>I03</th>
+            <td><span class="condition-pill" style="--pill:#b89214; --pill-bg:#fff4cc">Intermittent</span></td>
+            <td class="num" style="background:hsl(64.80000000000001 66% 90%); color:#171717;" title="I03 Pre: 8">8</td><td class="num" style="background:hsl(93.2 66% 90%); color:#171717;" title="I03 Post: 12">12</td><td class="num" style="background:hsl(55.33333333333333 66% 90%); color:#171717;" title="I03 Gain: +4">+4</td><td class="num" style="background:hsl(114.5 66% 90%); color:#171717;" title="I03 UES: 3.8">3.8</td><td class="num" style="background:hsl(150 66% 90%); color:#171717;" title="I03 Control: 5.0">5.0</td><td class="num" style="background:hsl(93.2 66% 90%); color:#171717;" title="I03 Distract: 2.0">2.0</td><td class="num" style="background:hsl(14.085714285714285 66% 90%); color:#171717;" title="I03 Features: 3">3</td>
+          </tr><tr>
+            <th>I04</th>
+            <td><span class="condition-pill" style="--pill:#b89214; --pill-bg:#fff4cc">Intermittent</span></td>
+            <td class="num" style="background:hsl(121.60000000000001 66% 90%); color:#171717;" title="I04 Pre: 16">16</td><td class="num" style="background:hsl(93.2 66% 90%); color:#171717;" title="I04 Post: 12">12</td><td class="num" style="background:hsl(8 66% 90%); color:#171717;" title="I04 Gain: -4">-4</td><td class="num" style="background:hsl(105.03333333333333 66% 90%); color:#171717;" title="I04 UES: 3.4">3.4</td><td class="num" style="background:hsl(150 66% 90%); color:#171717;" title="I04 Control: 5.0">5.0</td><td class="num" style="background:hsl(93.2 66% 90%); color:#171717;" title="I04 Distract: 2.0">2.0</td><td class="num" style="background:hsl(8 66% 90%); color:#171717;" title="I04 Features: 0">0</td>
+          </tr><tr>
+            <th>I05</th>
+            <td><span class="condition-pill" style="--pill:#b89214; --pill-bg:#fff4cc">Intermittent</span></td>
+            <td class="num" style="background:hsl(93.2 66% 90%); color:#171717;" title="I05 Pre: 12">12</td><td class="num" style="background:hsl(93.2 66% 90%); color:#171717;" title="I05 Post: 12">12</td><td class="num" style="background:hsl(8 66% 90%); color:#171717;" title="I05 Gain: 0">0</td><td class="num" style="background:hsl(126.33333333333333 66% 90%); color:#171717;" title="I05 UES: 4.2">4.2</td><td class="num" style="background:hsl(150 66% 90%); color:#171717;" title="I05 Control: 5.0">5.0</td><td class="num" style="background:hsl(121.60000000000001 66% 90%); color:#171717;" title="I05 Distract: 1.0">1.0</td><td class="num" style="background:hsl(8 66% 90%); color:#171717;" title="I05 Features: 0">0</td>
+          </tr><tr>
+            <th>I06</th>
+            <td><span class="condition-pill" style="--pill:#b89214; --pill-bg:#fff4cc">Intermittent</span></td>
+            <td class="num" style="background:hsl(8 66% 90%); color:#171717;" title="I06 Pre: 0">0</td><td class="num" style="background:hsl(79 66% 90%); color:#171717;" title="I06 Post: 10">10</td><td class="num" style="background:hsl(126.33333333333334 66% 90%); color:#171717;" title="I06 Gain: +10">+10</td><td class="num" style="background:hsl(131.06666666666666 66% 90%); color:#171717;" title="I06 UES: 4.3">4.3</td><td class="num" style="background:hsl(93.2 66% 90%); color:#171717;" title="I06 Control: 3.0">3.0</td><td class="num" style="background:hsl(121.60000000000001 66% 90%); color:#171717;" title="I06 Distract: 1.0">1.0</td><td class="num" style="background:hsl(10.028571428571428 66% 90%); color:#171717;" title="I06 Features: 1">1</td>
+          </tr><tr>
+            <th>I07</th>
+            <td><span class="condition-pill" style="--pill:#b89214; --pill-bg:#fff4cc">Intermittent</span></td>
+            <td class="num" style="background:hsl(93.2 66% 90%); color:#171717;" title="I07 Pre: 12">12</td><td class="num" style="background:hsl(93.2 66% 90%); color:#171717;" title="I07 Post: 12">12</td><td class="num" style="background:hsl(8 66% 90%); color:#171717;" title="I07 Gain: 0">0</td><td class="num" style="background:hsl(123.96666666666667 66% 90%); color:#171717;" title="I07 UES: 4.1">4.1</td><td class="num" style="background:hsl(150 66% 90%); color:#171717;" title="I07 Control: 5.0">5.0</td><td class="num" style="background:hsl(121.60000000000001 66% 90%); color:#171717;" title="I07 Distract: 1.0">1.0</td><td class="num" style="background:hsl(14.085714285714285 66% 90%); color:#171717;" title="I07 Features: 3">3</td>
+          </tr><tr>
+            <th>P01</th>
+            <td><span class="condition-pill" style="--pill:#dc345d; --pill-bg:#ffe6ec">Proactive</span></td>
+            <td class="num" style="background:hsl(64.80000000000001 66% 90%); color:#171717;" title="P01 Pre: 8">8</td><td class="num" style="background:hsl(121.60000000000001 66% 90%); color:#171717;" title="P01 Post: 16">16</td><td class="num" style="background:hsl(102.66666666666666 66% 90%); color:#171717;" title="P01 Gain: +8">+8</td><td class="num" style="background:hsl(109.76666666666665 66% 90%); color:#171717;" title="P01 UES: 3.6">3.6</td><td class="num" style="background:hsl(121.60000000000001 66% 90%); color:#171717;" title="P01 Control: 4.0">4.0</td><td class="num" style="background:hsl(64.80000000000001 66% 90%); color:#171717;" title="P01 Distract: 3.0">3.0</td><td class="num" style="background:hsl(131.74285714285713 66% 90%); color:#171717;" title="P01 Features: 61">61</td>
+          </tr><tr>
+            <th>P02</th>
+            <td><span class="condition-pill" style="--pill:#dc345d; --pill-bg:#ffe6ec">Proactive</span></td>
+            <td class="num" style="background:hsl(64.80000000000001 66% 90%); color:#171717;" title="P02 Pre: 8">8</td><td class="num" style="background:hsl(150 66% 90%); color:#171717;" title="P02 Post: 20">20</td><td class="num" style="background:hsl(150 66% 90%); color:#171717;" title="P02 Gain: +12">+12</td><td class="num" style="background:hsl(107.39999999999999 66% 90%); color:#171717;" title="P02 UES: 3.5">3.5</td><td class="num" style="background:hsl(93.2 66% 90%); color:#171717;" title="P02 Control: 3.0">3.0</td><td class="num" style="background:hsl(36.39999999999999 66% 90%); color:#171717;" title="P02 Distract: 4.0">4.0</td><td class="num" style="background:hsl(137.82857142857142 66% 90%); color:#171717;" title="P02 Features: 64">64</td>
+          </tr><tr>
+            <th>P03</th>
+            <td><span class="condition-pill" style="--pill:#dc345d; --pill-bg:#ffe6ec">Proactive</span></td>
+            <td class="num" style="background:hsl(36.400000000000006 66% 90%); color:#171717;" title="P03 Pre: 4">4</td><td class="num" style="background:hsl(64.80000000000001 66% 90%); color:#171717;" title="P03 Post: 8">8</td><td class="num" style="background:hsl(55.33333333333333 66% 90%); color:#171717;" title="P03 Gain: +4">+4</td><td class="num" style="background:hsl(123.96666666666668 66% 90%); color:#171717;" title="P03 UES: 4.1">4.1</td><td class="num" style="background:hsl(36.400000000000006 66% 90%); color:#171717;" title="P03 Control: 1.0">1.0</td><td class="num" style="background:hsl(36.39999999999999 66% 90%); color:#171717;" title="P03 Distract: 4.0">4.0</td><td class="num" style="background:hsl(109.42857142857143 66% 90%); color:#171717;" title="P03 Features: 50">50</td>
+          </tr><tr>
+            <th>P04</th>
+            <td><span class="condition-pill" style="--pill:#dc345d; --pill-bg:#ffe6ec">Proactive</span></td>
+            <td class="num" style="background:hsl(93.2 66% 90%); color:#171717;" title="P04 Pre: 12">12</td><td class="num" style="background:hsl(79 66% 90%); color:#171717;" title="P04 Post: 10">10</td><td class="num" style="background:hsl(8 66% 90%); color:#171717;" title="P04 Gain: -2">-2</td><td class="num" style="background:hsl(123.96666666666667 66% 90%); color:#171717;" title="P04 UES: 4.1">4.1</td><td class="num" style="background:hsl(121.60000000000001 66% 90%); color:#171717;" title="P04 Control: 4.0">4.0</td><td class="num" style="background:hsl(64.80000000000001 66% 90%); color:#171717;" title="P04 Distract: 3.0">3.0</td><td class="num" style="background:hsl(131.74285714285713 66% 90%); color:#171717;" title="P04 Features: 61">61</td>
+          </tr><tr>
+            <th>P05</th>
+            <td><span class="condition-pill" style="--pill:#dc345d; --pill-bg:#ffe6ec">Proactive</span></td>
+            <td class="num" style="background:hsl(36.400000000000006 66% 90%); color:#171717;" title="P05 Pre: 4">4</td><td class="num" style="background:hsl(64.80000000000001 66% 90%); color:#171717;" title="P05 Post: 8">8</td><td class="num" style="background:hsl(55.33333333333333 66% 90%); color:#171717;" title="P05 Gain: +4">+4</td><td class="num" style="background:hsl(112.13333333333333 66% 90%); color:#171717;" title="P05 UES: 3.7">3.7</td><td class="num" style="background:hsl(121.60000000000001 66% 90%); color:#171717;" title="P05 Control: 4.0">4.0</td><td class="num" style="background:hsl(121.60000000000001 66% 90%); color:#171717;" title="P05 Distract: 1.0">1.0</td><td class="num" style="background:hsl(145.94285714285715 66% 90%); color:#171717;" title="P05 Features: 68">68</td>
+          </tr><tr>
+            <th>P06</th>
+            <td><span class="condition-pill" style="--pill:#dc345d; --pill-bg:#ffe6ec">Proactive</span></td>
+            <td class="num" style="background:hsl(50.6 66% 90%); color:#171717;" title="P06 Pre: 6">6</td><td class="num" style="background:hsl(121.60000000000001 66% 90%); color:#171717;" title="P06 Post: 16">16</td><td class="num" style="background:hsl(126.33333333333334 66% 90%); color:#171717;" title="P06 Gain: +10">+10</td><td class="num" style="background:hsl(112.13333333333334 66% 90%); color:#171717;" title="P06 UES: 3.7">3.7</td><td class="num" style="background:hsl(121.60000000000001 66% 90%); color:#171717;" title="P06 Control: 4.0">4.0</td><td class="num" style="background:hsl(121.60000000000001 66% 90%); color:#171717;" title="P06 Distract: 1.0">1.0</td><td class="num" style="background:hsl(117.54285714285714 66% 90%); color:#171717;" title="P06 Features: 54">54</td>
+          </tr><tr>
+            <th>P07</th>
+            <td><span class="condition-pill" style="--pill:#dc345d; --pill-bg:#ffe6ec">Proactive</span></td>
+            <td class="num" style="background:hsl(50.6 66% 90%); color:#171717;" title="P07 Pre: 6">6</td><td class="num" style="background:hsl(79 66% 90%); color:#171717;" title="P07 Post: 10">10</td><td class="num" style="background:hsl(55.33333333333333 66% 90%); color:#171717;" title="P07 Gain: +4">+4</td><td class="num" style="background:hsl(90.83333333333334 66% 90%); color:#171717;" title="P07 UES: 2.9">2.9</td><td class="num" style="background:hsl(64.80000000000001 66% 90%); color:#171717;" title="P07 Control: 2.0">2.0</td><td class="num" style="background:hsl(36.39999999999999 66% 90%); color:#171717;" title="P07 Distract: 4.0">4.0</td><td class="num" style="background:hsl(101.31428571428572 66% 90%); color:#171717;" title="P07 Features: 46">46</td>
+          </tr>
+    </tbody>
+  </table></div>
+  </section>
+
+  <section id="takeaways" class="band">
+    <div class="section-head">
+      <div>
+        <h2>Interpretations worth carrying into the thesis.</h2>
+        <p>These are the higher-level claims that the numbers can support without overstating the sample.</p>
+      </div>
+      <p class="note">The missing interview data is the main next layer. It can explain whether ignored prompts were unread, quickly understood, or actively rejected.</p>
+    </div>
+    <div class="panel insight-list">
+      <div class="insight"><div><h3>The prototypes changed behavior before they clearly separated learning outcomes.</h3><p>Feature engagement differs strongly by condition, while raw gain and normalized gain do not. This validates the design manipulation without overstating learning effects.</p></div></div>
+      <div class="insight"><div><h3>Agency is an outcome variable.</h3><p>Intermittent's subjective advantage is not just preference language; it appears in control and low distraction ratings.</p></div></div>
+      <div class="insight"><div><h3>Interaction quality matters more than interaction quantity.</h3><p>Raw feature volume relates weakly to gain. Feed answering and explicit keyword action are more meaningful signals than exposure count.</p></div></div>
+      <div class="insight"><div><h3>Continuous is the balanced condition.</h3><p>It has the strongest final performance and a high level of constructive activity without the same interruption profile as Proactive.</p></div></div>
+      <div class="insight"><div><h3>Proactive is powerful but expensive.</h3><p>It creates the fastest first interactions and largest raw gains from low baseline, but it also carries a control and distraction cost.</p></div></div>
+      <div class="insight"><div><h3>Interviews are needed for passive cognitive uptake.</h3><p>The logs know what was clicked, skipped, or dismissed. They do not know what was read, understood, or mentally used.</p></div></div>
+    </div>
+  </section>
+
+  <section class="band">
+    <div class="section-head">
+      <div>
+        <h2>Caveats that should stay visible.</h2>
+        <p>Several exported fields are useful but imperfect. The dashboard avoids relying on known-problem metrics as decisive evidence.</p>
+      </div>
+    </div>
+    <div class="grid three">
+      <div class="panel"><h3>Low N</h3><p>With seven participants per condition, tests are exploratory and outliers matter.</p></div>
+      <div class="panel"><h3>Logging gaps</h3><p>Proactive active-video seconds and pauses are zero in export, and Proactive quiz sheet rows are incomplete.</p></div>
+      <div class="panel"><h3>Acceptance-rate ambiguity</h3><p>Some exported acceptance rates exceed 100%, so uptake is reconstructed from concrete event counts instead.</p></div>
+    </div>
+  </section>
+
+  <footer>
+    Generated from <code>src/P3 Data</code> on 2026-05-11. This page is standalone and does not load external chart libraries. Build script: <code>report/combined/build-p3-codex-analysis.mjs</code>.
+  </footer>
+</body>
+</html>

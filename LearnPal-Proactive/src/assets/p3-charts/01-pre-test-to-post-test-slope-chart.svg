@@ -1,0 +1,135 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 500" role="img" aria-label="Pre-test to post-test slope chart">
+  <style>
+  .grid-line { stroke: #d8d5cb; stroke-width: 1; fill: none; }
+  .axis-label, .small-label, .legend-text, .bar-label, .bar-value, .point-label {
+    font-family: Inter, Arial, sans-serif;
+    font-size: 12px;
+    fill: #6e7480;
+    font-variant-numeric: tabular-nums;
+  }
+  .axis-title {
+    font-family: Inter, Arial, sans-serif;
+    font-size: 13px;
+    fill: #343943;
+    font-weight: 720;
+  }
+  .slope-line { stroke-width: 2; opacity: 0.58; fill: none; }
+  .trend-line { stroke: #6f747d; stroke-width: 2; stroke-dasharray: 6 6; opacity: 0.72; fill: none; }
+  .dot, .scatter-dot { stroke: #ffffff; stroke-width: 1.6; opacity: 0.88; }
+  .compact-label { font-size: 10px; }
+  .key-label { font-weight: 760; fill: #232831; }
+  .bar-track { fill: #eeece2; }
+  .bar-value { fill: #343943; font-weight: 720; }
+</style>
+    <line x1="146" y1="420" x2="838" y2="420" class="grid-line"/><text x="136" y="424" class="axis-label" text-anchor="end">0</text><line x1="146" y1="326" x2="838" y2="326" class="grid-line"/><text x="136" y="330" class="axis-label" text-anchor="end">5</text><line x1="146" y1="232" x2="838" y2="232" class="grid-line"/><text x="136" y="236" class="axis-label" text-anchor="end">10</text><line x1="146" y1="138" x2="838" y2="138" class="grid-line"/><text x="136" y="142" class="axis-label" text-anchor="end">15</text><line x1="146" y1="44" x2="838" y2="44" class="grid-line"/><text x="136" y="48" class="axis-label" text-anchor="end">20</text>
+    <text x="170" y="24" class="axis-title" text-anchor="middle">Pre-test</text>
+    <text x="810" y="24" class="axis-title" text-anchor="middle">Post-test</text>
+    <text x="92" y="232" class="axis-title" text-anchor="middle" transform="rotate(-90 92 232)">Score out of 20</text>
+    <g class="participant-line">
+          <line x1="170" y1="269.6" x2="810" y2="194.4" stroke="#2764d8" class="slope-line"/>
+          <circle cx="170" cy="269.6" r="5" fill="#2764d8" class="dot"/>
+          <circle cx="794" cy="194.4" r="4.5" fill="#2764d8" class="dot" opacity="0.92"/>
+          <title>C01: 8 to 12, gain +4</title>
+        </g><g class="participant-line">
+          <line x1="170" y1="194.4" x2="810" y2="119.19999999999999" stroke="#2764d8" class="slope-line"/>
+          <circle cx="170" cy="194.4" r="5" fill="#2764d8" class="dot"/>
+          <circle cx="798" cy="119.19999999999999" r="4.5" fill="#2764d8" class="dot" opacity="0.92"/>
+          <title>C02: 12 to 16, gain +4</title>
+        </g><g class="participant-line">
+          <line x1="170" y1="232" x2="810" y2="156.8" stroke="#2764d8" class="slope-line"/>
+          <circle cx="170" cy="232" r="5" fill="#2764d8" class="dot"/>
+          <circle cx="810" cy="156.8" r="4.5" fill="#2764d8" class="dot" opacity="0.92"/>
+          <title>C03: 10 to 14, gain +4</title>
+        </g><g class="participant-line">
+          <line x1="170" y1="119.19999999999999" x2="810" y2="44" stroke="#2764d8" class="slope-line"/>
+          <circle cx="170" cy="119.19999999999999" r="5" fill="#2764d8" class="dot"/>
+          <circle cx="802" cy="44" r="4.5" fill="#2764d8" class="dot" opacity="0.92"/>
+          <title>C04: 16 to 20, gain +4</title>
+        </g><g class="participant-line">
+          <line x1="170" y1="344.8" x2="810" y2="269.6" stroke="#2764d8" class="slope-line"/>
+          <circle cx="170" cy="344.8" r="5" fill="#2764d8" class="dot"/>
+          <circle cx="798" cy="269.6" r="4.5" fill="#2764d8" class="dot" opacity="0.92"/>
+          <title>C05: 4 to 8, gain +4</title>
+        </g><g class="participant-line">
+          <line x1="170" y1="269.6" x2="810" y2="307.2" stroke="#2764d8" class="slope-line"/>
+          <circle cx="170" cy="269.6" r="5" fill="#2764d8" class="dot"/>
+          <circle cx="810" cy="307.2" r="4.5" fill="#2764d8" class="dot" opacity="0.92"/>
+          <title>C06: 8 to 6, gain -2</title>
+        </g><g class="participant-line">
+          <line x1="170" y1="269.6" x2="810" y2="44" stroke="#2764d8" class="slope-line"/>
+          <circle cx="170" cy="269.6" r="5" fill="#2764d8" class="dot"/>
+          <circle cx="810" cy="44" r="4.5" fill="#2764d8" class="dot" opacity="0.92"/>
+          <title>C07: 8 to 20, gain +12</title>
+        </g><g class="participant-line">
+          <line x1="170" y1="382.4" x2="810" y2="269.6" stroke="#b89214" class="slope-line"/>
+          <circle cx="170" cy="382.4" r="5" fill="#b89214" class="dot"/>
+          <circle cx="806" cy="269.6" r="4.5" fill="#b89214" class="dot" opacity="0.92"/>
+          <title>I01: 2 to 8, gain +6</title>
+        </g><g class="participant-line">
+          <line x1="170" y1="269.6" x2="810" y2="119.19999999999999" stroke="#b89214" class="slope-line"/>
+          <circle cx="170" cy="269.6" r="5" fill="#b89214" class="dot"/>
+          <circle cx="806" cy="119.19999999999999" r="4.5" fill="#b89214" class="dot" opacity="0.92"/>
+          <title>I02: 8 to 16, gain +8</title>
+        </g><g class="participant-line">
+          <line x1="170" y1="269.6" x2="810" y2="194.4" stroke="#b89214" class="slope-line"/>
+          <circle cx="170" cy="269.6" r="5" fill="#b89214" class="dot"/>
+          <circle cx="802" cy="194.4" r="4.5" fill="#b89214" class="dot" opacity="0.92"/>
+          <title>I03: 8 to 12, gain +4</title>
+        </g><g class="participant-line">
+          <line x1="170" y1="119.19999999999999" x2="810" y2="194.4" stroke="#b89214" class="slope-line"/>
+          <circle cx="170" cy="119.19999999999999" r="5" fill="#b89214" class="dot"/>
+          <circle cx="810" cy="194.4" r="4.5" fill="#b89214" class="dot" opacity="0.92"/>
+          <title>I04: 16 to 12, gain -4</title>
+        </g><g class="participant-line">
+          <line x1="170" y1="194.4" x2="810" y2="194.4" stroke="#b89214" class="slope-line"/>
+          <circle cx="170" cy="194.4" r="5" fill="#b89214" class="dot"/>
+          <circle cx="818" cy="194.4" r="4.5" fill="#b89214" class="dot" opacity="0.92"/>
+          <title>I05: 12 to 12, gain 0</title>
+        </g><g class="participant-line">
+          <line x1="170" y1="420" x2="810" y2="232" stroke="#b89214" class="slope-line"/>
+          <circle cx="170" cy="420" r="5" fill="#b89214" class="dot"/>
+          <circle cx="802" cy="232" r="4.5" fill="#b89214" class="dot" opacity="0.92"/>
+          <title>I06: 0 to 10, gain +10</title>
+        </g><g class="participant-line">
+          <line x1="170" y1="194.4" x2="810" y2="194.4" stroke="#b89214" class="slope-line"/>
+          <circle cx="170" cy="194.4" r="5" fill="#b89214" class="dot"/>
+          <circle cx="826" cy="194.4" r="4.5" fill="#b89214" class="dot" opacity="0.92"/>
+          <title>I07: 12 to 12, gain 0</title>
+        </g><g class="participant-line">
+          <line x1="170" y1="269.6" x2="810" y2="119.19999999999999" stroke="#d83a5d" class="slope-line"/>
+          <circle cx="170" cy="269.6" r="5" fill="#d83a5d" class="dot"/>
+          <circle cx="814" cy="119.19999999999999" r="4.5" fill="#d83a5d" class="dot" opacity="0.92"/>
+          <title>P01: 8 to 16, gain +8</title>
+        </g><g class="participant-line">
+          <line x1="170" y1="269.6" x2="810" y2="44" stroke="#d83a5d" class="slope-line"/>
+          <circle cx="170" cy="269.6" r="5" fill="#d83a5d" class="dot"/>
+          <circle cx="818" cy="44" r="4.5" fill="#d83a5d" class="dot" opacity="0.92"/>
+          <title>P02: 8 to 20, gain +12</title>
+        </g><g class="participant-line">
+          <line x1="170" y1="344.8" x2="810" y2="269.6" stroke="#d83a5d" class="slope-line"/>
+          <circle cx="170" cy="344.8" r="5" fill="#d83a5d" class="dot"/>
+          <circle cx="814" cy="269.6" r="4.5" fill="#d83a5d" class="dot" opacity="0.92"/>
+          <title>P03: 4 to 8, gain +4</title>
+        </g><g class="participant-line">
+          <line x1="170" y1="194.4" x2="810" y2="232" stroke="#d83a5d" class="slope-line"/>
+          <circle cx="170" cy="194.4" r="5" fill="#d83a5d" class="dot"/>
+          <circle cx="810" cy="232" r="4.5" fill="#d83a5d" class="dot" opacity="0.92"/>
+          <title>P04: 12 to 10, gain -2</title>
+        </g><g class="participant-line">
+          <line x1="170" y1="344.8" x2="810" y2="269.6" stroke="#d83a5d" class="slope-line"/>
+          <circle cx="170" cy="344.8" r="5" fill="#d83a5d" class="dot"/>
+          <circle cx="822" cy="269.6" r="4.5" fill="#d83a5d" class="dot" opacity="0.92"/>
+          <title>P05: 4 to 8, gain +4</title>
+        </g><g class="participant-line">
+          <line x1="170" y1="307.2" x2="810" y2="119.19999999999999" stroke="#d83a5d" class="slope-line"/>
+          <circle cx="170" cy="307.2" r="5" fill="#d83a5d" class="dot"/>
+          <circle cx="822" cy="119.19999999999999" r="4.5" fill="#d83a5d" class="dot" opacity="0.92"/>
+          <title>P06: 6 to 16, gain +10</title>
+        </g><g class="participant-line">
+          <line x1="170" y1="307.2" x2="810" y2="232" stroke="#d83a5d" class="slope-line"/>
+          <circle cx="170" cy="307.2" r="5" fill="#d83a5d" class="dot"/>
+          <circle cx="818" cy="232" r="4.5" fill="#d83a5d" class="dot" opacity="0.92"/>
+          <title>P07: 6 to 10, gain +4</title>
+        </g>
+    <text x="852" y="47" class="small-label key-label compact-label">C04, C07, P02</text><title>Post-test 20: C04 +4; C07 +12; P02 +12</title><text x="852" y="122.19999999999999" class="small-label key-label compact-label">C02, I02, P01, P06</text><title>Post-test 16: C02 +4; I02 +8; P01 +8; P06 +10</title><text x="852" y="159.8" class="small-label key-label compact-label">C03</text><title>Post-test 14: C03 +4</title><text x="852" y="197.4" class="small-label key-label compact-label">C01, I03, I04, I05, I07</text><title>Post-test 12: C01 +4; I03 +4; I04 -4; I05 0; I07 0</title><text x="852" y="235" class="small-label key-label compact-label">I06, P04, P07</text><title>Post-test 10: I06 +10; P04 -2; P07 +4</title><text x="852" y="272.6" class="small-label key-label compact-label">C05, I01, P03, P05</text><title>Post-test 8: C05 +4; I01 +6; P03 +4; P05 +4</title><text x="852" y="310.2" class="small-label key-label compact-label">C06</text><title>Post-test 6: C06 -2</title>
+  </svg>
